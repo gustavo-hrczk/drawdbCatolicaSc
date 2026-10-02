@@ -1,3 +1,4 @@
+import { appUrl } from "../../../utils/appUrl";
 import {
   Button,
   Image,
@@ -271,7 +272,7 @@ export default function Modal({
         setModal(MODAL.NONE);
         return;
       case MODAL.NEW:
-        window.open("/editor/templates/" + selectedTemplateId, "_blank");
+        window.open(appUrl("/editor/templates/" + selectedTemplateId), "_blank");
         setModal(MODAL.NONE);
         return;
       case MODAL.LANGUAGE:

@@ -1,3 +1,4 @@
+import { appUrl } from "../../utils/appUrl";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Slot, useExtensions } from "../../context/ExtensionsContext";
@@ -1162,7 +1163,7 @@ export default function ControlPanel({
           {t("saved_as_copy")}{" "}
           <Typography.Text
             link={{
-              href: `/editor/diagrams/${newId}${window.location.search}`,
+              href: appUrl(`/editor/diagrams/${newId}${window.location.search}`),
               target: "_blank",
               rel: "noopener noreferrer",
             }}
@@ -1189,7 +1190,7 @@ export default function ControlPanel({
         function: () => setModal(MODAL.NEW),
       },
       new_window: {
-        function: () => window.open("/editor", "_blank"),
+        function: () => window.open(appUrl("/editor"), "_blank"),
       },
       open: {
         function: open,
@@ -1975,7 +1976,7 @@ export default function ControlPanel({
         function: () => window.open(socials.discord, "_blank"),
       },
       report_bug: {
-        function: () => window.open("/bug-report", "_blank"),
+        function: () => window.open(appUrl("/bug-report"), "_blank"),
       },
     },
   };

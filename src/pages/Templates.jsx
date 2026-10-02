@@ -1,3 +1,4 @@
+import { appUrl } from "../utils/appUrl";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Tabs, TabPane, Banner, Steps } from "@douyinfe/semi-ui";
@@ -22,7 +23,7 @@ export default function Templates() {
   };
 
   const forkTemplate = (id) => {
-    window.open("/editor/templates/" + id, "_blank");
+    window.open(appUrl("/editor/templates/" + id), "_blank");
   };
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { appUrl } from "../../../utils/appUrl";
 import { Banner, Button, Input, Spin, Toast, Collapse, Tag, Space, Radio, RadioGroup, Typography } from "@douyinfe/semi-ui";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,7 +44,7 @@ export default function Share({ title, setModal }) {
   });
 
   const url = useMemo(() => {
-    const baseUrl = window.location.origin + "/editor?shareId=" + gistId;
+    const baseUrl = window.location.origin + appUrl("/editor?shareId=") + gistId;
     const params = new URLSearchParams();
     Object.entries(embedSettings).forEach(([key, value]) => {
       if (value) {
