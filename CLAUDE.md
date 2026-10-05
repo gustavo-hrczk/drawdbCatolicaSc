@@ -56,8 +56,7 @@ Dois commits sobre `e4e696f` (último commit do upstream no momento do fork):
    - Aplicado em `window.open`/`href` absolutos de `ControlPanel.jsx` (Novo, Relatar bug, link
      de cópia salva), `Modal.jsx` e `Templates.jsx` (abrir modelo) e `Share.jsx` (link de
      compartilhamento).
-   - **Status:** enviado ao usuário como patch. Confirmar com `git log` se já foi aplicado e
-     enviado ao GitHub.
+   - **Status:** aplicado e enviado ao GitHub (`cc8a7fd`, presente em `origin/main`).
 
 ### Convenção importante
 
@@ -82,6 +81,27 @@ BASE_PATH=/drawdbCatolicaSc/ npx vite preview      # abrir http://localhost:4173
 
 Sempre teste fluxos que abrem nova aba usando o build com `BASE_PATH`, porque `npm run dev`
 roda na raiz e esconde erros de caminho base.
+
+No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` vira
+`C:/Program Files/Git/drawdbCatolicaSc/` e o build sai com caminhos quebrados. No `cmd`, use
+`set BASE_PATH=/drawdbCatolicaSc/` antes do `npm run build`.
+
+## Homologação (ambiente de testes)
+
+- Os sprints são desenvolvidos na branch **`homolog`**. O PR para a `main` só é aberto quando
+  todos os sprints de [`docs/sprints.md`](docs/sprints.md) estiverem concluídos.
+- Todo push na `homolog` dispara **Deploy homologação** (`.github/workflows/deploy-homolog.yml`),
+  que publica a `main` em `/drawdbCatolicaSc/` e a `homolog` em `/drawdbCatolicaSc/teste/`.
+- A homologação usa o banco local `drawDB-teste` (`VITE_DB_NAME`) e mostra o selo
+  "Ambiente de testes" (`VITE_APP_ENV=homolog`, `src/catolica/HomologBadge.jsx`). O
+  `localStorage` (configurações, tipos personalizados) continua compartilhado com a produção.
+- Os links profundos dos dois ambientes passam por `.github/pages/404.html`, que carrega o
+  `index.html` certo mantendo a URL.
+- Um push na `main` publica só a produção e remove `/teste/`. Para restaurar, rode
+  Deploy homologação manualmente (Actions → Run workflow).
+- Requisito no GitHub: Settings → Environments → `github-pages` → Deployment branches deve
+  incluir `homolog`.
+- Código institucional novo fica em `src/catolica/`.
 
 ## Deploy
 
@@ -142,8 +162,10 @@ roda na raiz e esconde erros de caminho base.
   depender de uma conta pessoal.
 - Avaliar enquadramento como projeto de extensão ou de disciplina.
 
-## Próximo passo imediato
+## Plano de execução
 
-O mantenedor vai testar o site em uso real e trazer a lista do que precisa melhorar. Ao
-receber a lista: transformar cada item em issue, priorizar contra o roteiro acima e começar
-pelas mudanças sem servidor e de baixo risco.
+O roteiro acima foi detalhado em micro sprints em [`docs/sprints.md`](docs/sprints.md), feitos
+um de cada vez. Consulte e atualize o status lá. A primeira lista de pedidos do mantenedor
+(home em PT-BR, remover depoimentos, acesso rápido na home, botão Compartilhar, persistência)
+já está distribuída nos sprints. Layout, exibição e usabilidade geral ficam para depois das
+revisões em sala (Sprint 8).

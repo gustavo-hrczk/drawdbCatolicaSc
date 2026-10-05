@@ -1,0 +1,36 @@
+<!doctype html>
+<!--
+  Fallback de SPA usado quando produção e homologação são publicadas juntas.
+  O GitHub Pages só usa o 404.html da raiz do site, então este arquivo carrega
+  o index.html certo (raiz ou /teste/) mantendo a URL pedida, e o React Router
+  resolve a rota. __ROOT__ é substituído pelo workflow (ex.: /drawdbCatolicaSc/).
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Carregando…</title>
+    <script>
+      (function () {
+        var root = "__ROOT__";
+        var teste = root + "teste/";
+        var path = window.location.pathname;
+        var base = path.indexOf(teste) === 0 ? teste : root;
+        fetch(base + "index.html", { cache: "no-cache" })
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.status);
+            return res.text();
+          })
+          .then(function (html) {
+            document.open();
+            document.write(html);
+            document.close();
+          })
+          .catch(function () {
+            window.location.replace(base);
+          });
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
