@@ -1177,6 +1177,17 @@ export default function ControlPanel({
     });
   };
 
+  const [exitRequested, setExitRequested] = useState(false);
+  useEffect(() => {
+    if (!exitRequested) return;
+    if (saveState === State.SAVED || saveState === State.NONE) {
+      navigate("/");
+    } else if (saveState === State.ERROR) {
+      setExitRequested(false);
+      Toast.error(t("failed_to_save"));
+    }
+  }, [exitRequested, saveState, navigate, t]);
+
   const fullscreen = useFullscreen();
 
   useEffect(() => {
@@ -1663,8 +1674,13 @@ export default function ControlPanel({
       },
       exit: {
         function: () => {
+          if (layout.readOnly) {
+            navigate("/");
+            return;
+          }
+          // Sai só depois que o save terminar (ver efeito de exitRequested).
+          setExitRequested(true);
           save();
-          if (saveState === State.SAVED) navigate("/");
         },
       },
     },

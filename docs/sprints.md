@@ -9,7 +9,8 @@ for inevitável (ver `CLAUDE.md`).
 | # | Sprint | Status |
 |---|---|---|
 | 0 | Base do projeto | em andamento (branch e homologação prontas) |
-| 1 | Persistência I: nenhuma perda silenciosa de dados | pendente |
+| 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
+| 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y | pendente (próximo) |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -42,6 +43,55 @@ Prioridade máxima. São correções genéricas que podem ser contribuídas ao u
 - **Arquivo → Sair:** esperar o save terminar antes de sair.
 
 Aceite: reproduzir cada bug no build de produção antes de corrigir e confirmar a correção depois.
+
+**Resultado (05/10/2026):** os quatro itens foram corrigidos e validados no build de homologação
+local. Detalhes:
+- Saves fantasmas: o save agora cria o registro quando o `modify()` não acha o diagrama, e falhas
+  de gravação aparecem como "Falha ao salvar" em vez de ficarem em "Salvando". Ao abrir um id
+  inexistente, o editor é limpo, mostra um aviso e pede o banco de dados.
+- Importar `.json`/`.ddb` cria um diagrama novo com o banco do próprio arquivo
+  (`src/catolica/importAsNewDiagram.js`). Os JSON do ZIP de "Exportar dados salvos" também são
+  aceitos. Com extensões de nuvem, o comportamento original é mantido.
+- O ZIP é criado a cada exportação, os nomes de arquivo são higienizados e a data sai no formato
+  `AAAA_MM_DD`.
+- "Sair" espera o save terminar; se o save falhar, avisa e não sai.
+
+## Sprint 1B: Persistência da edição (auto-save, Ctrl+C/V, Ctrl+Z/Y)
+
+Pedido do mantenedor em 05/10/2026. Diagnóstico do comportamento atual:
+
+- **Auto-save:** já vem ligado e grava a cada alteração registrada no desfazer/refazer, no
+  título ou no zoom. Lacunas: o aluno pode desligá-lo em Configurações sem nenhum aviso; mover o
+  canvas (pan) não dispara save; o texto digitado num campo só entra no histórico quando o campo
+  perde o foco, então fechar a aba durante a digitação perde a última edição.
+- **Ctrl+C / Ctrl+V:** usa a área de transferência do sistema (`navigator.clipboard`), que já
+  funciona entre abas e diagramas. Lacunas: no Firefox e no Opera a leitura (`readText`) pode
+  pedir permissão ou falhar; a falha é silenciosa (sem `catch`); copia só um elemento por vez.
+- **Ctrl+Z / Ctrl+Y:** o histórico fica só na memória. Recarregar a página, trocar de diagrama
+  ou reabrir o navegador apaga o histórico. Não há limite de tamanho, e Ctrl+Shift+Z (atalho
+  comum para refazer) não funciona.
+
+Entregas:
+
+- **Auto-save:**
+  - Ligado por padrão para todos. Se for desligado, mostrar um aviso persistente no cabeçalho.
+  - Gravar também ao perder o foco da janela (`visibilitychange`/`pagehide`) e confirmar a
+    última digitação pendente.
+  - Aviso ao fechar a aba quando houver um save em andamento ou com falha.
+- **Ctrl+C / Ctrl+V:**
+  - Usar os eventos nativos `copy`/`paste`, que funcionam no Chrome, Edge, Opera e Firefox sem
+    pedir permissão.
+  - Guardar uma cópia do último elemento copiado no `localStorage` como reserva para o menu
+    Editar → Colar e para navegadores que bloqueiam a área de transferência.
+  - Mensagem clara quando colar falhar.
+- **Ctrl+Z / Ctrl+Y:**
+  - Salvar o histórico por diagrama num banco local próprio (`drawDB-catolica`, separado do
+    banco do upstream, para não conflitar com migrações dele), com limite de passos.
+  - Restaurar o histórico ao reabrir o diagrama.
+  - Aceitar Ctrl+Shift+Z como refazer.
+
+Aceite: testar recarregar, fechar e reabrir, trocar de diagrama e copiar/colar entre abas no
+Chrome, Edge, Opera e Firefox.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

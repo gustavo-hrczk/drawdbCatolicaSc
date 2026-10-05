@@ -30,7 +30,7 @@ import {
   useNavigateWithParams,
 } from "../hooks";
 import FloatingControls from "./FloatingControls";
-import { Button, Modal, Tag } from "@douyinfe/semi-ui";
+import { Button, Modal, Tag, Toast } from "@douyinfe/semi-ui";
 import { IconAlertTriangle } from "@douyinfe/semi-icons";
 import { useTranslation } from "react-i18next";
 import { databases } from "../data/databases";
@@ -172,55 +172,44 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       return;
     }
 
-    if (isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram)) {
-      const diagramId = uuidv4();
-      await db.diagrams
-        .add({
-          diagramId,
-          database: database,
-          name: title,
-          gistId: gistId ?? "",
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          navigate(`/editor/diagrams/${diagramId}`, { replace: true });
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
-    } else {
-      await db.diagrams
-        .where("diagramId")
-        .equals(loadedDiagramId)
-        .modify({
-          database: database,
-          name: title,
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          gistId: gistId ?? "",
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
+    const fields = {
+      database: database,
+      name: title,
+      lastModified: new Date(),
+      tables: tables,
+      references: relationships,
+      notes: notes,
+      areas: areas,
+      views: views,
+      gistId: gistId ?? "",
+      pan: transform.pan,
+      zoom: transform.zoom,
+      loadedFromGistId: loadedFromGistId,
+      ...(databases[database].hasEnums && { enums: enums }),
+      ...(databases[database].hasTypes && { types: types }),
+    };
+
+    try {
+      if (isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram)) {
+        const diagramId = uuidv4();
+        await db.diagrams.add({ diagramId, ...fields });
+        navigate(`/editor/diagrams/${diagramId}`, { replace: true });
+      } else {
+        const updated = await db.diagrams
+          .where("diagramId")
+          .equals(loadedDiagramId)
+          .modify(fields);
+        // O diagrama da URL não existe neste navegador (link de outro PC,
+        // dados apagados): cria o registro em vez de "salvar" em nada.
+        if (updated === 0) {
+          await db.diagrams.add({ diagramId: loadedDiagramId, ...fields });
+        }
+      }
+      setSaveState(State.SAVED);
+      setLastSaved(new Date().toLocaleString());
+    } catch (err) {
+      console.error("local save failed:", err);
+      setSaveState(State.ERROR);
     }
   }, [
     cloudOnly,
@@ -352,7 +341,15 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
 
     const loadDiagram = async (id) => {
       const { diagram, source } = await fetchDiagram(id);
-      if (!diagram) return;
+      if (!diagram) {
+        resetEditorState();
+        Toast.warning({
+          content: i18n.t("diagram_not_found_locally"),
+          duration: 8,
+        });
+        if (selectedDb === "") setShowSelectDbModal(true);
+        return;
+      }
 
       setDiagramSource(source);
       if (source === "local") {
@@ -469,6 +466,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     isTemplate,
     loadedDiagramId,
     cloudOnly,
+    i18n,
   ]);
 
   const returnToCurrentDiagram = async () => {

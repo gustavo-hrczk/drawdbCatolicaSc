@@ -12,7 +12,7 @@ import { Parser } from "node-sql-parser";
 import { Parser as OracleParser } from "oracle-sql-parser";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DB, MODAL, STATUS } from "../../../data/constants";
+import { DB, IMPORT_FROM, MODAL, STATUS } from "../../../data/constants";
 import { databases } from "../../../data/databases";
 import {
   useAreas,
@@ -47,6 +47,7 @@ import Open from "./Open";
 import Rename from "./Rename";
 import Share from "./Share";
 import { mergeCustomTypes } from "../../../utils/customTypes";
+import { importAsNewDiagram } from "../../../catolica/importAsNewDiagram";
 
 const extensionToLanguage = {
   md: "markdown",
@@ -93,7 +94,12 @@ export default function Modal({
   const [saveAsTitle, setSaveAsTitle] = useState(title);
   const [aiImporting, setAiImporting] = useState(false);
   const navigate = useNavigateWithParams();
-  const { importSqlWithAi } = useExtensions();
+  const { importSqlWithAi, cloudSave } = useExtensions();
+  // Importar arquivo .json/.ddb abre um diagrama novo em vez de sobrescrever
+  // o atual (é assim que o aluno "reabre" um arquivo salvo). Com nuvem
+  // (extensões), mantém o comportamento original.
+  const importAsNew =
+    importFrom === IMPORT_FROM.JSON && typeof cloudSave !== "function";
 
   useEffect(() => {
     if (modal === MODAL.SAVEAS) setSaveAsTitle(title);
@@ -246,6 +252,23 @@ export default function Modal({
         return;
       }
       case MODAL.IMPORT:
+        if (error.type !== STATUS.ERROR && importAsNew) {
+          try {
+            const newId = await importAsNewDiagram(importData);
+            Toast.success(
+              t("diagram_imported", {
+                title: importData.title || importData.name || "",
+              }),
+            );
+            setImportData(null);
+            setModal(MODAL.NONE);
+            navigate(`/editor/diagrams/${newId}`);
+          } catch (err) {
+            console.error(err);
+            Toast.error(t("oops_smth_went_wrong"));
+          }
+          return;
+        }
         if (error.type !== STATUS.ERROR) {
           setTransform((prev) => ({ ...prev, pan: { x: 0, y: 0 } }));
           overwriteDiagram();
@@ -294,6 +317,7 @@ export default function Modal({
             error={error}
             setError={setError}
             importFrom={importFrom}
+            importAsNew={importAsNew}
           />
         );
       case MODAL.IMPORT_SRC:
