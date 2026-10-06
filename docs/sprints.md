@@ -394,6 +394,20 @@ A definir depois das revisões em sala.
   exportador específico (draw.io, pgModeler etc.) entra no plano até haver demanda concreta. Os
   formatos do Sprint 1C (SQL, JSON, PNG, ZIP) já são padrões abertos.
 
+## Correção de desempenho: copiar e exportar imagem (08/10/2026)
+
+- **Causa:** o html-to-image copiava todas as propriedades de estilo de cada elemento, inclusive
+  as centenas de variáveis de tema do Semi UI (~24 KB por elemento). Um diagrama de 7 tabelas
+  virava um SVG de 7,5 MB; além disso, embutia 4,3 MB de fontes de ícones a cada imagem.
+- **Correção** (`src/catolica/canvasImage.js`): html-to-image atualizado para 1.11.13 (versão
+  fixa) com `includeStyleProperties` só com propriedades reais, sem fontes embutidas e sem os
+  ícones de interface (`<i>`). Imagem final desenhada pelo nosso código (a 1.11.13 depende de
+  `requestAnimationFrame`, que não roda em aba em segundo plano), com teto de 32 milhões de
+  pixels. Ctrl+Alt+C usa 2× e ignora novos toques enquanto gera a imagem; PNG exportado mantém 4×;
+  JPEG e PDF usam o fundo do tema (antes podiam sair com fundo preto).
+- **Medição (7 tabelas):** Ctrl+Alt+C de 4,2 s com 2,7 s de travamento para 1,1 s com 49 ms de
+  travamento; imagem idêntica pixel a pixel à anterior.
+
 ## Pendências registradas em 07/10/2026
 
 - **Sprint 1E, Histórico de versões (aprovado):** botão "Histórico de versões" no lugar de

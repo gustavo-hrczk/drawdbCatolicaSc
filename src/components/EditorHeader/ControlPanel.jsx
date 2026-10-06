@@ -27,7 +27,12 @@ import {
   Typography,
   Modal as SemiModal,
 } from "@douyinfe/semi-ui";
-import { toPng, toJpeg, toSvg } from "html-to-image";
+import {
+  canvasToDataUrl,
+  canvasToSvgDataUrl,
+  copyCanvasImage,
+  editorBackground,
+} from "../../catolica/canvasImage";
 import {
   jsonToMySQL,
   jsonToPostgreSQL,
@@ -78,7 +83,6 @@ import {
   useNavigateWithParams,
 } from "../../hooks";
 import { enterFullscreen, exitFullscreen } from "../../utils/fullscreen";
-import { dataURItoBlob } from "../../utils/utils";
 import {
   IconAddArea,
   IconAddNote,
@@ -692,19 +696,11 @@ export default function ControlPanel({
     }));
   };
   const copyAsImage = () => {
-    toPng(document.getElementById("canvas"), {
-      pixelRatio: pngExportPixelRatio,
-    }).then(function (dataUrl) {
-      const blob = dataURItoBlob(dataUrl);
-      navigator.clipboard
-        .write([new ClipboardItem({ "image/png": blob })])
-        .then(() => {
-          Toast.success(t("copied_to_clipboard"));
-        })
-        .catch(() => {
-          Toast.error(t("oops_smth_went_wrong"));
-        });
-    });
+    copyCanvasImage(document.getElementById("canvas"))
+      .then((status) => {
+        if (status === "ok") Toast.success(t("copied_to_clipboard"));
+      })
+      .catch(() => Toast.error(t("oops_smth_went_wrong")));
   };
   const resetView = () =>
     setTransform((prev) => ({ ...prev, zoom: 1, pan: { x: 0, y: 0 } }));
@@ -1609,7 +1605,7 @@ export default function ControlPanel({
           {
             name: "PNG",
             function: () => {
-              toPng(document.getElementById("canvas"), {
+              canvasToDataUrl(document.getElementById("canvas"), {
                 pixelRatio: pngExportPixelRatio,
               }).then(function (dataUrl) {
                 setExportData((prev) => ({
@@ -1624,7 +1620,13 @@ export default function ControlPanel({
           {
             name: "JPEG",
             function: () => {
-              toJpeg(document.getElementById("canvas"), { quality: 0.95 }).then(
+              const node = document.getElementById("canvas");
+              canvasToDataUrl(node, {
+                type: "image/jpeg",
+                quality: 0.95,
+                pixelRatio: window.devicePixelRatio || 1,
+                background: editorBackground(node),
+              }).then(
                 function (dataUrl) {
                   setExportData((prev) => ({
                     ...prev,
@@ -1639,8 +1641,7 @@ export default function ControlPanel({
           {
             name: "SVG",
             function: () => {
-              const filter = (node) => node.tagName !== "i";
-              toSvg(document.getElementById("canvas"), { filter: filter }).then(
+              canvasToSvgDataUrl(document.getElementById("canvas")).then(
                 function (dataUrl) {
                   setExportData((prev) => ({
                     ...prev,
@@ -1700,7 +1701,12 @@ export default function ControlPanel({
             function: () => {
               const canvas = document.getElementById("canvas");
               const filename = `${title}_${new Date().toISOString()}`;
-              toJpeg(canvas).then(function (dataUrl) {
+              canvasToDataUrl(canvas, {
+                type: "image/jpeg",
+                quality: 0.95,
+                pixelRatio: 2,
+                background: editorBackground(canvas),
+              }).then(function (dataUrl) {
                 const doc = new jsPDF("l", "px", [
                   canvas.offsetWidth,
                   canvas.offsetHeight,
