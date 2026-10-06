@@ -80,6 +80,9 @@ local. Detalhes:
 - O ZIP é criado a cada exportação, os nomes de arquivo são higienizados e a data sai no formato
   `AAAA_MM_DD`.
 - "Sair" espera o save terminar; se o save falhar, avisa e não sai.
+- Correção pós-homologação (06/10/2026): o aviso de diagrama inexistente se repetia a cada clique
+  no seletor de banco (o `load` roda de novo quando `selectedDb` muda). Agora avisa uma vez por
+  diagrama.
 
 ## Sprint 1B: Persistência da edição (auto-save, Ctrl+C/V, Ctrl+Z/Y)
 

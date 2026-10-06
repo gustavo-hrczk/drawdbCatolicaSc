@@ -342,11 +342,15 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     const loadDiagram = async (id) => {
       const { diagram, source } = await fetchDiagram(id);
       if (!diagram) {
-        resetEditorState();
-        Toast.warning({
-          content: i18n.t("diagram_not_found_locally"),
-          duration: 8,
-        });
+        // load roda de novo a cada clique no seletor de banco (depende de
+        // selectedDb); só limpa e avisa no primeiro carregamento deste id.
+        if (previousLoadedId !== loadedIdRef.current) {
+          resetEditorState();
+          Toast.warning({
+            content: i18n.t("diagram_not_found_locally"),
+            duration: 8,
+          });
+        }
         if (selectedDb === "") setShowSelectDbModal(true);
         return;
       }
