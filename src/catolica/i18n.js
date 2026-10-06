@@ -35,21 +35,9 @@ const resources = {
     shortcuts_title: "Atalhos do teclado",
     shortcuts_button: "Atalhos do teclado (?)",
     shortcuts_single_key_group: "Atalhos de uma tecla",
-    shortcuts_single_key_help:
-      "Funcionam fora de campos de texto. Se você começar a digitar uma palavra, a ação é desfeita sozinha.",
-    shortcuts_single_key_off:
-      "Desligados: as teclas T, A, N, O, F e ? não fazem nada no diagrama.",
-    shortcut_col_action: "Ação",
-    shortcut_col_keys: "Atalho",
-    shortcut_col_notes: "Observação",
     shortcut_group_edit: "Edição",
     shortcut_group_file: "Arquivo",
     shortcut_group_view: "Visualização",
-    shortcut_note_system: "Sistema",
-    shortcut_note_at_pointer: "Onde está o mouse",
-    shortcut_note_search: "Aba Tabelas",
-    shortcut_note_delete: "Repita se acabou de digitar",
-    shortcut_note_wheel: "Ou Ctrl + roda",
     shortcut_fit_diagram: "Ajustar diagrama à tela",
     shortcut_center_view: "Redefinir visualização",
     shortcut_zoom: "Aumentar / diminuir zoom",
@@ -60,7 +48,15 @@ const resources = {
     shortcut_edit_selected: "Editar elemento selecionado",
     shortcut_field_summary: "Mostrar resumo dos campos",
     shortcut_dbml_editor: "Abrir editor DBML",
-    shortcut_used: "{{action}} (atalho {{key}}). Ctrl+Z desfaz.",
+    shortcut_theme: "Alternar tema claro/escuro",
+    shortcut_hint_table:
+      "Tabela criada pelo atalho T. Pressione Ctrl+Z para desfazer.",
+    shortcut_hint_area:
+      "Área criada pelo atalho A. Pressione Ctrl+Z para desfazer.",
+    shortcut_hint_note:
+      "Nota criada pelo atalho N. Pressione Ctrl+Z para desfazer.",
+    shortcut_hint_arrange:
+      "Diagrama organizado pelo atalho O. Pressione Ctrl+Z para voltar ao layout e ao zoom anteriores.",
     shortcut_typing_detected:
       "Parece que você está digitando fora de um campo de texto, então o atalho foi ignorado ou desfeito. Clique no campo onde quer escrever.",
     shortcut_delete_blocked:
@@ -104,21 +100,9 @@ const resources = {
     shortcuts_title: "Keyboard shortcuts",
     shortcuts_button: "Keyboard shortcuts (?)",
     shortcuts_single_key_group: "Single-key shortcuts",
-    shortcuts_single_key_help:
-      "They work outside text fields. If you start typing a word, the action is undone automatically.",
-    shortcuts_single_key_off:
-      "Off: the T, A, N, O, F and ? keys do nothing in the diagram.",
-    shortcut_col_action: "Action",
-    shortcut_col_keys: "Shortcut",
-    shortcut_col_notes: "Notes",
     shortcut_group_edit: "Editing",
     shortcut_group_file: "File",
     shortcut_group_view: "View",
-    shortcut_note_system: "System",
-    shortcut_note_at_pointer: "At the mouse pointer",
-    shortcut_note_search: "Tables tab",
-    shortcut_note_delete: "Repeat if you just typed",
-    shortcut_note_wheel: "Or Ctrl + wheel",
     shortcut_fit_diagram: "Fit diagram to screen",
     shortcut_center_view: "Reset view",
     shortcut_zoom: "Zoom in / out",
@@ -129,7 +113,15 @@ const resources = {
     shortcut_edit_selected: "Edit selected element",
     shortcut_field_summary: "Show field summary",
     shortcut_dbml_editor: "Open DBML editor",
-    shortcut_used: "{{action}} ({{key}} shortcut). Ctrl+Z undoes it.",
+    shortcut_theme: "Toggle light/dark theme",
+    shortcut_hint_table:
+      "Table created with the T shortcut. Press Ctrl+Z to undo.",
+    shortcut_hint_area:
+      "Area created with the A shortcut. Press Ctrl+Z to undo.",
+    shortcut_hint_note:
+      "Note created with the N shortcut. Press Ctrl+Z to undo.",
+    shortcut_hint_arrange:
+      "Diagram arranged with the O shortcut. Press Ctrl+Z to return to the previous layout and zoom.",
     shortcut_typing_detected:
       "It looks like you are typing outside a text field, so the shortcut was ignored or undone. Click the field where you want to write.",
     shortcut_delete_blocked:

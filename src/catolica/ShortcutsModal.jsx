@@ -38,8 +38,8 @@ function Keys({ combos }) {
 function GroupHeader({ children, action }) {
   return (
     <tr>
-      <td colSpan={3} className="pb-1 pt-3">
-        <div className="flex items-center justify-between gap-3">
+      <td colSpan={2} className="pb-1 pt-3">
+        <div className="flex min-h-6 items-center justify-between gap-3">
           <span
             className="text-xs font-semibold uppercase tracking-wide"
             style={{ color: "var(--semi-color-primary)" }}
@@ -72,76 +72,52 @@ export default function ShortcutsModal({
       onCancel={onClose}
       footer={null}
       centered
-      width={620}
+      width={460}
       bodyStyle={{
         maxHeight: "70vh",
         overflowY: "auto",
         overflowX: "hidden",
+        // Reserva o espaço da barra de rolagem para ela não cobrir a chave.
+        scrollbarGutter: "stable",
+        paddingRight: 4,
         paddingBottom: 12,
       }}
     >
       <table className="w-full table-fixed border-collapse text-[13px]">
         <colgroup>
-          <col style={{ width: "40%" }} />
-          <col style={{ width: "34%" }} />
-          <col style={{ width: "26%" }} />
+          <col style={{ width: "56%" }} />
+          <col style={{ width: "44%" }} />
         </colgroup>
-        <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide opacity-50">
-            <th className="pb-1 font-medium">{t("shortcut_col_action")}</th>
-            <th className="pb-1 font-medium">{t("shortcut_col_keys")}</th>
-            <th className="pb-1 font-medium">{t("shortcut_col_notes")}</th>
-          </tr>
-        </thead>
         <tbody>
-          {SHORTCUT_GROUPS.map(({ group, items, singleKey }) => {
-            const hidden = singleKey && !prefs.singleKey;
-            return (
-              <Fragment key={group}>
-                <GroupHeader
-                  action={
-                    singleKey && (
-                      <Switch
-                        size="small"
-                        checked={prefs.singleKey}
-                        onChange={(checked) =>
-                          onChangePrefs({ ...prefs, singleKey: checked })
-                        }
-                        aria-label={t(group)}
-                      />
-                    )
-                  }
-                >
-                  {t(group)}
-                </GroupHeader>
-                {singleKey && (
-                  <tr>
-                    <td colSpan={3} className="pb-1.5 text-xs opacity-70">
-                      {t(
-                        hidden
-                          ? "shortcuts_single_key_off"
-                          : "shortcuts_single_key_help",
-                      )}
+          {SHORTCUT_GROUPS.map(({ group, items, singleKey }) => (
+            <Fragment key={group}>
+              <GroupHeader
+                action={
+                  singleKey && (
+                    <Switch
+                      size="small"
+                      checked={prefs.singleKey}
+                      onChange={(checked) =>
+                        onChangePrefs({ ...prefs, singleKey: checked })
+                      }
+                      aria-label={t(group)}
+                    />
+                  )
+                }
+              >
+                {t(group)}
+              </GroupHeader>
+              {(!singleKey || prefs.singleKey) &&
+                items.map((item) => (
+                  <tr key={item.id} className="border-t" style={borderStyle}>
+                    <td className="py-1 pr-3 align-middle">{t(item.label)}</td>
+                    <td className="py-1 align-middle">
+                      <Keys combos={item.keys} />
                     </td>
                   </tr>
-                )}
-                {!hidden &&
-                  items.map((item) => (
-                    <tr key={item.id} className="border-t" style={borderStyle}>
-                      <td className="py-1 pr-3 align-middle">
-                        {t(item.label)}
-                      </td>
-                      <td className="py-1 pr-3 align-middle">
-                        <Keys combos={item.keys} />
-                      </td>
-                      <td className="py-1 align-middle text-xs opacity-60">
-                        {item.note ? t(item.note) : ""}
-                      </td>
-                    </tr>
-                  ))}
-              </Fragment>
-            );
-          })}
+                ))}
+            </Fragment>
+          ))}
         </tbody>
       </table>
     </Modal>

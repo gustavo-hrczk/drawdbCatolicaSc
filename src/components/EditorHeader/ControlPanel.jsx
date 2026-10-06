@@ -236,6 +236,15 @@ export default function ControlPanel({
           updateView(element.id, element.undo);
         }
       }
+      if (a.view) {
+        // Volta o enquadramento e guarda o atual para o refazer.
+        setRedoStack((prev) => [
+          ...prev,
+          { ...a, view: { ...a.view, after: transform } },
+        ]);
+        setTransform(a.view.before);
+        return;
+      }
       setRedoStack((prev) => [...prev, a]);
       return;
     }
@@ -454,6 +463,7 @@ export default function ControlPanel({
           updateView(element.id, element.redo);
         }
       }
+      if (a.view?.after) setTransform(a.view.after);
       setUndoStack((prev) => [...prev, a]);
       return;
     }
@@ -798,6 +808,8 @@ export default function ControlPanel({
         bulk: true,
         message: t("auto_arrange"),
         elements,
+        // Enquadramento de antes, para o desfazer voltar também o zoom.
+        view: { before: transform },
       },
     ]);
     setRedoStack([]);
@@ -2092,6 +2104,16 @@ export default function ControlPanel({
     EDITOR_HOTKEY,
   );
   useHotkeys("mod+shift+g", viewGrid, EDITOR_HOTKEY);
+  useHotkeys("mod+alt+g", snapToGrid, EDITOR_HOTKEY);
+  useHotkeys(
+    "mod+alt+d",
+    () =>
+      setSettings((prev) => ({
+        ...prev,
+        mode: prev.mode === "dark" ? "light" : "dark",
+      })),
+    EDITOR_HOTKEY,
+  );
   useHotkeys("mod+up", zoomIn, EDITOR_HOTKEY);
   useHotkeys("mod+down", zoomOut, EDITOR_HOTKEY);
   useHotkeys("mod+shift+m", viewStrictMode, EDITOR_HOTKEY);
@@ -2145,21 +2167,21 @@ export default function ControlPanel({
       t: {
         run: () => addTable(undefined, true, tableAtPointer()),
         rollback: () => undoIfLast(isAdd(ObjectType.TABLE)),
-        label: t("add_table"),
+        hintText: t("shortcut_hint_table"),
         changes: true,
         hint: "first",
       },
       a: {
         run: () => addArea(undefined, true, pointerInDiagram()),
         rollback: () => undoIfLast(isAdd(ObjectType.AREA)),
-        label: t("add_area"),
+        hintText: t("shortcut_hint_area"),
         changes: true,
         hint: "first",
       },
       n: {
         run: () => addNote(undefined, true, pointerInDiagram()),
         rollback: () => undoIfLast(isAdd(ObjectType.NOTE)),
-        label: t("add_note"),
+        hintText: t("shortcut_hint_note"),
         changes: true,
         hint: "first",
       },
@@ -2174,7 +2196,7 @@ export default function ControlPanel({
           );
           restoreTransform();
         },
-        label: t("auto_arrange"),
+        hintText: t("shortcut_hint_arrange"),
         changes: true,
         hint: "always",
       },
@@ -2184,12 +2206,10 @@ export default function ControlPanel({
           fitWindow();
         },
         rollback: restoreTransform,
-        label: t("shortcut_fit_diagram"),
       },
       "?": {
         run: () => setShowShortcuts(true),
         rollback: () => setShowShortcuts(false),
-        label: t("shortcut_list"),
       },
     },
     onEscape: () =>
@@ -2293,7 +2313,7 @@ export default function ControlPanel({
         <div className="flex justify-start items-center">
           <LayoutDropdown />
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("zoom_out")} position="bottom">
+          <Tooltip content={`${t("zoom_out")} (Ctrl+↓)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-lg"
               onClick={() =>
@@ -2356,7 +2376,7 @@ export default function ControlPanel({
               </div>
             </div>
           </Dropdown>
-          <Tooltip content={t("zoom_in")} position="bottom">
+          <Tooltip content={`${t("zoom_in")} (Ctrl+↑)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-lg"
               onClick={() =>
@@ -2369,7 +2389,7 @@ export default function ControlPanel({
           <Divider layout="vertical" margin="8px" />
           <GridDropdown />
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("undo")} position="bottom">
+          <Tooltip content={`${t("undo")} (Ctrl+Z)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               disabled={undoStack.length === 0 || layout.readOnly}
@@ -2378,7 +2398,7 @@ export default function ControlPanel({
               <IconUndo size="large" />
             </button>
           </Tooltip>
-          <Tooltip content={t("redo")} position="bottom">
+          <Tooltip content={`${t("redo")} (Ctrl+Y)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               disabled={redoStack.length === 0 || layout.readOnly}
@@ -2435,7 +2455,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("save")} position="bottom">
+          <Tooltip content={`${t("save")} (Ctrl+S)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={save}
@@ -2469,7 +2489,7 @@ export default function ControlPanel({
             </>
           )}
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("theme")} position="bottom">
+          <Tooltip content={`${t("theme")} (Ctrl+Alt+D)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
               onClick={() => {

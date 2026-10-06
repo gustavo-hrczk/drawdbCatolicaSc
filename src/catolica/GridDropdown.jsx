@@ -12,6 +12,16 @@ const GRID_SIZES = [
 
 const tick = (on) => (on ? <IconCheckboxTick /> : <div className="px-2" />);
 
+// Texto do item com o atalho alinhado à direita, como nos menus do cabeçalho.
+function WithShortcut({ keys, children }) {
+  return (
+    <div className="flex w-full items-center justify-between gap-4">
+      <span>{children}</span>
+      <span className="text-xs opacity-60">{keys}</span>
+    </div>
+  );
+}
+
 // Menu da grade na barra de ferramentas: mostrar/ocultar, alinhar objetos à
 // grade e tamanho. Segue o padrão do LayoutDropdown do upstream.
 export default function GridDropdown() {
@@ -24,7 +34,7 @@ export default function GridDropdown() {
   return (
     <Dropdown
       position="bottomLeft"
-      style={{ width: "220px" }}
+      style={{ width: "290px" }}
       trigger="click"
       render={
         <Dropdown.Menu>
@@ -32,13 +42,13 @@ export default function GridDropdown() {
             icon={tick(settings.showGrid)}
             onClick={() => toggle("showGrid")}
           >
-            {t("show_grid")}
+            <WithShortcut keys="Ctrl+Shift+G">{t("show_grid")}</WithShortcut>
           </Dropdown.Item>
           <Dropdown.Item
             icon={tick(settings.snapToGrid)}
             onClick={() => toggle("snapToGrid")}
           >
-            {t("grid_snap")}
+            <WithShortcut keys="Ctrl+Alt+G">{t("grid_snap")}</WithShortcut>
           </Dropdown.Item>
           <Dropdown.Divider />
           <Dropdown.Title>{t("grid_size")}</Dropdown.Title>
@@ -61,7 +71,7 @@ export default function GridDropdown() {
       }
     >
       <div>
-        <Tooltip content={t("grid_menu")} position="bottom">
+        <Tooltip content={`${t("grid_menu")} (Ctrl+Shift+G)`} position="bottom">
           <div
             className={`py-1 px-2 hover-2 rounded-sm flex items-center justify-center gap-1 ${
               settings.showGrid ? "" : "opacity-50"

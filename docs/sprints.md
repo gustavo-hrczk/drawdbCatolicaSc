@@ -220,6 +220,22 @@ sem querer.
   atalhos de uma tecla viraram um grupo com a chave no cabeçalho; desligado, o grupo encolhe para
   uma linha. Saiu o aviso de "atalhos fixos".
 
+**Segunda rodada de ajustes (07/10/2026):**
+
+- Janela de atalhos com duas colunas (sem "Observação" e sem textos de ajuda), largura 460 px,
+  espaço reservado para a barra de rolagem (a chave do grupo ficava parcialmente coberta).
+- Atalhos nas dicas de todos os botões da barra (zoom, grade, desfazer, refazer, salvar, tema).
+- Novos atalhos: **Ctrl+Alt+D** alterna tema claro/escuro e **Ctrl+Alt+G** alinha objetos à grade
+  (Ctrl+Alt com essas letras não produz caractere no AltGr do ABNT2). O menu da grade mostra os
+  atalhos ao lado das opções.
+- Dicas reescritas: "Tabela criada pelo atalho T. Pressione Ctrl+Z para desfazer." (idem área e
+  nota) e "Diagrama organizado pelo atalho O. Pressione Ctrl+Z para voltar ao layout e ao zoom
+  anteriores."
+- **Esc fecha as mensagens flutuantes** ("Tabela excluída" etc.); se havia mensagem, esse Esc não
+  faz mais nada.
+- **Organizar automaticamente guarda o enquadramento:** Ctrl+Z volta posições e zoom; Ctrl+Y
+  reaplica os dois (vale para o botão e para a tecla O).
+
 **Fase B (pendente):** personalização das teclas. O catálogo `src/catolica/shortcuts.js` já tem
 ids estáveis por ação; falta ler as teclas do catálogo nos `useHotkeys` do `ControlPanel.jsx`,
 captura de nova combinação, bloqueio de conflitos e de combinações reservadas pelo navegador.

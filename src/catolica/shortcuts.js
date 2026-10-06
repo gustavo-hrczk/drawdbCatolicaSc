@@ -4,8 +4,8 @@
 // um id estável, para permitir personalização no futuro.
 //
 // label: chave de tradução; keys: combinações (cada uma é uma lista de
-// teclas); note: chave de tradução da observação. O grupo com singleKey é o
-// dos atalhos de uma tecla, que a janela mostra ou oculta conforme a chave.
+// teclas). O grupo com singleKey é o dos atalhos de uma tecla, que a janela
+// mostra ou oculta conforme a chave.
 export const SHORTCUT_GROUPS = [
   {
     group: "shortcuts_single_key_group",
@@ -15,19 +15,16 @@ export const SHORTCUT_GROUPS = [
         id: "add_table",
         label: "add_table",
         keys: [["T"]],
-        note: "shortcut_note_at_pointer",
       },
       {
         id: "add_area",
         label: "add_area",
         keys: [["A"]],
-        note: "shortcut_note_at_pointer",
       },
       {
         id: "add_note",
         label: "add_note",
         keys: [["N"]],
-        note: "shortcut_note_at_pointer",
       },
       { id: "auto_arrange", label: "auto_arrange", keys: [["O"]] },
       { id: "fit", label: "shortcut_fit_diagram", keys: [["F"]] },
@@ -50,26 +47,22 @@ export const SHORTCUT_GROUPS = [
         id: "copy",
         label: "copy",
         keys: [["Ctrl", "C"]],
-        note: "shortcut_note_system",
       },
       {
         id: "cut",
         label: "cut",
         keys: [["Ctrl", "X"]],
-        note: "shortcut_note_system",
       },
       {
         id: "paste",
         label: "paste",
         keys: [["Ctrl", "V"]],
-        note: "shortcut_note_system",
       },
       { id: "duplicate", label: "duplicate", keys: [["Ctrl", "D"]] },
       {
         id: "delete",
         label: "delete",
         keys: [["Delete"]],
-        note: "shortcut_note_delete",
       },
       { id: "edit", label: "shortcut_edit_selected", keys: [["Ctrl", "E"]] },
       { id: "deselect", label: "shortcut_deselect", keys: [["Esc"]] },
@@ -77,7 +70,6 @@ export const SHORTCUT_GROUPS = [
         id: "search",
         label: "shortcut_search_table",
         keys: [["Ctrl", "F"]],
-        note: "shortcut_note_search",
       },
     ],
   },
@@ -106,10 +98,11 @@ export const SHORTCUT_GROUPS = [
           ["Ctrl", "↑"],
           ["Ctrl", "↓"],
         ],
-        note: "shortcut_note_wheel",
       },
       { id: "pan", label: "shortcut_pan", keys: [["←"], ["↑"], ["→"], ["↓"]] },
       { id: "grid", label: "show_grid", keys: [["Ctrl", "Shift", "G"]] },
+      { id: "snap", label: "grid_snap", keys: [["Ctrl", "Alt", "G"]] },
+      { id: "theme", label: "shortcut_theme", keys: [["Ctrl", "Alt", "D"]] },
       { id: "strict", label: "strict_mode", keys: [["Ctrl", "Shift", "M"]] },
       {
         id: "field_summary",

@@ -79,10 +79,11 @@ export function allowDelete() {
   return false;
 }
 
-// singleKeys: { tecla: { run, rollback, label, changes, hint } }, com a tecla
-// em minúscula (ou "?"). changes: altera o diagrama (bloqueado em somente
-// leitura). hint: "first" (dica nas primeiras vezes) ou "always".
-// onEscape e onFind: Esc e Ctrl+F; onFind devolve true se tratou o atalho.
+// singleKeys: { tecla: { run, rollback, changes, hint, hintText } }, com a
+// tecla em minúscula (ou "?"). changes: altera o diagrama (bloqueado em
+// somente leitura). hint: "first" (dica nas primeiras vezes) ou "always";
+// hintText: texto da dica. onEscape e onFind: Esc e Ctrl+F; onFind devolve
+// true se tratou o atalho. Esc também fecha as mensagens flutuantes.
 export default function useSafeKeyShortcuts({
   singleKeys,
   enabled,
@@ -109,21 +110,15 @@ export default function useSafeKeyShortcuts({
       });
     };
 
-    const showHint = (key, action) => {
-      if (!action.hint) return;
+    const showHint = (action) => {
+      if (!action.hint || !action.hintText) return;
       if (action.hint === "first") {
         const prefs = readShortcutPrefs();
         const shown = prefs.hintsShown ?? 0;
         if (shown >= USAGE_HINTS) return;
         writeShortcutPrefs({ ...prefs, hintsShown: shown + 1 });
       }
-      Toast.info({
-        content: configRef.current.t("shortcut_used", {
-          action: action.label,
-          key: key.toUpperCase(),
-        }),
-        duration: 3,
-      });
+      Toast.info({ content: action.hintText, duration: 3 });
     };
 
     const onKeyDown = (e) => {
@@ -138,7 +133,7 @@ export default function useSafeKeyShortcuts({
         return;
       }
       if (e.key === "Escape") {
-        if (!hasOpenOverlay()) config.onEscape?.();
+        if (!closedToastsOn.has(e) && !hasOpenOverlay()) config.onEscape?.();
         return;
       }
       if (withMod || e.altKey || e.key.length !== 1) return;
@@ -186,10 +181,27 @@ export default function useSafeKeyShortcuts({
       e.preventDefault();
       action.run();
       lastRun = { key, at: now };
-      showHint(key, action);
+      showHint(action);
     };
 
+    // Esc fecha as mensagens flutuantes ("Tabela excluída" etc.), em qualquer
+    // lugar da tela. Se fechou alguma, esse Esc não faz mais nada.
+    const closedToastsOn = new WeakSet();
+    const onEscapeToasts = (e) => {
+      if (e.key !== "Escape") return;
+      const visible = [...document.querySelectorAll(".semi-toast")].some(
+        (toast) => !/animation-hide/.test(String(toast.className)),
+      );
+      if (!visible) return;
+      Toast.destroyAll();
+      closedToastsOn.add(e);
+    };
+
+    document.addEventListener("keydown", onEscapeToasts, true);
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onEscapeToasts, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
 }
