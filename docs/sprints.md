@@ -82,7 +82,7 @@ local. Detalhes:
 - "Sair" espera o save terminar; se o save falhar, avisa e não sai.
 - Correção pós-homologação (06/10/2026): o aviso de diagrama inexistente se repetia a cada clique
   no seletor de banco (o `load` roda de novo quando `selectedDb` muda). Agora avisa uma vez por
-  diagrama.
+  diagrama, fecha sozinho após 5 segundos e some assim que um banco é escolhido.
 
 ## Sprint 1B: Persistência da edição (auto-save, Ctrl+C/V, Ctrl+Z/Y)
 

@@ -70,6 +70,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     useState(readDismissedBanners);
   const pendingNewIdRef = useRef(null);
   const loadedIdRef = useRef(null);
+  const notFoundToastRef = useRef(null);
   const { layout, setLayout } = useLayout();
   const { settings } = useSettings();
   const { types, setTypes } = useTypes();
@@ -346,9 +347,9 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         // selectedDb); só limpa e avisa no primeiro carregamento deste id.
         if (previousLoadedId !== loadedIdRef.current) {
           resetEditorState();
-          Toast.warning({
+          notFoundToastRef.current = Toast.warning({
             content: i18n.t("diagram_not_found_locally"),
-            duration: 8,
+            duration: 5,
           });
         }
         if (selectedDb === "") setShowSelectDbModal(true);
@@ -633,7 +634,14 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
           {Object.values(databases).map((x) => (
             <div
               key={x.name}
-              onClick={() => setSelectedDb(x.label)}
+              onClick={() => {
+                setSelectedDb(x.label);
+                // A escolha do banco responde ao aviso de diagrama inexistente.
+                if (notFoundToastRef.current) {
+                  Toast.close(notFoundToastRef.current);
+                  notFoundToastRef.current = null;
+                }
+              }}
               className={`space-y-3 p-3 rounded-md border-2 select-none ${
                 settings.mode === "dark"
                   ? "bg-zinc-700 hover:bg-zinc-600"
