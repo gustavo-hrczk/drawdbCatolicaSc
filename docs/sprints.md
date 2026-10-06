@@ -161,6 +161,12 @@ Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
   - **Versões removida:** dependia de gists no drawdb-server ("Registrar versão" falhava com a
     requisição para `localhost:5000`). O botão só aparece se houver servidor configurado
     (`src/catolica/features.js`).
+  - Nome do diagrama no título da aba do navegador, cortado em 40 caracteres
+    (`src/catolica/tabTitle.js`). O link continua com o código do diagrama (decisão do
+    mantenedor).
+  - Mensagem para link de diagrama inexistente explica que links só abrem diagramas do mesmo
+    navegador e perfil e como receber o diagrama de outra pessoa. Validado: o mesmo link em
+    outra aba do mesmo navegador abre normalmente.
 
 ## Sprint 1C: Exportação e importação, os três casos de entrega
 
