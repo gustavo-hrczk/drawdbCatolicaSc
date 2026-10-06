@@ -65,6 +65,7 @@ export const SHORTCUT_GROUPS = [
         keys: [["Delete"]],
       },
       { id: "edit", label: "shortcut_edit_selected", keys: [["Ctrl", "E"]] },
+      { id: "rename", label: "rename_selected", keys: [["F2"]] },
       { id: "deselect", label: "shortcut_deselect", keys: [["Esc"]] },
       {
         id: "search",

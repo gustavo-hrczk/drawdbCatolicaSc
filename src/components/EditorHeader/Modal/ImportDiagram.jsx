@@ -14,14 +14,12 @@ import {
 } from "../../../hooks";
 import { useTranslation } from "react-i18next";
 import { fromDBML } from "../../../utils/importFrom/dbml";
-import { databases } from "../../../data/databases";
 
 export default function ImportDiagram({
   setImportData,
   error,
   setError,
   importFrom,
-  importAsNew = false,
 }) {
   const { areas } = useAreas();
   const { notes } = useNotes();
@@ -77,17 +75,7 @@ export default function ImportDiagram({
       jsonObject.database = DB.GENERIC;
     }
 
-    if (importAsNew && !databases[jsonObject.database]) {
-      setError({
-        type: STATUS.ERROR,
-        message: t("unknown_database_in_file"),
-      });
-      return;
-    }
-
-    // Como diagrama novo, o arquivo traz o próprio banco; só importa a
-    // compatibilidade quando ele substitui o diagrama aberto.
-    if (!importAsNew && jsonObject.database !== database) {
+    if (jsonObject.database !== database) {
       setError({
         type: STATUS.ERROR,
         message: t("imported_diagram_database_mismatch"),
@@ -131,12 +119,7 @@ export default function ImportDiagram({
     if (!ok) return;
 
     setImportData(jsonObject);
-    if (importAsNew) {
-      setError({
-        type: STATUS.OK,
-        message: t("ready_to_import_as_new"),
-      });
-    } else if (diagramIsEmpty()) {
+    if (diagramIsEmpty()) {
       setError({
         type: STATUS.OK,
         message: t("ready_to_import"),

@@ -3,7 +3,7 @@
 Plano de evolução do fork, um sprint por vez. Os sprints são desenvolvidos na branch `homolog`
 e validados no ambiente de testes (`/drawdbCatolicaSc/teste/`). Quando a homologação chega a um
 ponto estável e validado, o mantenedor publica uma versão (PR para a `main`, tag e release),
-conforme `docs/versionamento.md` (decisão de 08/10/2026; antes era um PR único no fim). Toda
+conforme `docs/versionamento.md` (decisão de 06/10/2026; antes era um PR único no fim). Toda
 mudança visível ao usuário entra no `CHANGELOG.md`. Atualize o status ao concluir.
 
 Princípio: código institucional em arquivos próprios; o núcleo do upstream só é alterado quando
@@ -14,7 +14,7 @@ for inevitável (ver `CLAUDE.md`).
 | 0 | Base do projeto | em parte: branch e homologação prontas |
 | 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
-| 1C | Exportação e importação: os três casos de entrega | 1C.1 (núcleo e testes) concluído na `homolog`; 1C.2 (interface) pendente |
+| 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
@@ -155,7 +155,7 @@ Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
     do diagrama anterior no novo.
   - **Bug do upstream:** abrir `/editor` (link "Editor" da home) duplicava o último diagrama a
     cada visita, e o aluno passava a editar a cópia. Reproduzido no build de produção e corrigido.
-- **Validação manual (07/10/2026):** os quatro testes manuais foram aprovados pelo mantenedor.
+- **Validação manual (06/10/2026):** os quatro testes manuais foram aprovados pelo mantenedor.
 - **Ajustes pós-homologação:**
   - Indicador de salvamento sem piscar: horário com precisão de minuto e "Salvando..." só se o
     save demorar mais de 1 s (`src/catolica/SaveStatus.jsx`).
@@ -173,10 +173,10 @@ Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
 
 ## Sprint 1D: Atalhos do teclado
 
-Pedido do mantenedor em 07/10/2026, feito antes do 1C. A prioridade é evitar atalhos acionados
+Pedido do mantenedor em 06/10/2026, feito antes do 1C. A prioridade é evitar atalhos acionados
 sem querer.
 
-**Fase A (concluída, 07/10/2026):**
+**Fase A (concluída, 06/10/2026):**
 
 - Novos atalhos: **T** (tabela), **A** (área), **N** (nota), **F** (ajustar à tela), **?** (lista de
   atalhos), **Esc** (desmarcar) e **Ctrl+F** (abre a busca da aba Tabelas; fora dela, continua
@@ -203,7 +203,7 @@ sem querer.
 - Limite conhecido: quem digita muito devagar fora de um campo (mais de 0,4 s entre letras) pode
   acionar um atalho; a dica de Ctrl+Z e a opção de desligar cobrem esse caso.
 
-**Ajustes pós-homologação (07/10/2026):**
+**Ajustes pós-homologação (06/10/2026):**
 
 - **Sem atraso:** a espera de 0,4 s incomodava. Agora a ação é imediata e, se outra tecla chegar
   em até 0,7 s (começo de uma palavra), ela é desfeita sozinha, sem deixar rastro no Refazer.
@@ -222,7 +222,7 @@ sem querer.
   atalhos de uma tecla viraram um grupo com a chave no cabeçalho; desligado, o grupo encolhe para
   uma linha. Saiu o aviso de "atalhos fixos".
 
-**Segunda rodada de ajustes (07/10/2026):**
+**Segunda rodada de ajustes (06/10/2026):**
 
 - Janela de atalhos com duas colunas (sem "Observação" e sem textos de ajuda), largura 460 px,
   espaço reservado para a barra de rolagem (a chave do grupo ficava parcialmente coberta).
@@ -306,13 +306,47 @@ extras; JSON antigo sem metadados; acentos e emojis nos nomes.
 Aceite: enviar e baixar os três casos pelo MS Teams da instituição (chat e Tarefas), conferindo
 nomes, abertura no Windows e reimportação no editor; Chrome, Edge, Opera e Firefox.
 
-**1C.1, núcleo (08/10/2026):** módulos sem interface em `src/catolica/files/`: `naming.js` (nomes e
+**1C.1, núcleo (06/10/2026):** módulos sem interface em `src/catolica/files/`: `naming.js` (nomes e
 datas locais), `sql.js` (SQL pelos exportadores do upstream, sem nenhuma linha nossa; hash
 normalizado), `diagramJson.js` (JSON v1 compatível com o drawDB original, metadados em
 `catolica`), `zipPackage.js` (pacote e leitura com limites) e `importPlan.js` (encaixe por
 conteúdo). 72 testes com Vitest (`npm test`, também rodam no deploy da homologação); conferido
 que quebrar de propósito a normalização de CRLF, a remoção de BOM ou a comparação do hash faz os
 testes certos falharem.
+
+**1C.2, interface (06/10/2026):**
+
+- Arquivo → **Exportar para entrega…**: janela com as três opções e os nomes dos arquivos. Em
+  diagramas "Genérico", escolhe o banco do SQL (vem marcado o banco padrão). O pacote leva a
+  imagem em 2×; se ela não puder ser gerada, o pacote sai sem a imagem e o LEIA-ME não a cita.
+- Arquivo → Importar → **Arquivo do diagrama (.json, .sql, .zip)** e Ctrl+I: uma janela só, com
+  arrastar e soltar em qualquer ponto dela, resumo antes de abrir e situação do encaixe. Mesmo
+  arquivo importado de novo (`importedFrom.exportId`): oferece "Abrir o existente" ou "Importar
+  uma nova cópia". SQL que não confere: abre pelo JSON e oferece abrir o SQL como outro diagrama
+  (com volta). O importado é sempre um diagrama novo. A importação antiga de JSON, que substituía
+  o diagrama aberto, saiu do menu; `Modal.jsx` e `ImportDiagram.jsx` voltaram ao código do
+  upstream.
+- Só o SQL: mesmo conversor do "Importar de SQL" do upstream, com escolha do banco, tabelas
+  organizadas como no "Organizar automaticamente" e diagrama enquadrado na tela.
+- Configurações → **Banco de dados padrão** (marca o atual); o seletor de banco de diagramas
+  novos já vem com ele marcado. Título padrão "Diagrama sem título". Diagramas novos e
+  importados gravam a data de criação.
+- **F2** (pedido do mantenedor nesta etapa): renomeia a tabela, área, nota ou view selecionada.
+  Abre a edição do elemento com o nome selecionado; Enter confirma e Esc volta o nome anterior,
+  sem deixar entrada no desfazer. Funciona com e sem o painel lateral, também com o cursor no
+  texto de uma nota, e está no menu Editar e na janela de atalhos.
+- Conferido no build de homologação local: os três casos de exportação (conteúdo do ZIP, imagem e
+  LEIA-ME), ida e volta do ZIP, duplicata, par com nomes diferentes, SQL alterado, CRLF com BOM,
+  RAR, `.docx`, dois JSON, SQL com erro (linha e coluna) e SQL sozinho; F2 em tabela e nota, com
+  e sem painel lateral; banco padrão no menu e no seletor de diagramas novos.
+
+**Defeito conhecido (upstream, decisão pendente):** o exportador do drawDB original, ao gerar
+PostgreSQL a partir de um diagrama "Genérico", escreve tipos que o PostgreSQL não aceita, como
+`text(65535)`. Nos modelos prontos, isso afeta "Human resources schema" e "E-commerce schema": o
+SQL não roda no PostgreSQL nem é reimportado pelo editor. Os testes marcam esses dois casos como
+falha esperada (`it.fails`) e vão avisar quando o defeito for corrigido. Como o SQL precisa ser
+idêntico ao do exportador, a correção deve ser feita no próprio exportador
+(`src/utils/exportSQL/generic.js`) e, de preferência, contribuída ao projeto original.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 
@@ -406,7 +440,7 @@ A definir depois das revisões em sala.
   exportador específico (draw.io, pgModeler etc.) entra no plano até haver demanda concreta. Os
   formatos do Sprint 1C (SQL, JSON, PNG, ZIP) já são padrões abertos.
 
-## Copiar e exportar o diagrama como imagem (08/10/2026)
+## Copiar e exportar o diagrama como imagem (06/10/2026)
 
 **Primeira tentativa (commit `2cb8f87`), que não funcionou:** atualizar o html-to-image para
 1.11.13 e filtrar as propriedades copiadas. Ficou rápido, mas as tabelas saíam sem estilo: a
@@ -431,7 +465,7 @@ upstream):
 - **Medido (modelo Blog, 5 tabelas e 6 relacionamentos, tema escuro):** 1339×720 px, ~120 KB,
   ~1,3 s, sem travamento perceptível. Imagem conferida visualmente nos temas claro e escuro e com
   área e nota; nomes cortados com "…" iguais aos da tela.
-## Pendências registradas em 07/10/2026
+## Pendências registradas em 06/10/2026
 
 - **Sprint 1E, Histórico de versões (aprovado):** botão "Histórico de versões" no lugar de
   "Compartilhar", painel lateral à direita com as abas **Alterações** (registro com data e hora,
@@ -451,7 +485,7 @@ upstream):
   cópia. Abrir:". Padrão proposto: sucesso = "<Objeto> <particípio>." + `undo_hint` quando houver
   desfazer; botões no infinitivo; títulos sem ponto; atalhos no formato "Ctrl+Z".
 
-## Duplicidades e barra de menu (08/10/2026)
+## Duplicidades e barra de menu (06/10/2026)
 
 - Regra do mantenedor: remover só atalhos/comandos que fazem exatamente a mesma coisa; o mesmo
   comando em lugares diferentes (menu e barra) pode ficar, desde que chame a mesma função.

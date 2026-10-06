@@ -53,6 +53,8 @@ import {
 import { notifyDiagramLoaded } from "../catolica/editorEvents";
 import ConflictModal from "../catolica/ConflictModal";
 import { tabTitle } from "../catolica/tabTitle";
+import { untitledTitle } from "../catolica/i18n";
+import { preferredDatabase } from "../catolica/databasePreference";
 
 export const IdContext = createContext({
   gistId: "",
@@ -67,7 +69,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   const [gistId, setGistId] = useState("");
   const [version, setVersion] = useState("");
   const [loadedFromGistId, setLoadedFromGistId] = useState("");
-  const [title, setTitle] = useState("Untitled Diagram");
+  const [title, setTitle] = useState(untitledTitle);
   const [resize, setResize] = useState(false);
   const [toolbarContainer, setToolbarContainer] = useState(null);
   const [width, setWidth] = useState(SIDEPANEL_MIN_WIDTH);
@@ -235,8 +237,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       return;
     }
 
-    const isNew =
-      isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram);
+    const isNew = isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram);
     const savedId = isNew ? uuidv4() : loadedDiagramId;
 
     // A URL já aponta para outro diagrama, mas o load dele ainda não terminou:
@@ -255,7 +256,11 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     let failed = false;
     try {
       if (isNew) {
-        await db.diagrams.add({ diagramId: savedId, ...fields });
+        await db.diagrams.add({
+          diagramId: savedId,
+          createdAt: new Date(),
+          ...fields,
+        });
       } else {
         // Ler e gravar na mesma transação: outra aba não consegue gravar
         // entre a verificação da revisão e a escrita.
@@ -267,7 +272,11 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
           // O diagrama da URL não existe neste navegador (link de outro PC,
           // dados apagados): cria o registro em vez de "salvar" em nada.
           if (!current) {
-            await db.diagrams.add({ diagramId: savedId, ...fields });
+            await db.diagrams.add({
+              diagramId: savedId,
+              createdAt: new Date(),
+              ...fields,
+            });
             return;
           }
           // Conteúdo igual ao gravado: não gera revisão nova, para não criar
@@ -362,13 +371,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       console.warn("move to cloud failed:", err);
       setSaveState(State.ERROR);
     }
-  }, [
-    extensions,
-    loadedDiagramId,
-    buildCloudPayload,
-    setSaveState,
-    cloudLoad,
-  ]);
+  }, [extensions, loadedDiagramId, buildCloudPayload, setSaveState, cloudLoad]);
 
   const dismissMoveToCloud = () => {
     if (!loadedDiagramId) return;
@@ -421,7 +424,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       setUndoStack([]);
       setRedoStack([]);
       setTransform({ zoom: 1, pan: { x: 0, y: 0 } });
-      setTitle("Untitled diagram");
+      setTitle(untitledTitle());
       setGistId("");
       setLoadedFromGistId("");
       setLayout((prev) => ({ ...prev, readOnly: false }));
@@ -610,6 +613,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         await db.diagrams.add({
           ...fields,
           diagramId: newId,
+          createdAt: fields.lastModified,
           name: i18n.t("conflict_copy_name", {
             title,
             date: fields.lastModified.toLocaleString(),
@@ -769,9 +773,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
               <div className="pointer-events-none absolute inset-x-0 top-3 z-50 flex justify-center">
                 <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-blue-300 bg-blue-50 px-5 py-1.5 shadow-md dark:border-sky-900/50 dark:bg-sky-900/30">
                   <i className="bi bi-hdd" />
-                  <span className="text-sm">
-                    {t("move_to_cloud_prompt")}
-                  </span>
+                  <span className="text-sm">{t("move_to_cloud_prompt")}</span>
                   <Button
                     size="small"
                     theme="solid"
@@ -809,11 +811,12 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         okText={t("confirm")}
         visible={showSelectDbModal}
         onOk={() => {
-          if (selectedDb === "") return;
-          setDatabase(selectedDb);
+          // Sem escolha explícita, vale o banco padrão (Configurações).
+          const choice = selectedDb || preferredDatabase(settings);
+          setSelectedDb(choice);
+          setDatabase(choice);
           setShowSelectDbModal(false);
         }}
-        okButtonProps={{ disabled: selectedDb === "" }}
       >
         <div className="grid grid-cols-3 gap-4 place-content-center">
           {Object.values(databases).map((x) => (
@@ -831,7 +834,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
                 settings.mode === "dark"
                   ? "bg-zinc-700 hover:bg-zinc-600"
                   : "bg-zinc-100 hover:bg-zinc-200"
-              } ${selectedDb === x.label ? "border-zinc-400" : "border-transparent"}`}
+              } ${(selectedDb || preferredDatabase(settings)) === x.label ? "border-zinc-400" : "border-transparent"}`}
             >
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{x.name}</div>

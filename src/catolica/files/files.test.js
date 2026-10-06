@@ -30,6 +30,7 @@ import {
 } from "./diagramJson";
 import { buildPackage, readPackage } from "./zipPackage";
 import { planImport } from "./importPlan";
+import { parseSqlDiagram } from "./sqlImport";
 
 const TEMPLATES = [
   template1,
@@ -411,5 +412,41 @@ describe("importação: encaixe dos arquivos", () => {
   it("outros formatos são recusados", async () => {
     const plan = await planImport([{ name: "t.docx", bytes: bytes("x") }]);
     expect(plan).toMatchObject({ ok: false, error: "unsupported" });
+  });
+});
+
+describe("abrir um .sql como diagrama novo", () => {
+  // Defeito do exportador do upstream (docs/sprints.md, "Defeito conhecido"): de
+  // "Genérico" para PostgreSQL, campos TEXT com tamanho viram "text(65535)", que
+  // o PostgreSQL não aceita. it.fails passa enquanto o defeito existir e avisa
+  // quando ele for corrigido.
+  const knownUpstreamBug = (template, dialect) =>
+    dialect === DB.POSTGRES &&
+    ["Human resources schema", "E-commerce schema"].includes(template.title);
+
+  for (const dialect of [DB.POSTGRES, DB.MYSQL]) {
+    for (const template of TEMPLATES) {
+      const test = knownUpstreamBug(template, dialect) ? it.fails : it;
+      test(`${template.title} exportado e reimportado em ${dialect}`, () => {
+        const diagram = asDiagram(template);
+        const sql = diagramSql(diagram, dialect);
+        const parsed = parseSqlDiagram(`\uFEFF${sql}`, dialect);
+        expect(parsed.ok).toBe(true);
+        expect(parsed.data.database).toBe(dialect);
+        expect(parsed.data.tables.map((t) => t.name).sort()).toEqual(
+          diagram.tables.map((t) => t.name).sort(),
+        );
+        expect(parsed.data.relationships).toHaveLength(
+          diagram.relationships.length,
+        );
+      });
+    }
+  }
+
+  it("SQL com erro de sintaxe informa linha e coluna", () => {
+    const parsed = parseSqlDiagram("CREATE TABLE (\n  id INT", DB.POSTGRES);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error).toBe("sql_syntax");
+    expect(parsed.detail.line).toBeGreaterThan(0);
   });
 });

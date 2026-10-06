@@ -53,13 +53,18 @@ function isClosing(el) {
   );
 }
 
-export function hasOpenOverlay() {
-  return [...document.querySelectorAll(OVERLAY_SELECTOR)].some(
+// Janelas, painéis e menus abertos (visíveis e sem animação de saída).
+export function openOverlays() {
+  return [...document.querySelectorAll(OVERLAY_SELECTOR)].filter(
     (el) =>
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility !== "hidden" &&
       !isClosing(el),
   );
+}
+
+export function hasOpenOverlay() {
+  return openOverlays().length > 0;
 }
 
 function recentlyTypedInField() {

@@ -110,6 +110,9 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 - Persistência (Sprint 1B): o save local em `Workspace.jsx` confere a revisão (`lastModified`)
   dentro de uma transação, roda um save por vez e grava o histórico de desfazer no banco
   `drawDB-catolica`. Ao mexer no save, preserve essas garantias (ver `docs/sprints.md`).
+- Exportação e importação de entrega (Sprint 1C): núcleo testado em `src/catolica/files/` e
+  janelas `src/catolica/ExportDialog.jsx` e `ImportDialog.jsx`. O SQL exportado tem de ser
+  idêntico ao dos exportadores do upstream (há teste para isso); metadados do fork só no `.json`.
 
 ## Versionamento (público)
 

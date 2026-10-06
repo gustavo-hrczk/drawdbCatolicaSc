@@ -132,10 +132,20 @@ import {
 } from "../../catolica/shortcuts";
 import useSafeKeyShortcuts, {
   allowDelete,
+  openOverlays,
 } from "../../catolica/useSafeKeyShortcuts";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
 import GridDropdown, { SnapToGridButton } from "../../catolica/GridDropdown";
+import { untitledTitle } from "../../catolica/i18n";
+import ExportDialog from "../../catolica/ExportDialog";
+import ImportDialog from "../../catolica/ImportDialog";
+import { preferredDatabase } from "../../catolica/databasePreference";
+import {
+  canRename,
+  focusNameField,
+  openForRename,
+} from "../../catolica/renameField";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -665,7 +675,10 @@ export default function ControlPanel({
     }
   };
 
-  const fileImport = () => setModal(MODAL.IMPORT);
+  // Importar arquivo (.json, .sql, .zip) e exportar para entrega (Sprint 1C).
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const fileImport = () => setShowImportDialog(true);
   const viewGrid = () =>
     setSettings((prev) => ({ ...prev, showGrid: !prev.showGrid }));
   const snapToGrid = () =>
@@ -930,6 +943,13 @@ export default function ControlPanel({
         }));
       }
     }
+  };
+  // F2: abre a edição do elemento selecionado com o campo do nome em foco.
+  const rename = () => {
+    if (layout.readOnly || !canRename(selectedElement)) return;
+    if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
+    setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+    focusNameField(selectedElement.element, selectedElement.id, layout.sidebar);
   };
   const del = () => {
     if (layout.readOnly) {
@@ -1267,7 +1287,9 @@ export default function ControlPanel({
           {t("saved_as_copy")}{" "}
           <Typography.Text
             link={{
-              href: appUrl(`/editor/diagrams/${newId}${window.location.search}`),
+              href: appUrl(
+                `/editor/diagrams/${newId}${window.location.search}`,
+              ),
               target: "_blank",
               rel: "noopener noreferrer",
             }}
@@ -1396,7 +1418,7 @@ export default function ControlPanel({
             } else {
               await db.diagrams.where("diagramId").equals(diagramId).delete();
             }
-            setTitle("Untitled diagram");
+            setTitle(untitledTitle());
             setTables([]);
             setRelationships([]);
             setAreas([]);
@@ -1416,12 +1438,8 @@ export default function ControlPanel({
       import_from: {
         children: [
           {
-            function: () => {
-              setModal(MODAL.IMPORT);
-              setImportFrom(IMPORT_FROM.JSON);
-            },
-            name: "JSON",
-            disabled: layout.readOnly,
+            function: fileImport,
+            name: t("import_file_child"),
           },
           {
             function: () => {
@@ -1493,6 +1511,9 @@ export default function ControlPanel({
           setModal(MODAL.IMPORT_SRC);
         },
         disabled: layout.readOnly,
+      },
+      export_delivery: {
+        function: () => setShowExportDialog(true),
       },
       export_source: {
         ...(database === DB.GENERIC && {
@@ -1796,6 +1817,11 @@ export default function ControlPanel({
         shortcut: "Ctrl+E",
         disabled: layout.readOnly,
       },
+      rename_selected: {
+        function: rename,
+        shortcut: "F2",
+        disabled: layout.readOnly || !canRename(selectedElement),
+      },
       cut: {
         function: cut,
         shortcut: "Ctrl+X",
@@ -2027,6 +2053,18 @@ export default function ControlPanel({
         function: () => setModal(MODAL.CONFIG_CUSTOM_TYPES),
         disabled: layout.readOnly,
       },
+      default_database: {
+        children: Object.entries(databases).map(([key, info]) => ({
+          name: info.name,
+          label:
+            key === preferredDatabase(settings)
+              ? t("default_database_current")
+              : undefined,
+          function: () =>
+            setSettings((prev) => ({ ...prev, defaultDatabase: key })),
+        })),
+        function: () => {},
+      },
       language: {
         function: () => setModal(MODAL.LANGUAGE),
       },
@@ -2082,6 +2120,9 @@ export default function ControlPanel({
   useHotkeys("mod+s", save, EDITOR_HOTKEY);
   useHotkeys("mod+o", open, EDITOR_HOTKEY);
   useHotkeys("mod+e", edit, EDITOR_HOTKEY);
+  // F2 não digita texto: funciona também com o cursor num campo (por exemplo,
+  // no texto de uma nota recém-clicada).
+  useHotkeys("f2", rename, { ...EDITOR_HOTKEY, enableOnFormTags: true });
   useHotkeys("mod+d", duplicate, EDITOR_HOTKEY);
   useHotkeys(
     "delete",
@@ -2142,8 +2183,7 @@ export default function ControlPanel({
     const pointer = pointerInDiagram();
     if (!pointer) return null;
     const step = settings.gridSize ?? gridSize;
-    const snap = (v) =>
-      settings.snapToGrid ? Math.round(v / step) * step : v;
+    const snap = (v) => (settings.snapToGrid ? Math.round(v / step) * step : v);
     return { x: snap(pointer.x - tableWidth / 2), y: snap(pointer.y - 20) };
   };
 
@@ -2245,6 +2285,16 @@ export default function ControlPanel({
         onClose={() => setShowShortcuts(false)}
         prefs={shortcutPrefs}
         onChangePrefs={changeShortcutPrefs}
+      />
+      <ExportDialog
+        visible={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        title={title}
+        diagramId={diagramId}
+      />
+      <ImportDialog
+        visible={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
       />
       <Modal
         modal={modal}
@@ -2499,7 +2549,6 @@ export default function ControlPanel({
       </div>
     );
   }
-
 
   function header() {
     return (

@@ -12,7 +12,13 @@ export const LIMITS = {
 // Arquivos que o editor procura dentro de um pacote.
 const RELEVANT = /\.(json|ddb|sql)$/i;
 
-export function packageReadme({ title, exportedAt, dialectLabel, baseName }) {
+export function packageReadme({
+  title,
+  exportedAt,
+  dialectLabel,
+  baseName,
+  hasImage = true,
+}) {
   const lines = [
     `Diagrama: ${title || "(sem título)"}`,
     `Exportado em: ${exportedAt}`,
@@ -21,8 +27,11 @@ export function packageReadme({ title, exportedAt, dialectLabel, baseName }) {
     "Conteúdo:",
     `- ${baseName}.sql: script SQL para criar o banco de dados.`,
     `- ${baseName}.json: o diagrama completo, com o desenho. Para reabrir no editor, use`,
-    "  Arquivo > Importar e escolha este arquivo (ou o .zip inteiro).",
-    `- ${baseName}.png: imagem do diagrama, para visualizar sem o editor.`,
+    "  Arquivo > Importar > Arquivo do diagrama (ou Ctrl+I) e escolha este .zip",
+    "  inteiro ou o .json.",
+    hasImage
+      ? `- ${baseName}.png: imagem do diagrama, para visualizar sem o editor.`
+      : null,
     "",
     "Gerado pelo drawDB Católica SC, uma versão do drawDB (https://github.com/drawdb-io/drawdb).",
   ];
