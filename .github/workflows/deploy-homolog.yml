@@ -56,9 +56,9 @@ jobs:
         env:
           BASE_PATH: ${{ env.ROOT }}
 
-      - name: Lint e build homologação
+      - name: Lint, testes e build homologação
         working-directory: homolog
-        run: npm ci && npm run lint && npm run build
+        run: npm ci && npm run lint && npm test && npm run build
         env:
           BASE_PATH: ${{ env.ROOT }}teste/
           VITE_DB_NAME: drawDB-teste

@@ -75,6 +75,7 @@ grep -rnE "window\.open\(\"/|href: \`/|origin \+ \"/" src
 npm install
 npm run dev                                        # desenvolvimento (base /)
 npm run lint                                       # precisa passar: o CI roda lint
+npm test                                           # testes (Vitest); rodam no deploy da homologação
 BASE_PATH=/drawdbCatolicaSc/ npm run build         # simula o build de produção
 BASE_PATH=/drawdbCatolicaSc/ npx vite preview      # abrir http://localhost:4173/drawdbCatolicaSc/
 ```

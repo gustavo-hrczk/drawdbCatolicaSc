@@ -14,7 +14,7 @@ for inevitável (ver `CLAUDE.md`).
 | 0 | Base do projeto | em parte: branch e homologação prontas |
 | 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
-| 1C | Exportação e importação: os três casos de entrega | pendente (próximo) |
+| 1C | Exportação e importação: os três casos de entrega | 1C.1 (núcleo e testes) concluído na `homolog`; 1C.2 (interface) pendente |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
@@ -305,6 +305,14 @@ extras; JSON antigo sem metadados; acentos e emojis nos nomes.
 
 Aceite: enviar e baixar os três casos pelo MS Teams da instituição (chat e Tarefas), conferindo
 nomes, abertura no Windows e reimportação no editor; Chrome, Edge, Opera e Firefox.
+
+**1C.1, núcleo (08/10/2026):** módulos sem interface em `src/catolica/files/`: `naming.js` (nomes e
+datas locais), `sql.js` (SQL pelos exportadores do upstream, sem nenhuma linha nossa; hash
+normalizado), `diagramJson.js` (JSON v1 compatível com o drawDB original, metadados em
+`catolica`), `zipPackage.js` (pacote e leitura com limites) e `importPlan.js` (encaixe por
+conteúdo). 72 testes com Vitest (`npm test`, também rodam no deploy da homologação); conferido
+que quebrar de propósito a normalização de CRLF, a remoção de BOM ou a comparação do hash faz os
+testes certos falharem.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 
