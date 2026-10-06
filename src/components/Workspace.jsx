@@ -52,6 +52,7 @@ import {
 } from "../catolica/editorHistory";
 import { notifyDiagramLoaded } from "../catolica/editorEvents";
 import ConflictModal from "../catolica/ConflictModal";
+import { tabTitle } from "../catolica/tabTitle";
 
 export const IdContext = createContext({
   gistId: "",
@@ -452,8 +453,15 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         if (previousLoadedId !== loadedIdRef.current) {
           resetEditorState();
           notFoundToastRef.current = Toast.warning({
-            content: i18n.t("diagram_not_found_locally"),
-            duration: 5,
+            content: (
+              <div>
+                <div className="font-semibold">
+                  {i18n.t("diagram_not_found_title")}
+                </div>
+                <div>{i18n.t("diagram_not_found_body")}</div>
+              </div>
+            ),
+            duration: 8,
           });
         }
         baseRef.current = { diagramId: id, revision: null };
@@ -692,10 +700,13 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   }, [saveState, layout, save]);
 
   useEffect(() => {
-    document.title = "Editor | drawDB";
-
     load();
   }, [load]);
+
+  // Nome do diagrama na aba do navegador (antes era sempre "Editor | drawDB").
+  useEffect(() => {
+    document.title = tabTitle(title);
+  }, [title]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden theme">

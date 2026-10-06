@@ -4,8 +4,9 @@ import i18n from "../i18n/i18n";
 // gerar conflitos ao sincronizar as traduções com o upstream.
 const resources = {
   "pt-BR": {
-    diagram_not_found_locally:
-      "Este diagrama não está salvo neste navegador. O que você criar aqui será salvo como um novo diagrama.",
+    diagram_not_found_title: "Diagrama não encontrado neste navegador",
+    diagram_not_found_body:
+      "Links do editor só abrem diagramas salvos neste mesmo navegador e perfil. Para receber o diagrama de outra pessoa, peça o arquivo exportado e use Arquivo → Importar. O que você criar aqui será salvo como um novo diagrama.",
     ready_to_import_as_new:
       "Tudo certo. O arquivo será aberto como um novo diagrama, e o diagrama atual não será alterado.",
     diagram_imported: 'Diagrama "{{title}}" aberto e salvo neste navegador.',
@@ -33,8 +34,9 @@ const resources = {
       "Nada para colar: copie uma tabela, nota, área ou view do diagrama.",
   },
   en: {
-    diagram_not_found_locally:
-      "This diagram is not saved in this browser. Whatever you create here will be saved as a new diagram.",
+    diagram_not_found_title: "Diagram not found in this browser",
+    diagram_not_found_body:
+      "Editor links only open diagrams saved in this same browser and profile. To receive someone else's diagram, ask for the exported file and use File → Import. Whatever you create here will be saved as a new diagram.",
     ready_to_import_as_new:
       "All set. The file will open as a new diagram and the current one will not change.",
     diagram_imported: 'Diagram "{{title}}" opened and saved in this browser.',
