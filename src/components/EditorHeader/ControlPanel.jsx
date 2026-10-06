@@ -131,7 +131,7 @@ import useSafeKeyShortcuts, {
 } from "../../catolica/useSafeKeyShortcuts";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
-import GridDropdown from "../../catolica/GridDropdown";
+import GridDropdown, { SnapToGridButton } from "../../catolica/GridDropdown";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -2388,6 +2388,7 @@ export default function ControlPanel({
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
           <GridDropdown />
+          <SnapToGridButton />
           <Divider layout="vertical" margin="8px" />
           <Tooltip content={`${t("undo")} (Ctrl+Z)`} position="bottom">
             <button

@@ -49,14 +49,12 @@ const resources = {
     shortcut_field_summary: "Mostrar resumo dos campos",
     shortcut_dbml_editor: "Abrir editor DBML",
     shortcut_theme: "Alternar tema claro/escuro",
-    shortcut_hint_table:
-      "Tabela criada pelo atalho T. Pressione Ctrl+Z para desfazer.",
-    shortcut_hint_area:
-      "Área criada pelo atalho A. Pressione Ctrl+Z para desfazer.",
-    shortcut_hint_note:
-      "Nota criada pelo atalho N. Pressione Ctrl+Z para desfazer.",
-    shortcut_hint_arrange:
-      "Diagrama organizado pelo atalho O. Pressione Ctrl+Z para voltar ao layout e ao zoom anteriores.",
+    undo_hint: "Pressione Ctrl+Z para desfazer alterações.",
+    shortcut_hint_table: "Tabela criada pelo atalho T. $t(undo_hint)",
+    shortcut_hint_area: "Área criada pelo atalho A. $t(undo_hint)",
+    shortcut_hint_note: "Nota criada pelo atalho N. $t(undo_hint)",
+    shortcut_hint_arrange: "Diagrama organizado pelo atalho O. $t(undo_hint)",
+    snap_button: "Alinhar objetos à grade (Ctrl+Alt+G)",
     shortcut_typing_detected:
       "Parece que você está digitando fora de um campo de texto, então o atalho foi ignorado ou desfeito. Clique no campo onde quer escrever.",
     shortcut_delete_blocked:
@@ -114,14 +112,13 @@ const resources = {
     shortcut_field_summary: "Show field summary",
     shortcut_dbml_editor: "Open DBML editor",
     shortcut_theme: "Toggle light/dark theme",
-    shortcut_hint_table:
-      "Table created with the T shortcut. Press Ctrl+Z to undo.",
-    shortcut_hint_area:
-      "Area created with the A shortcut. Press Ctrl+Z to undo.",
-    shortcut_hint_note:
-      "Note created with the N shortcut. Press Ctrl+Z to undo.",
+    undo_hint: "Press Ctrl+Z to undo changes.",
+    shortcut_hint_table: "Table created with the T shortcut. $t(undo_hint)",
+    shortcut_hint_area: "Area created with the A shortcut. $t(undo_hint)",
+    shortcut_hint_note: "Note created with the N shortcut. $t(undo_hint)",
     shortcut_hint_arrange:
-      "Diagram arranged with the O shortcut. Press Ctrl+Z to return to the previous layout and zoom.",
+      "Diagram arranged with the O shortcut. $t(undo_hint)",
+    snap_button: "Snap objects to grid (Ctrl+Alt+G)",
     shortcut_typing_detected:
       "It looks like you are typing outside a text field, so the shortcut was ignored or undone. Click the field where you want to write.",
     shortcut_delete_blocked:

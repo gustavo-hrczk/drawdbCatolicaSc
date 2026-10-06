@@ -393,3 +393,23 @@ A definir depois das revisões em sala.
 - **06/10/2026, outras plataformas de diagrama:** não há como afirmar quais são usadas. Nenhum
   exportador específico (draw.io, pgModeler etc.) entra no plano até haver demanda concreta. Os
   formatos do Sprint 1C (SQL, JSON, PNG, ZIP) já são padrões abertos.
+
+## Pendências registradas em 07/10/2026
+
+- **Sprint 1E, Histórico de versões (aprovado):** botão "Histórico de versões" no lugar de
+  "Compartilhar", painel lateral à direita com as abas **Alterações** (registro com data e hora,
+  últimas 500) e **Versões** (automáticas ao abrir e a cada 10 min de edição; manuais com nome;
+  visualizar, restaurar sem perder o atual, baixar, renomear, excluir). Guarda: 20 automáticas
+  recentes + 1 por dia por 30 dias; manuais sem limite. Banco `drawDB-catolica`. Ordem: depois do
+  1C.
+- **Histórico no ZIP (1C + 1E):** é viável. O pacote do 1C reserva a pasta `historico/`; o 1E
+  passa a gravar `historico/alteracoes.json` (+ versão legível `alteracoes.txt`) e
+  `historico/versoes/<data>_<nome>.json` (formato JSON v1). Opção na exportação "Incluir histórico"
+  (decidir o padrão); ao importar um ZIP com histórico, as versões e o registro vêm junto, o que
+  permite levar o histórico para outro computador.
+- **Revisão geral de textos:** inventário em andamento (textos do fork em `src/catolica/i18n.js` e
+  textos do upstream usados nos mesmos fluxos). Inconsistências já vistas: "Ajustar à grade"
+  (menu Configurações, upstream) x "Alinhar objetos à grade" (barra); "Template salvo!" e
+  "Ops! Algo deu errado." fora do padrão; mensagens de exclusão sem a dica de desfazer; "Salvo como
+  cópia. Abrir:". Padrão proposto: sucesso = "<Objeto> <particípio>." + `undo_hint` quando houver
+  desfazer; botões no infinitivo; títulos sem ponto; atalhos no formato "Ctrl+Z".

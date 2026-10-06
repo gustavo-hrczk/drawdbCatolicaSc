@@ -44,12 +44,6 @@ export default function GridDropdown() {
           >
             <WithShortcut keys="Ctrl+Shift+G">{t("show_grid")}</WithShortcut>
           </Dropdown.Item>
-          <Dropdown.Item
-            icon={tick(settings.snapToGrid)}
-            onClick={() => toggle("snapToGrid")}
-          >
-            <WithShortcut keys="Ctrl+Alt+G">{t("grid_snap")}</WithShortcut>
-          </Dropdown.Item>
           <Dropdown.Divider />
           <Dropdown.Title>{t("grid_size")}</Dropdown.Title>
           {GRID_SIZES.map(({ size, label }) => (
@@ -83,5 +77,36 @@ export default function GridDropdown() {
         </Tooltip>
       </div>
     </Dropdown>
+  );
+}
+
+// Botão de ímã ao lado do menu da grade: liga/desliga o alinhamento dos
+// objetos à grade (mesmo que Ctrl+Alt+G). Destacado quando ligado.
+export function SnapToGridButton() {
+  const { t } = useTranslation();
+  const { settings, setSettings } = useSettings();
+  const on = Boolean(settings.snapToGrid);
+
+  return (
+    <Tooltip content={t("snap_button")} position="bottom">
+      <button
+        className="py-1 px-2 hover-2 rounded-sm text-lg"
+        aria-pressed={on}
+        aria-label={t("grid_snap")}
+        style={
+          on
+            ? {
+                color: "var(--semi-color-primary)",
+                backgroundColor: "var(--semi-color-primary-light-default)",
+              }
+            : undefined
+        }
+        onClick={() =>
+          setSettings((prev) => ({ ...prev, snapToGrid: !prev.snapToGrid }))
+        }
+      >
+        <i className="fa-solid fa-magnet" />
+      </button>
+    </Tooltip>
   );
 }
