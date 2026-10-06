@@ -1,8 +1,10 @@
 # Micro sprints
 
 Plano de evolução do fork, um sprint por vez. Os sprints são desenvolvidos na branch `homolog`
-e validados no ambiente de testes (`/drawdbCatolicaSc/teste/`). O PR para a `main` é único e só
-é aberto quando todos os sprints estiverem concluídos. Atualize o status ao concluir.
+e validados no ambiente de testes (`/drawdbCatolicaSc/teste/`). Quando a homologação chega a um
+ponto estável e validado, o mantenedor publica uma versão (PR para a `main`, tag e release),
+conforme `docs/versionamento.md` (decisão de 08/10/2026; antes era um PR único no fim). Toda
+mudança visível ao usuário entra no `CHANGELOG.md`. Atualize o status ao concluir.
 
 Princípio: código institucional em arquivos próprios; o núcleo do upstream só é alterado quando
 for inevitável (ver `CLAUDE.md`).
@@ -314,6 +316,8 @@ nomes, abertura no Windows e reimportação no editor; Chrome, Edge, Opera e Fir
 - Português como idioma padrão no editor: `pt-BR` como fallback e detecção, respeitando a
   escolha manual do usuário em Configurações → Idioma.
 - Navbar e rodapé em português.
+- Seção "Novidades" na home, lida do `CHANGELOG.md` (resumo das últimas versões, com link para
+  o histórico completo e para as releases do GitHub).
 
 ## Sprint 3: Acesso rápido na home
 

@@ -14,6 +14,9 @@ está neste repositório.
 - `src/main.jsx`: removido o Vercel Analytics (não se aplica fora da Vercel).
 - `.github/workflows/deploy-pages.yml`: build e publicação automáticos no GitHub Pages.
 
+As novidades e correções desta versão, além das listadas acima, estão em
+[`CHANGELOG.md`](CHANGELOG.md).
+
 Nada do editor foi removido. Os recursos pagos do drawDB Pro (nuvem, colaboração em tempo real,
 IA) dependem de servidores próprios do drawDB e não fazem parte do código aberto.
 

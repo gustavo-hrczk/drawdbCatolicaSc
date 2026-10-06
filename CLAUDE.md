@@ -88,8 +88,9 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 
 ## Homologação (ambiente de testes)
 
-- Os sprints são desenvolvidos na branch **`homolog`**. O PR para a `main` só é aberto quando
-  todos os sprints de [`docs/sprints.md`](docs/sprints.md) estiverem concluídos.
+- Os sprints são desenvolvidos na branch **`homolog`**. A `main` recebe a `homolog` por PR quando
+  o mantenedor decide publicar uma versão (ponto estável e validado), seguindo
+  [`docs/versionamento.md`](docs/versionamento.md).
 - Todo push na `homolog` dispara **Deploy homologação** (`.github/workflows/deploy-homolog.yml`),
   que publica a `main` em `/drawdbCatolicaSc/` e a `homolog` em `/drawdbCatolicaSc/teste/`.
 - A homologação usa o banco local `drawDB-teste` (`VITE_DB_NAME`) e mostra o selo
@@ -108,6 +109,16 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 - Persistência (Sprint 1B): o save local em `Workspace.jsx` confere a revisão (`lastModified`)
   dentro de uma transação, roda um save por vez e grava o histórico de desfazer no banco
   `drawDB-catolica`. Ao mexer no save, preserve essas garantias (ver `docs/sprints.md`).
+
+## Versionamento (público)
+
+- [`CHANGELOG.md`](CHANGELOG.md) é a fonte única das versões. **Toda mudança visível ao usuário
+  entra na seção `[Não lançado]` no mesmo commit**, em texto curto e sem termos técnicos; mudanças
+  só internas não entram. A futura tela inicial vai ler esse arquivo, então mantenha o formato
+  descrito no comentário do topo.
+- Versões seguem SemVer, com tag `vX.Y.Z` na `main` e GitHub Release. A primeira será a 1.0.0.
+  O `version` do `package.json` fica o do upstream. Passo a passo em
+  [`docs/versionamento.md`](docs/versionamento.md).
 
 ## Deploy
 
