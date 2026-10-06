@@ -11,8 +11,8 @@ for inevitável (ver `CLAUDE.md`).
 |---|---|---|
 | 0 | Base do projeto | em parte: branch e homologação prontas |
 | 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
-| 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | pendente (próximo) |
-| 1C | Exportação e importação: os três casos de entrega | pendente |
+| 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
+| 1C | Exportação e importação: os três casos de entrega | pendente (próximo) |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -124,6 +124,34 @@ Entregas:
 
 Aceite: testar recarregar, fechar e reabrir, trocar de diagrama, duas abas no mesmo diagrama e
 copiar/colar entre abas no Chrome, Edge, Opera e Firefox. Cumprir os critérios de aceite de save.
+
+**Resultado (06/10/2026):** implementado e validado no build de homologação local (Chromium).
+Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
+
+- **Auto-save:** além do save do upstream (a cada ação de desfazer), grava 0,8 s depois de
+  qualquer mudança de conteúdo, inclusive texto digitado sem sair do campo e zoom/enquadramento.
+  Grava na hora ao trocar de aba ou minimizar, avisa ao fechar a aba se algo não foi gravado e
+  mostra um aviso com botão "Ligar" quando o auto-save está desligado
+  (`src/catolica/EditorGuardian.jsx`, encaixado no slot `canvas-overlay`).
+- **Ctrl+Z / Ctrl+Y:** histórico salvo por diagrama no banco próprio `drawDB-catolica`
+  (100 passos, ~1 MB por pilha) e restaurado ao reabrir, só se a revisão bater com a do diagrama
+  (`src/catolica/editorHistory.js`). Ctrl+Shift+Z refaz.
+- **Ctrl+C / Ctrl+V / Ctrl+X:** eventos nativos `copy`/`cut`/`paste` (sem permissão), ignorados
+  dentro de campos de texto; cópia reserva no `localStorage` usada pelo menu Editar → Colar
+  quando o navegador bloqueia a leitura; aviso quando não há o que colar
+  (`src/catolica/clipboard.js`).
+- **Conflito entre abas:** o save confere a revisão dentro de uma transação. Se outra aba gravou
+  antes, nada é sobrescrito e a janela de conflito oferece salvar como cópia (recomendado),
+  descartar e recarregar ou substituir (`src/catolica/ConflictModal.jsx`). Aviso quando o mesmo
+  diagrama está aberto em outra aba (`BroadcastChannel`). Gravações sem mudança de conteúdo não
+  geram revisão nova, para não criar conflito falso.
+- **Correções no save encontradas durante os testes:**
+  - Saves simultâneos na mesma aba (o upstream chama o save de novo a cada mudança durante um
+    save em andamento) agora rodam em fila.
+  - O save ignora o intervalo entre a troca de URL e o fim do load, que podia gravar o conteúdo
+    do diagrama anterior no novo.
+  - **Bug do upstream:** abrir `/editor` (link "Editor" da home) duplicava o último diagrama a
+    cada visita, e o aluno passava a editar a cópia. Reproduzido no build de produção e corrigido.
 
 ## Sprint 1C: Exportação e importação, os três casos de entrega
 

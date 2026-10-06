@@ -101,7 +101,13 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   Deploy homologação manualmente (Actions → Run workflow).
 - Requisito no GitHub: Settings → Environments → `github-pages` → Deployment branches deve
   incluir `homolog`.
-- Código institucional novo fica em `src/catolica/`.
+- Código institucional novo fica em `src/catolica/`. Componentes do fork entram nos `<Slot>` do
+  upstream via `src/catolica/extensions.jsx` (o `ExtensionsContext.Provider` está no
+  `src/main.jsx`). Nunca definir ali chaves de nuvem (`cloudSave`, `cloudLoad`...), que mudam o
+  comportamento de salvamento. Textos próprios ficam em `src/catolica/i18n.js`.
+- Persistência (Sprint 1B): o save local em `Workspace.jsx` confere a revisão (`lastModified`)
+  dentro de uma transação, roda um save por vez e grava o histórico de desfazer no banco
+  `drawDB-catolica`. Ao mexer no save, preserve essas garantias (ver `docs/sprints.md`).
 
 ## Deploy
 

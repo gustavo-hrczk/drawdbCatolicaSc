@@ -1,5 +1,5 @@
 import { appUrl } from "../../utils/appUrl";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Slot, useExtensions } from "../../context/ExtensionsContext";
 import { createPortal } from "react-dom";
@@ -112,6 +112,12 @@ import { deleteFromCache, STORAGE_KEY } from "../../utils/cache";
 import { DateTime } from "luxon";
 import ConfigureCustomTypes from "./ConfigureCustomTypes";
 import { useDiagramList } from "./Modal/Open/hooks/useDiagramList";
+import {
+  hasTextSelection,
+  isTypingTarget,
+  lastCopied,
+  rememberCopied,
+} from "../../catolica/clipboard";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -955,89 +961,101 @@ export default function ControlPanel({
         break;
     }
   };
-  const copy = () => {
+  const selectionAsText = () => {
+    let element = null;
     switch (selectedElement.element) {
       case ObjectType.TABLE:
-        navigator.clipboard
-          .writeText(
-            JSON.stringify(tables.find((t) => t.id === selectedElement.id)),
-          )
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = tables.find((t) => t.id === selectedElement.id);
         break;
       case ObjectType.NOTE:
-        navigator.clipboard
-          .writeText(JSON.stringify({ ...notes[selectedElement.id] }))
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = notes[selectedElement.id] && { ...notes[selectedElement.id] };
         break;
       case ObjectType.AREA:
-        navigator.clipboard
-          .writeText(JSON.stringify({ ...areas[selectedElement.id] }))
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = areas[selectedElement.id] && { ...areas[selectedElement.id] };
         break;
       case ObjectType.VIEW:
-        navigator.clipboard
-          .writeText(
-            JSON.stringify(views.find((v) => v.id === selectedElement.id)),
-          )
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = views.find((v) => v.id === selectedElement.id);
         break;
       default:
         break;
     }
+    return element ? JSON.stringify(element) : null;
   };
-  const paste = () => {
+  const copy = () => {
+    const text = selectionAsText();
+    if (!text) return;
+    // A cópia reserva garante o colar mesmo se o navegador bloquear a área
+    // de transferência do sistema.
+    rememberCopied(text);
+    navigator.clipboard?.writeText(text).catch(() => {});
+  };
+  // Devolve true se o texto era um elemento do diagrama e foi colado.
+  const pasteText = (text) => {
+    let obj = null;
+    try {
+      obj = JSON.parse(text);
+    } catch (error) {
+      return false;
+    }
+    if (!obj || typeof obj !== "object") return false;
+    const v = new Validator();
+    if (v.validate(obj, viewSchema).valid) {
+      addView({
+        view: {
+          ...obj,
+          x: obj.x + 20,
+          y: obj.y + 20,
+          id: nanoid(),
+          columns: (obj.columns ?? []).map((c) => ({ ...c, id: nanoid() })),
+          joins: (obj.joins ?? []).map((j) => ({ ...j, id: nanoid() })),
+          conditions: (obj.conditions ?? []).map((c) => ({
+            ...c,
+            id: nanoid(),
+          })),
+        },
+        index: views.length,
+      });
+    } else if (v.validate(obj, tableSchema).valid) {
+      addTable({
+        table: {
+          ...obj,
+          x: obj.x + 20,
+          y: obj.y + 20,
+          id: nanoid(),
+        },
+      });
+    } else if (v.validate(obj, areaSchema).valid) {
+      addArea({
+        ...obj,
+        x: obj.x + 20,
+        y: obj.y + 20,
+        id: areas.length,
+      });
+    } else if (v.validate(obj, noteSchema).valid) {
+      addNote({
+        ...obj,
+        x: obj.x + 20,
+        y: obj.y + 20,
+        id: notes.length,
+      });
+    } else {
+      return false;
+    }
+    return true;
+  };
+  // Menu Editar → Colar. Ctrl+V usa o evento nativo "paste" (ver efeito abaixo),
+  // que não depende de permissão do navegador.
+  const paste = async () => {
     if (layout.readOnly) {
       return;
     }
-    navigator.clipboard.readText().then((text) => {
-      let obj = null;
-      try {
-        obj = JSON.parse(text);
-      } catch (error) {
-        return;
-      }
-      const v = new Validator();
-      if (v.validate(obj, viewSchema).valid) {
-        addView({
-          view: {
-            ...obj,
-            x: obj.x + 20,
-            y: obj.y + 20,
-            id: nanoid(),
-            columns: (obj.columns ?? []).map((c) => ({ ...c, id: nanoid() })),
-            joins: (obj.joins ?? []).map((j) => ({ ...j, id: nanoid() })),
-            conditions: (obj.conditions ?? []).map((c) => ({
-              ...c,
-              id: nanoid(),
-            })),
-          },
-          index: views.length,
-        });
-      } else if (v.validate(obj, tableSchema).valid) {
-        addTable({
-          table: {
-            ...obj,
-            x: obj.x + 20,
-            y: obj.y + 20,
-            id: nanoid(),
-          },
-        });
-      } else if (v.validate(obj, areaSchema).valid) {
-        addArea({
-          ...obj,
-          x: obj.x + 20,
-          y: obj.y + 20,
-          id: areas.length,
-        });
-      } else if (v.validate(obj, noteSchema).valid) {
-        addNote({
-          ...obj,
-          x: obj.x + 20,
-          y: obj.y + 20,
-          id: notes.length,
-        });
-      }
-    });
+    let text = null;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      text = lastCopied();
+    }
+    if (!pasteText(text)) Toast.info(t("nothing_to_paste"));
   };
   const cut = () => {
     if (layout.readOnly) {
@@ -1046,6 +1064,45 @@ export default function ControlPanel({
     copy();
     del();
   };
+
+  // Ctrl+C / Ctrl+X / Ctrl+V pelos eventos nativos da área de transferência:
+  // funcionam no Chrome, Edge, Opera e Firefox sem pedir permissão. As refs
+  // evitam registrar os ouvintes de novo a cada renderização.
+  const clipboardRef = useRef({});
+  clipboardRef.current = {
+    selectionAsText,
+    pasteText,
+    del,
+    readOnly: layout.readOnly,
+  };
+  useEffect(() => {
+    const onCopyOrCut = (e) => {
+      if (isTypingTarget(e.target) || hasTextSelection()) return;
+      const { selectionAsText, del, readOnly } = clipboardRef.current;
+      const text = selectionAsText();
+      if (!text) return;
+      e.preventDefault();
+      e.clipboardData?.setData("text/plain", text);
+      rememberCopied(text);
+      if (e.type === "cut" && !readOnly) del();
+    };
+    const onPaste = (e) => {
+      if (isTypingTarget(e.target)) return;
+      const { pasteText, readOnly } = clipboardRef.current;
+      if (readOnly) return;
+      e.preventDefault();
+      const text = e.clipboardData?.getData("text/plain") || lastCopied();
+      if (!pasteText(text)) Toast.info(t("nothing_to_paste"));
+    };
+    document.addEventListener("copy", onCopyOrCut);
+    document.addEventListener("cut", onCopyOrCut);
+    document.addEventListener("paste", onPaste);
+    return () => {
+      document.removeEventListener("copy", onCopyOrCut);
+      document.removeEventListener("cut", onCopyOrCut);
+      document.removeEventListener("paste", onPaste);
+    };
+  }, [t]);
   const toggleDBMLEditor = () => {
     setLayout((prev) => ({ ...prev, dbmlEditor: !prev.dbmlEditor }));
   };
@@ -2000,13 +2057,11 @@ export default function ControlPanel({
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
   useHotkeys("mod+z", undo, EDITOR_HOTKEY);
   useHotkeys("mod+y", redo, EDITOR_HOTKEY);
+  useHotkeys("mod+shift+z", redo, EDITOR_HOTKEY);
   useHotkeys("mod+s", save, EDITOR_HOTKEY);
   useHotkeys("mod+o", open, EDITOR_HOTKEY);
   useHotkeys("mod+e", edit, EDITOR_HOTKEY);
   useHotkeys("mod+d", duplicate, EDITOR_HOTKEY);
-  useHotkeys("mod+c", copy, EDITOR_HOTKEY);
-  useHotkeys("mod+v", paste, EDITOR_HOTKEY);
-  useHotkeys("mod+x", cut, EDITOR_HOTKEY);
   useHotkeys("delete", del, EDITOR_HOTKEY);
   useHotkeys("mod+shift+g", viewGrid, EDITOR_HOTKEY);
   useHotkeys("mod+up", zoomIn, EDITOR_HOTKEY);

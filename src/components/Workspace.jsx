@@ -42,6 +42,16 @@ import {
   readDismissedBanners,
   addDismissedBanner,
 } from "../utils/dismissedBanners";
+import {
+  compareWithSaved,
+  loadHistory,
+  pruneOrphanHistory,
+  revisionOf,
+  saveHistory,
+  SaveConflictError,
+} from "../catolica/editorHistory";
+import { notifyDiagramLoaded } from "../catolica/editorEvents";
+import ConflictModal from "../catolica/ConflictModal";
 
 export const IdContext = createContext({
   gistId: "",
@@ -71,6 +81,18 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   const pendingNewIdRef = useRef(null);
   const loadedIdRef = useRef(null);
   const notFoundToastRef = useRef(null);
+  // Revisão (lastModified) da versão salva que esta aba conhece, atrelada ao
+  // diagrama carregado. Se o banco tiver outra ao salvar, outra aba gravou no
+  // meio: é um conflito.
+  const baseRef = useRef({ diagramId: null, revision: null });
+  const conflictRef = useRef(false);
+  const forceSaveRef = useRef(false);
+  // Um save local por vez; se outro for pedido no meio, roda em seguida com
+  // os dados mais recentes (saveRef aponta para o save da última renderização).
+  const savingRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const saveRef = useRef(null);
+  const [conflict, setConflict] = useState(null);
   const { layout, setLayout } = useLayout();
   const { settings } = useSettings();
   const { types, setTypes } = useTypes();
@@ -141,6 +163,39 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     ],
   );
 
+  const buildLocalFields = useCallback(
+    () => ({
+      database: database,
+      name: title,
+      lastModified: new Date(),
+      tables: tables,
+      references: relationships,
+      notes: notes,
+      areas: areas,
+      views: views,
+      gistId: gistId ?? "",
+      pan: transform.pan,
+      zoom: transform.zoom,
+      loadedFromGistId: loadedFromGistId,
+      ...(databases[database].hasEnums && { enums: enums }),
+      ...(databases[database].hasTypes && { types: types }),
+    }),
+    [
+      database,
+      title,
+      tables,
+      relationships,
+      notes,
+      areas,
+      views,
+      gistId,
+      transform,
+      loadedFromGistId,
+      enums,
+      types,
+    ],
+  );
+
   const save = useCallback(async () => {
     if (searchParams.has("shareId")) {
       searchParams.delete("shareId");
@@ -173,71 +228,120 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       return;
     }
 
-    const fields = {
-      database: database,
-      name: title,
-      lastModified: new Date(),
-      tables: tables,
-      references: relationships,
-      notes: notes,
-      areas: areas,
-      views: views,
-      gistId: gistId ?? "",
-      pan: transform.pan,
-      zoom: transform.zoom,
-      loadedFromGistId: loadedFromGistId,
-      ...(databases[database].hasEnums && { enums: enums }),
-      ...(databases[database].hasTypes && { types: types }),
-    };
-
-    try {
-      if (isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram)) {
-        const diagramId = uuidv4();
-        await db.diagrams.add({ diagramId, ...fields });
-        navigate(`/editor/diagrams/${diagramId}`, { replace: true });
-      } else {
-        const updated = await db.diagrams
-          .where("diagramId")
-          .equals(loadedDiagramId)
-          .modify(fields);
-        // O diagrama da URL não existe neste navegador (link de outro PC,
-        // dados apagados): cria o registro em vez de "salvar" em nada.
-        if (updated === 0) {
-          await db.diagrams.add({ diagramId: loadedDiagramId, ...fields });
-        }
-      }
-      setSaveState(State.SAVED);
-      setLastSaved(new Date().toLocaleString());
-    } catch (err) {
-      console.error("local save failed:", err);
+    // Conflito pendente: não grava nada até o usuário decidir.
+    if (conflictRef.current) {
       setSaveState(State.ERROR);
+      return;
     }
+
+    const isNew =
+      isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram);
+    const savedId = isNew ? uuidv4() : loadedDiagramId;
+
+    // A URL já aponta para outro diagrama, mas o load dele ainda não terminou:
+    // o conteúdo em memória é do diagrama anterior. O load dispara o save de
+    // novo quando aplicar o diagrama certo.
+    if (!isNew && baseRef.current.diagramId !== savedId) return;
+
+    if (savingRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+    savingRef.current = true;
+
+    const fields = buildLocalFields();
+    let revision = revisionOf(fields.lastModified);
+    let failed = false;
+    try {
+      if (isNew) {
+        await db.diagrams.add({ diagramId: savedId, ...fields });
+      } else {
+        // Ler e gravar na mesma transação: outra aba não consegue gravar
+        // entre a verificação da revisão e a escrita.
+        await db.transaction("rw", db.diagrams, async () => {
+          const current = await db.diagrams
+            .where("diagramId")
+            .equals(savedId)
+            .first();
+          // O diagrama da URL não existe neste navegador (link de outro PC,
+          // dados apagados): cria o registro em vez de "salvar" em nada.
+          if (!current) {
+            await db.diagrams.add({ diagramId: savedId, ...fields });
+            return;
+          }
+          // Conteúdo igual ao gravado: não gera revisão nova, para não criar
+          // conflito falso com outra aba que tenha o mesmo diagrama aberto.
+          const change = compareWithSaved(current, fields);
+          if (change !== "content") {
+            if (change === "view") {
+              await db.diagrams
+                .where("diagramId")
+                .equals(savedId)
+                .modify({ pan: fields.pan, zoom: fields.zoom });
+            }
+            revision = revisionOf(current.lastModified);
+            return;
+          }
+          const known = baseRef.current.revision;
+          if (
+            !forceSaveRef.current &&
+            known != null &&
+            revisionOf(current.lastModified) !== known
+          ) {
+            throw new SaveConflictError(current.lastModified);
+          }
+          await db.diagrams.where("diagramId").equals(savedId).modify(fields);
+        });
+      }
+      forceSaveRef.current = false;
+      baseRef.current = { diagramId: savedId, revision };
+      await saveHistory(savedId, revision, undoStack, redoStack);
+    } catch (err) {
+      failed = true;
+      if (err instanceof SaveConflictError) {
+        conflictRef.current = true;
+        setConflict({ savedAt: err.savedAt });
+      } else {
+        console.error("local save failed:", err);
+      }
+      setSaveState(State.ERROR);
+    } finally {
+      savingRef.current = false;
+    }
+    if (failed) return;
+
+    if (pendingSaveRef.current) {
+      pendingSaveRef.current = false;
+      if (isNew) {
+        // Fica em "Salvando": o load do diagrama recém-criado dispara o save
+        // pendente já com o id novo (chamar agora criaria outro diagrama).
+        navigate(`/editor/diagrams/${savedId}`, { replace: true });
+      } else {
+        saveRef.current?.();
+      }
+      return;
+    }
+    if (isNew) navigate(`/editor/diagrams/${savedId}`, { replace: true });
+    setSaveState(State.SAVED);
+    setLastSaved(new Date().toLocaleString());
   }, [
+    buildLocalFields,
+    undoStack,
+    redoStack,
     cloudOnly,
     diagramSource,
     buildCloudPayload,
     extensions,
     searchParams,
     setSearchParams,
-    tables,
-    relationships,
-    notes,
-    areas,
-    views,
-    types,
-    title,
-    transform,
     setSaveState,
     setLastSaved,
-    database,
-    enums,
-    gistId,
-    loadedFromGistId,
     isDiagram,
     isTemplate,
     loadedDiagramId,
     navigate,
   ]);
+  saveRef.current = save;
 
   const moveToCloud = useCallback(async () => {
     if (typeof extensions.cloudSave !== "function" || !loadedDiagramId) return;
@@ -335,8 +439,8 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         if (selectedDb === "") setShowSelectDbModal(true);
         return;
       }
-      setDiagramSource("local");
-      applyDiagramState(diagram);
+      // Só redireciona; o load da nova URL aplica o diagrama. Aplicar aqui,
+      // com a URL ainda em /editor, fazia o auto-save criar uma cópia dele.
       navigate(`/editor/diagrams/${diagram.diagramId}`, { replace: true });
     };
 
@@ -352,9 +456,23 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
             duration: 5,
           });
         }
+        baseRef.current = { diagramId: id, revision: null };
         if (selectedDb === "") setShowSelectDbModal(true);
         return;
       }
+
+      // Busca o histórico antes de aplicar o diagrama, para que estado e
+      // pilhas de desfazer/refazer mudem juntos.
+      const revision = revisionOf(diagram.lastModified);
+      const history =
+        source === "local" ? await loadHistory(id, revision) : null;
+      baseRef.current = {
+        diagramId: id,
+        revision: source === "local" ? revision : null,
+      };
+      conflictRef.current = false;
+      setConflict(null);
+      notifyDiagramLoaded();
 
       setDiagramSource(source);
       if (source === "local") {
@@ -363,8 +481,8 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         setLayout((prev) => ({ ...prev, readOnly: !diagram.canWrite }));
       }
       applyDiagramState(diagram);
-      setUndoStack([]);
-      setRedoStack([]);
+      setUndoStack(history?.undo ?? []);
+      setRedoStack(history?.redo ?? []);
     };
 
     const loadTemplate = async (id) => {
@@ -473,6 +591,62 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     cloudOnly,
     i18n,
   ]);
+
+  const resolveConflict = async (choice) => {
+    if (choice === "copy") {
+      // Mantém as duas versões: a do banco fica como está e o conteúdo desta
+      // aba vira um diagrama novo.
+      const newId = uuidv4();
+      const fields = buildLocalFields();
+      try {
+        await db.diagrams.add({
+          ...fields,
+          diagramId: newId,
+          name: i18n.t("conflict_copy_name", {
+            title,
+            date: fields.lastModified.toLocaleString(),
+          }),
+          gistId: "",
+          loadedFromGistId: "",
+        });
+        await saveHistory(
+          newId,
+          revisionOf(fields.lastModified),
+          undoStack,
+          redoStack,
+        );
+      } catch (err) {
+        console.error(err);
+        Toast.error(i18n.t("oops_smth_went_wrong"));
+        return;
+      }
+      // A partir daqui esta aba é dona da cópia; nenhum save volta a tocar no
+      // diagrama original.
+      baseRef.current = {
+        diagramId: newId,
+        revision: revisionOf(fields.lastModified),
+      };
+      conflictRef.current = false;
+      setConflict(null);
+      setSaveState(State.SAVED);
+      navigate(`/editor/diagrams/${newId}`);
+      return;
+    }
+
+    conflictRef.current = false;
+    setConflict(null);
+    if (choice === "overwrite") {
+      forceSaveRef.current = true;
+      setSaveState(State.SAVING);
+    } else {
+      await load();
+      setSaveState(State.NONE);
+    }
+  };
+
+  useEffect(() => {
+    pruneOrphanHistory(db);
+  }, []);
 
   const returnToCurrentDiagram = async () => {
     await load();
@@ -692,6 +866,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       >
         {t("restore_warning")}
       </Modal>
+      <ConflictModal conflict={conflict} onResolve={resolveConflict} />
     </div>
   );
 }
