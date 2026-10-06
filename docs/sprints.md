@@ -394,20 +394,31 @@ A definir depois das revisões em sala.
   exportador específico (draw.io, pgModeler etc.) entra no plano até haver demanda concreta. Os
   formatos do Sprint 1C (SQL, JSON, PNG, ZIP) já são padrões abertos.
 
-## Correção de desempenho: copiar e exportar imagem (08/10/2026)
+## Copiar e exportar o diagrama como imagem (08/10/2026)
 
-- **Causa:** o html-to-image copiava todas as propriedades de estilo de cada elemento, inclusive
-  as centenas de variáveis de tema do Semi UI (~24 KB por elemento). Um diagrama de 7 tabelas
-  virava um SVG de 7,5 MB; além disso, embutia 4,3 MB de fontes de ícones a cada imagem.
-- **Correção** (`src/catolica/canvasImage.js`): html-to-image atualizado para 1.11.13 (versão
-  fixa) com `includeStyleProperties` só com propriedades reais, sem fontes embutidas e sem os
-  ícones de interface (`<i>`). Imagem final desenhada pelo nosso código (a 1.11.13 depende de
-  `requestAnimationFrame`, que não roda em aba em segundo plano), com teto de 32 milhões de
-  pixels. Ctrl+Alt+C usa 2× e ignora novos toques enquanto gera a imagem; PNG exportado mantém 4×;
-  JPEG e PDF usam o fundo do tema (antes podiam sair com fundo preto).
-- **Medição (7 tabelas):** Ctrl+Alt+C de 4,2 s com 2,7 s de travamento para 1,1 s com 49 ms de
-  travamento; imagem idêntica pixel a pixel à anterior.
+**Primeira tentativa (commit `2cb8f87`), que não funcionou:** atualizar o html-to-image para
+1.11.13 e filtrar as propriedades copiadas. Ficou rápido, mas as tabelas saíam sem estilo: a
+1.11.13 copia o `<svg>` inteiro de uma vez e o HTML dentro dos `<foreignObject>` perde o CSS. A
+validação "imagem idêntica pixel a pixel" estava errada: no painel de testes o `viewBox` do canvas
+era 0×0 e as duas imagens comparadas estavam vazias. Lição: conferir a imagem gerada de verdade
+(o servidor local de testes agora recebe o PNG por POST e salva em arquivo).
 
+**Solução atual** (`src/catolica/canvasImage.js`, sem html-to-image, que voltou para a versão do
+upstream):
+
+- O `<svg>` do diagrama é clonado elemento por elemento; de cada elemento só são copiados os
+  estilos que diferem do padrão do navegador (calculado num iframe sem o CSS da página) ou, nos
+  herdados, do pai. Espessura de borda é sempre copiada junto com o estilo da borda (o CSS do site
+  usa `solid` com espessura 0).
+- **Recorte no conteúdo, em tamanho real (zoom 100%)**, independente do zoom e da posição da tela,
+  com margem de 24 px. Ficam de fora a grade, a linha de criação de relacionamento, o retângulo de
+  seleção e os botões com ícone que aparecem ao passar o mouse; os pontos azuis dos campos ficam.
+- Ctrl+Alt+C: PNG na densidade da tela (como um print); PNG/JPEG exportados e PDF em 2×; SVG
+  exportado é o próprio SVG recortado; PDF com página do tamanho do conteúdo. Fundo do tema.
+  Teto de 8192 px por lado / 32 milhões de pixels. Diagrama vazio: aviso em vez de imagem.
+- **Medido (modelo Blog, 5 tabelas e 6 relacionamentos, tema escuro):** 1339×720 px, ~120 KB,
+  ~1,3 s, sem travamento perceptível. Imagem conferida visualmente nos temas claro e escuro e com
+  área e nota; nomes cortados com "…" iguais aos da tela.
 ## Pendências registradas em 07/10/2026
 
 - **Sprint 1E, Histórico de versões (aprovado):** botão "Histórico de versões" no lugar de
@@ -427,3 +438,20 @@ A definir depois das revisões em sala.
   "Ops! Algo deu errado." fora do padrão; mensagens de exclusão sem a dica de desfazer; "Salvo como
   cópia. Abrir:". Padrão proposto: sucesso = "<Objeto> <particípio>." + `undo_hint` quando houver
   desfazer; botões no infinitivo; títulos sem ponto; atalhos no formato "Ctrl+Z".
+
+## Duplicidades e barra de menu (08/10/2026)
+
+- Regra do mantenedor: remover só atalhos/comandos que fazem exatamente a mesma coisa; o mesmo
+  comando em lugares diferentes (menu e barra) pode ficar, desde que chame a mesma função.
+- **Removido:** Ctrl+Alt+W (fazia o mesmo que F; e AltGr+W digita "?" no ABNT2, disparando o
+  ajuste sem querer).
+- **Conferido que chamam a mesma função:** desfazer/refazer, salvar, zoom (×1,2 na barra e no
+  menu), grade e alinhamento (menu Ver, menu da grade, ímã e atalhos), tema, organizar, ajustar à
+  tela, copiar como imagem, lista de atalhos.
+- **Nomes unificados** (sobrescrevendo textos do upstream em `src/catolica/i18n.js`): "Ajustar
+  janela / Redefinir" virou "Ajustar diagrama à tela" (a opção só ajusta) e "Ajustar à grade"
+  virou "Alinhar objetos à grade".
+- Mantido de propósito: Ctrl+Y e Ctrl+Shift+Z para refazer (as duas convenções mais comuns).
+- **Barra de menu sem volta:** ao ocultar em Ver → Barra de menu (e com a barra de ferramentas
+  também oculta) não havia como reexibir. Agora um botão no canto do desenho traz a barra de volta
+  enquanto ela estiver oculta (`src/catolica/HeaderRestoreButton.jsx`).

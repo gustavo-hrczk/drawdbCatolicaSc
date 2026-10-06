@@ -65,6 +65,8 @@ const resources = {
     grid_size_small: "Pequena ({{size}} px)",
     grid_size_medium: "Média ({{size}} px)",
     grid_size_large: "Grande ({{size}} px)",
+    image_empty_diagram: "Nada para copiar ou exportar: o diagrama está vazio.",
+    show_header: "Mostrar barra de menu",
   },
   en: {
     diagram_not_found_title: "Diagram not found in this browser",
@@ -129,9 +131,29 @@ const resources = {
     grid_size_small: "Small ({{size}} px)",
     grid_size_medium: "Medium ({{size}} px)",
     grid_size_large: "Large ({{size}} px)",
+    image_empty_diagram: "Nothing to copy or export: the diagram is empty.",
+    show_header: "Show menu bar",
   },
 };
 
 for (const [lng, translation] of Object.entries(resources)) {
   i18n.addResourceBundle(lng, "translation", translation, true, false);
+}
+
+// Ajustes em textos do upstream (sobrescrevem as traduções originais sem
+// editar src/i18n/locales): nomes que precisam ser iguais em todos os lugares
+// onde o mesmo comando aparece.
+const overrides = {
+  "pt-BR": {
+    fit_window_reset: "Ajustar diagrama à tela",
+    snap_to_grid: "Alinhar objetos à grade",
+  },
+  en: {
+    fit_window_reset: "Fit diagram to screen",
+    snap_to_grid: "Snap objects to grid",
+  },
+};
+
+for (const [lng, translation] of Object.entries(overrides)) {
+  i18n.addResourceBundle(lng, "translation", translation, true, true);
 }

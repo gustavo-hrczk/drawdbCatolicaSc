@@ -28,10 +28,11 @@ import {
   Modal as SemiModal,
 } from "@douyinfe/semi-ui";
 import {
-  canvasToDataUrl,
-  canvasToSvgDataUrl,
-  copyCanvasImage,
-  editorBackground,
+  copyDiagramImage,
+  diagramDataUrl,
+  diagramSvg,
+  EmptyDiagramError,
+  svgToDataUrl,
 } from "../../catolica/canvasImage";
 import {
   jsonToMySQL,
@@ -51,7 +52,6 @@ import {
   DB,
   IMPORT_FROM,
   noteWidth,
-  pngExportPixelRatio,
   keyboardPanStep,
   tableWidth,
   gridSize,
@@ -695,12 +695,38 @@ export default function ControlPanel({
       showFieldSummary: !prev.showFieldSummary,
     }));
   };
+  // Imagens do diagrama: recortadas no conteúdo, em tamanho real
+  // (src/catolica/canvasImage.js).
+  const imageError = (err) => {
+    if (err instanceof EmptyDiagramError) {
+      Toast.info(t("image_empty_diagram"));
+    } else {
+      console.error(err);
+      Toast.error(t("oops_smth_went_wrong"));
+    }
+  };
   const copyAsImage = () => {
-    copyCanvasImage(document.getElementById("canvas"))
+    copyDiagramImage()
       .then((status) => {
         if (status === "ok") Toast.success(t("copied_to_clipboard"));
+        if (status === "empty") Toast.info(t("image_empty_diagram"));
       })
-      .catch(() => Toast.error(t("oops_smth_went_wrong")));
+      .catch(imageError);
+  };
+  const exportDiagramImage = (extension, options) => {
+    const image =
+      extension === "svg"
+        ? Promise.resolve().then(() => svgToDataUrl(diagramSvg().markup))
+        : diagramDataUrl(options).then((result) => result.dataUrl);
+    openExportModal(MODAL.IMG);
+    image
+      .then((dataUrl) =>
+        setExportData((prev) => ({ ...prev, data: dataUrl, extension })),
+      )
+      .catch((err) => {
+        setModal(MODAL.NONE);
+        imageError(err);
+      });
   };
   const resetView = () =>
     setTransform((prev) => ({ ...prev, zoom: 1, pan: { x: 0, y: 0 } }));
@@ -1604,54 +1630,20 @@ export default function ControlPanel({
         children: [
           {
             name: "PNG",
-            function: () => {
-              canvasToDataUrl(document.getElementById("canvas"), {
-                pixelRatio: pngExportPixelRatio,
-              }).then(function (dataUrl) {
-                setExportData((prev) => ({
-                  ...prev,
-                  data: dataUrl,
-                  extension: "png",
-                }));
-              });
-              openExportModal(MODAL.IMG);
-            },
+            function: () => exportDiagramImage("png", { scale: 2 }),
           },
           {
             name: "JPEG",
-            function: () => {
-              const node = document.getElementById("canvas");
-              canvasToDataUrl(node, {
+            function: () =>
+              exportDiagramImage("jpeg", {
                 type: "image/jpeg",
                 quality: 0.95,
-                pixelRatio: window.devicePixelRatio || 1,
-                background: editorBackground(node),
-              }).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "jpeg",
-                  }));
-                },
-              );
-              openExportModal(MODAL.IMG);
-            },
+                scale: 2,
+              }),
           },
           {
             name: "SVG",
-            function: () => {
-              canvasToSvgDataUrl(document.getElementById("canvas")).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "svg",
-                  }));
-                },
-              );
-              openExportModal(MODAL.IMG);
-            },
+            function: () => exportDiagramImage("svg"),
           },
           {
             name: "JSON",
@@ -1699,28 +1691,19 @@ export default function ControlPanel({
           {
             name: "PDF",
             function: () => {
-              const canvas = document.getElementById("canvas");
               const filename = `${title}_${new Date().toISOString()}`;
-              canvasToDataUrl(canvas, {
-                type: "image/jpeg",
-                quality: 0.95,
-                pixelRatio: 2,
-                background: editorBackground(canvas),
-              }).then(function (dataUrl) {
-                const doc = new jsPDF("l", "px", [
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                ]);
-                doc.addImage(
-                  dataUrl,
-                  "jpeg",
-                  0,
-                  0,
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                );
-                doc.save(`${filename}.pdf`);
-              });
+              diagramDataUrl({ type: "image/jpeg", quality: 0.95, scale: 2 })
+                .then(({ dataUrl, svgWidth, svgHeight }) => {
+                  // Página do tamanho do conteúdo do diagrama.
+                  const doc = new jsPDF(
+                    svgWidth >= svgHeight ? "l" : "p",
+                    "px",
+                    [svgWidth, svgHeight],
+                  );
+                  doc.addImage(dataUrl, "jpeg", 0, 0, svgWidth, svgHeight);
+                  doc.save(`${filename}.pdf`);
+                })
+                .catch(imageError);
             },
           },
           {
@@ -2128,7 +2111,6 @@ export default function ControlPanel({
   useHotkeys("mod+alt+c", copyAsImage, EDITOR_HOTKEY);
   useHotkeys("enter", resetView, EDITOR_HOTKEY);
   useHotkeys("mod+h", () => window.open(socials.docs, "_blank"), EDITOR_HOTKEY);
-  useHotkeys("mod+alt+w", fitWindow, EDITOR_HOTKEY);
   useHotkeys("alt+e", toggleDBMLEditor, EDITOR_HOTKEY);
   useHotkeys("left", panLeft, EDITOR_HOTKEY);
   useHotkeys("right", panRight, EDITOR_HOTKEY);

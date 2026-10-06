@@ -85,11 +85,6 @@ export const SHORTCUT_GROUPS = [
   {
     group: "shortcut_group_view",
     items: [
-      {
-        id: "fit_ctrl",
-        label: "shortcut_fit_diagram",
-        keys: [["Ctrl", "Alt", "W"]],
-      },
       { id: "reset_view", label: "shortcut_center_view", keys: [["Enter"]] },
       {
         id: "zoom",
