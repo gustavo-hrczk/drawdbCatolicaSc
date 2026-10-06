@@ -13,6 +13,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | pendente (próximo) |
+| 1D | Atalhos do teclado: novos atalhos, proteção contra acionamento acidental e janela de atalhos | fase A concluída na `homolog`; fase B (personalização) pendente |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -167,6 +168,42 @@ Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
   - Mensagem para link de diagrama inexistente explica que links só abrem diagramas do mesmo
     navegador e perfil e como receber o diagrama de outra pessoa. Validado: o mesmo link em
     outra aba do mesmo navegador abre normalmente.
+
+## Sprint 1D: Atalhos do teclado
+
+Pedido do mantenedor em 07/10/2026, feito antes do 1C. A prioridade é evitar atalhos acionados
+sem querer.
+
+**Fase A (concluída, 07/10/2026):**
+
+- Novos atalhos: **T** (tabela), **A** (área), **N** (nota), **F** (ajustar à tela), **?** (lista de
+  atalhos), **Esc** (desmarcar) e **Ctrl+F** (abre a busca da aba Tabelas; fora dela, continua
+  sendo a busca do navegador). Dicas dos botões mostram a tecla.
+- Proteções dos atalhos de uma tecla (`src/catolica/useSafeKeyShortcuts.js`):
+  1. nunca em campos de texto, editores ou conteúdo editável;
+  2. nunca com Ctrl, Alt, Cmd ou AltGr;
+  3. tecla segurada (repetição) é ignorada;
+  4. ignorados por 1,5 s depois de digitar em um campo;
+  5. isolamento: a ação espera 0,4 s e é cancelada se outra letra chegar logo antes ou logo
+     depois (digitação), com aviso explicando;
+  6. bloqueados com janelas, painéis ou menus abertos;
+  7. criar elementos é bloqueado no modo somente leitura;
+  8. podem ser desligados na janela de atalhos (preferência por navegador).
+  Nas três primeiras vezes, um aviso diz qual atalho foi usado e que Ctrl+Z desfaz.
+- **Delete protegido:** logo depois de digitar em um campo, o primeiro Delete é ignorado com
+  aviso; repetir em até 3 s confirma. Backspace não exclui elementos (risco alto de engano).
+- Janela **Atalhos do teclado** (`src/catolica/ShortcutsModal.jsx`): botão na barra de
+  ferramentas no lugar de Versões, Ajuda → Atalhos e tecla ?. Lista todos os atalhos, inclusive
+  os fixos do sistema (copiar, colar, recortar), em colunas alinhadas, e liga/desliga os de uma
+  tecla.
+- Testado no build local: T isolado cria; digitação rápida, tecla segurada, digitação logo após
+  campo, modificadores e janela aberta não criam; Delete protegido; Ctrl+F; ?; desligar.
+- Limite conhecido: quem digita muito devagar fora de um campo (mais de 0,4 s entre letras) pode
+  acionar um atalho; a dica de Ctrl+Z e a opção de desligar cobrem esse caso.
+
+**Fase B (pendente):** personalização das teclas. O catálogo `src/catolica/shortcuts.js` já tem
+ids estáveis por ação; falta ler as teclas do catálogo nos `useHotkeys` do `ControlPanel.jsx`,
+captura de nova combinação, bloqueio de conflitos e de combinações reservadas pelo navegador.
 
 ## Sprint 1C: Exportação e importação, os três casos de entrega
 

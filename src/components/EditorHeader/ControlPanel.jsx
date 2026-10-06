@@ -119,6 +119,15 @@ import {
 } from "../../catolica/clipboard";
 import SaveStatus from "../../catolica/SaveStatus";
 import { hasGistBackend } from "../../catolica/features";
+import ShortcutsModal from "../../catolica/ShortcutsModal";
+import {
+  readShortcutPrefs,
+  writeShortcutPrefs,
+} from "../../catolica/shortcuts";
+import useSafeKeyShortcuts, {
+  allowDelete,
+} from "../../catolica/useSafeKeyShortcuts";
+import { focusTableSearch } from "../../catolica/tableSearch";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -1234,6 +1243,13 @@ export default function ControlPanel({
     });
   };
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [shortcutPrefs, setShortcutPrefs] = useState(readShortcutPrefs);
+  const changeShortcutPrefs = (prefs) => {
+    setShortcutPrefs(prefs);
+    writeShortcutPrefs(prefs);
+  };
+
   const [exitRequested, setExitRequested] = useState(false);
   useEffect(() => {
     if (!exitRequested) return;
@@ -2043,7 +2059,7 @@ export default function ControlPanel({
         shortcut: "Ctrl+H",
       },
       shortcuts: {
-        function: () => window.open(`${socials.docs}/shortcuts`, "_blank"),
+        function: () => setShowShortcuts(true),
       },
       ask_on_discord: {
         function: () => window.open(socials.discord, "_blank"),
@@ -2062,7 +2078,15 @@ export default function ControlPanel({
   useHotkeys("mod+o", open, EDITOR_HOTKEY);
   useHotkeys("mod+e", edit, EDITOR_HOTKEY);
   useHotkeys("mod+d", duplicate, EDITOR_HOTKEY);
-  useHotkeys("delete", del, EDITOR_HOTKEY);
+  useHotkeys(
+    "delete",
+    () => {
+      // Delete logo após digitar num campo costuma ser engano: avisa antes.
+      if (allowDelete()) del();
+      else Toast.info(t("shortcut_delete_blocked"));
+    },
+    EDITOR_HOTKEY,
+  );
   useHotkeys("mod+shift+g", viewGrid, EDITOR_HOTKEY);
   useHotkeys("mod+up", zoomIn, EDITOR_HOTKEY);
   useHotkeys("mod+down", zoomOut, EDITOR_HOTKEY);
@@ -2078,6 +2102,28 @@ export default function ControlPanel({
   useHotkeys("right", panRight, EDITOR_HOTKEY);
   useHotkeys("up", panUp, EDITOR_HOTKEY);
   useHotkeys("down", panDown, EDITOR_HOTKEY);
+  // Atalhos de uma tecla, Esc e Ctrl+F, com proteção contra acionamento
+  // acidental (ver src/catolica/useSafeKeyShortcuts.js).
+  useSafeKeyShortcuts({
+    t,
+    enabled: shortcutPrefs.singleKey,
+    readOnly: layout.readOnly,
+    singleKeys: {
+      t: { run: () => addTable(), label: t("add_table"), creates: true },
+      a: { run: () => addArea(), label: t("add_area"), creates: true },
+      n: { run: () => addNote(), label: t("add_note"), creates: true },
+      f: { run: fitWindow, label: t("shortcut_fit_diagram") },
+      "?": { run: () => setShowShortcuts(true), label: t("shortcut_list") },
+    },
+    onEscape: () =>
+      setSelectedElement((prev) => ({
+        ...prev,
+        element: ObjectType.NONE,
+        id: -1,
+        open: false,
+      })),
+    onFind: focusTableSearch,
+  });
 
   return (
     <>
@@ -2109,6 +2155,12 @@ export default function ControlPanel({
           toolbarContainer &&
           createPortal(toolbar(), toolbarContainer)}
       </div>
+      <ShortcutsModal
+        visible={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        prefs={shortcutPrefs}
+        onChangePrefs={changeShortcutPrefs}
+      />
       <Modal
         modal={modal}
         exportData={exportData}
@@ -2257,7 +2309,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("add_table")} position="bottom">
+          <Tooltip content={`${t("add_table")} (T)`} position="bottom">
             <button
               className="flex items-center py-1 px-2 hover-2 rounded-sm disabled:opacity-50"
               onClick={() => addTable()}
@@ -2275,7 +2327,7 @@ export default function ControlPanel({
               <IconAddView />
             </button>
           </Tooltip>
-          <Tooltip content={t("add_area")} position="bottom">
+          <Tooltip content={`${t("add_area")} (A)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addArea()}
@@ -2284,7 +2336,7 @@ export default function ControlPanel({
               <IconAddArea />
             </button>
           </Tooltip>
-          <Tooltip content={t("add_note")} position="bottom">
+          <Tooltip content={`${t("add_note")} (N)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addNote()}
@@ -2311,6 +2363,16 @@ export default function ControlPanel({
               disabled={layout.readOnly}
             >
               <IconSaveStroked size="extra-large" />
+            </button>
+          </Tooltip>
+          <Divider layout="vertical" margin="8px" />
+          <Tooltip content={t("shortcuts_button")} position="bottom">
+            <button
+              className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
+              onClick={() => setShowShortcuts(true)}
+              aria-label={t("shortcuts_title")}
+            >
+              <i className="fa-regular fa-keyboard" />
             </button>
           </Tooltip>
           {/* Versões grava em gists no drawdb-server; sem servidor, só falharia. */}
