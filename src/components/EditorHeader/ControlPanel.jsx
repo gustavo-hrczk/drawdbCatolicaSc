@@ -21,7 +21,6 @@ import {
   Dropdown,
   InputNumber,
   Tooltip,
-  Spin,
   Tag,
   Toast,
   Popconfirm,
@@ -118,6 +117,8 @@ import {
   lastCopied,
   rememberCopied,
 } from "../../catolica/clipboard";
+import SaveStatus from "../../catolica/SaveStatus";
+import { hasGistBackend } from "../../catolica/features";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -128,7 +129,6 @@ const EDITOR_HOTKEY = {
 export default function ControlPanel({
   title,
   setTitle,
-  lastSaved,
   setLastSaved,
   toolbarContainer,
 }) {
@@ -2313,15 +2313,20 @@ export default function ControlPanel({
               <IconSaveStroked size="extra-large" />
             </button>
           </Tooltip>
-          <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("versions")} position="bottom">
-            <button
-              className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
-              onClick={() => setSidesheet(SIDESHEET.VERSIONS)}
-            >
-              <i className="fa-solid fa-code-branch" />
-            </button>
-          </Tooltip>
+          {/* Versões grava em gists no drawdb-server; sem servidor, só falharia. */}
+          {hasGistBackend && (
+            <>
+              <Divider layout="vertical" margin="8px" />
+              <Tooltip content={t("versions")} position="bottom">
+                <button
+                  className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
+                  onClick={() => setSidesheet(SIDESHEET.VERSIONS)}
+                >
+                  <i className="fa-solid fa-code-branch" />
+                </button>
+              </Tooltip>
+            </>
+          )}
           <Divider layout="vertical" margin="8px" />
           <Tooltip content={t("theme")} position="bottom">
             <button
@@ -2345,24 +2350,6 @@ export default function ControlPanel({
     );
   }
 
-  function getState() {
-    switch (saveState) {
-      case State.NONE:
-        return t("no_changes");
-      case State.LOADING:
-        return t("loading");
-      case State.SAVED:
-        return `${t("last_saved")} ${lastSaved}`;
-      case State.SAVING:
-        return t("saving");
-      case State.ERROR:
-        return t("failed_to_save");
-      case State.FAILED_TO_LOAD:
-        return t("failed_to_load");
-      default:
-        return "";
-    }
-  }
 
   function header() {
     return (
@@ -2550,20 +2537,7 @@ export default function ControlPanel({
                 ))}
               </div>
               {layout.readOnly && <Tag size="small">{t("read_only")}</Tag>}
-              {!layout.readOnly && (
-                <Tag
-                  size="small"
-                  type="light"
-                  prefixIcon={
-                    saveState === State.LOADING ||
-                    saveState === State.SAVING ? (
-                      <Spin size="small" />
-                    ) : null
-                  }
-                >
-                  {getState()}
-                </Tag>
-              )}
+              {!layout.readOnly && <SaveStatus saveState={saveState} />}
             </div>
           </div>
         </div>

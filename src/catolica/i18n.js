@@ -15,7 +15,7 @@ const resources = {
       "Salvamento automático desligado: suas alterações só são salvas com Ctrl+S.",
     turn_on_autosave: "Ligar",
     diagram_open_in_other_tab:
-      "Este diagrama também está aberto em outra aba. Edite em uma aba só para evitar conflitos.",
+      "Este diagrama já está aberto em outra aba. Edite em apenas uma aba para evitar conflitos de salvamento.",
     save_conflict_title: "Este diagrama foi alterado em outra aba",
     save_conflict_body:
       "Depois que você abriu este diagrama aqui, ele foi salvo em outra aba ou janela ({{date}}). Para não perder nada, escolha o que fazer com as alterações desta aba.",
@@ -44,7 +44,7 @@ const resources = {
       "Autosave is off: your changes are only saved with Ctrl+S.",
     turn_on_autosave: "Turn on",
     diagram_open_in_other_tab:
-      "This diagram is also open in another tab. Edit it in a single tab to avoid conflicts.",
+      "This diagram is already open in another tab. Edit it in only one tab to avoid saving conflicts.",
     save_conflict_title: "This diagram was changed in another tab",
     save_conflict_body:
       "After you opened this diagram here, it was saved in another tab or window ({{date}}). To avoid losing anything, choose what to do with the changes in this tab.",

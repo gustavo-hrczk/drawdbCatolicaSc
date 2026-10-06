@@ -152,6 +152,15 @@ Falta o teste manual com teclado e mouse reais no Chrome, Edge, Opera e Firefox.
     do diagrama anterior no novo.
   - **Bug do upstream:** abrir `/editor` (link "Editor" da home) duplicava o último diagrama a
     cada visita, e o aluno passava a editar a cópia. Reproduzido no build de produção e corrigido.
+- **Validação manual (07/10/2026):** os quatro testes manuais foram aprovados pelo mantenedor.
+- **Ajustes pós-homologação:**
+  - Indicador de salvamento sem piscar: horário com precisão de minuto e "Salvando..." só se o
+    save demorar mais de 1 s (`src/catolica/SaveStatus.jsx`).
+  - Aviso de outra aba: "Este diagrama já está aberto em outra aba. Edite em apenas uma aba para
+    evitar conflitos de salvamento."
+  - **Versões removida:** dependia de gists no drawdb-server ("Registrar versão" falhava com a
+    requisição para `localhost:5000`). O botão só aparece se houver servidor configurado
+    (`src/catolica/features.js`).
 
 ## Sprint 1C: Exportação e importação, os três casos de entrega
 
