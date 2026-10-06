@@ -48,6 +48,8 @@ import {
   noteWidth,
   pngExportPixelRatio,
   keyboardPanStep,
+  tableWidth,
+  gridSize,
 } from "../../data/constants";
 import jsPDF from "jspdf";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -128,6 +130,8 @@ import useSafeKeyShortcuts, {
   allowDelete,
 } from "../../catolica/useSafeKeyShortcuts";
 import { focusTableSearch } from "../../catolica/tableSearch";
+import { pointerInDiagram } from "../../catolica/canvasPointer";
+import GridDropdown from "../../catolica/GridDropdown";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -2104,16 +2108,89 @@ export default function ControlPanel({
   useHotkeys("down", panDown, EDITOR_HOTKEY);
   // Atalhos de uma tecla, Esc e Ctrl+F, com proteção contra acionamento
   // acidental (ver src/catolica/useSafeKeyShortcuts.js).
+  // Desfaz a última ação se ela for a que o atalho acabou de fazer (usado
+  // quando o atalho era, na verdade, o começo de uma palavra digitada).
+  const undoIfLast = (matches) => {
+    const last = undoStack[undoStack.length - 1];
+    if (!last || !matches(last)) return;
+    undo();
+    setRedoStack((prev) => prev.slice(0, -1));
+  };
+  const isAdd = (element) => (entry) =>
+    entry.action === Action.ADD && entry.element === element;
+  const transformBeforeShortcut = useRef(null);
+  const rememberTransform = () => {
+    transformBeforeShortcut.current = transform;
+  };
+  const restoreTransform = () => {
+    if (transformBeforeShortcut.current) {
+      setTransform(transformBeforeShortcut.current);
+    }
+  };
+  // Posição do mouse no diagrama (ou null, e o elemento nasce no centro).
+  const tableAtPointer = () => {
+    const pointer = pointerInDiagram();
+    if (!pointer) return null;
+    const step = settings.gridSize ?? gridSize;
+    const snap = (v) =>
+      settings.snapToGrid ? Math.round(v / step) * step : v;
+    return { x: snap(pointer.x - tableWidth / 2), y: snap(pointer.y - 20) };
+  };
+
   useSafeKeyShortcuts({
     t,
     enabled: shortcutPrefs.singleKey,
     readOnly: layout.readOnly,
     singleKeys: {
-      t: { run: () => addTable(), label: t("add_table"), creates: true },
-      a: { run: () => addArea(), label: t("add_area"), creates: true },
-      n: { run: () => addNote(), label: t("add_note"), creates: true },
-      f: { run: fitWindow, label: t("shortcut_fit_diagram") },
-      "?": { run: () => setShowShortcuts(true), label: t("shortcut_list") },
+      t: {
+        run: () => addTable(undefined, true, tableAtPointer()),
+        rollback: () => undoIfLast(isAdd(ObjectType.TABLE)),
+        label: t("add_table"),
+        changes: true,
+        hint: "first",
+      },
+      a: {
+        run: () => addArea(undefined, true, pointerInDiagram()),
+        rollback: () => undoIfLast(isAdd(ObjectType.AREA)),
+        label: t("add_area"),
+        changes: true,
+        hint: "first",
+      },
+      n: {
+        run: () => addNote(undefined, true, pointerInDiagram()),
+        rollback: () => undoIfLast(isAdd(ObjectType.NOTE)),
+        label: t("add_note"),
+        changes: true,
+        hint: "first",
+      },
+      o: {
+        run: () => {
+          rememberTransform();
+          autoArrangeTables();
+        },
+        rollback: () => {
+          undoIfLast(
+            (entry) => entry.bulk && entry.message === t("auto_arrange"),
+          );
+          restoreTransform();
+        },
+        label: t("auto_arrange"),
+        changes: true,
+        hint: "always",
+      },
+      f: {
+        run: () => {
+          rememberTransform();
+          fitWindow();
+        },
+        rollback: restoreTransform,
+        label: t("shortcut_fit_diagram"),
+      },
+      "?": {
+        run: () => setShowShortcuts(true),
+        rollback: () => setShowShortcuts(false),
+        label: t("shortcut_list"),
+      },
     },
     onEscape: () =>
       setSelectedElement((prev) => ({
@@ -2290,6 +2367,8 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
+          <GridDropdown />
+          <Divider layout="vertical" margin="8px" />
           <Tooltip content={t("undo")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
@@ -2346,7 +2425,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("auto_arrange")} position="bottom">
+          <Tooltip content={`${t("auto_arrange")} (O)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5 disabled:opacity-50"
               onClick={autoArrangeTables}

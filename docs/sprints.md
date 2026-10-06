@@ -13,7 +13,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1 | Persistência I: nenhuma perda silenciosa de dados | concluído na `homolog` |
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | pendente (próximo) |
-| 1D | Atalhos do teclado: novos atalhos, proteção contra acionamento acidental e janela de atalhos | fase A concluída na `homolog`; fase B (personalização) pendente |
+| 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -200,6 +200,25 @@ sem querer.
   campo, modificadores e janela aberta não criam; Delete protegido; Ctrl+F; ?; desligar.
 - Limite conhecido: quem digita muito devagar fora de um campo (mais de 0,4 s entre letras) pode
   acionar um atalho; a dica de Ctrl+Z e a opção de desligar cobrem esse caso.
+
+**Ajustes pós-homologação (07/10/2026):**
+
+- **Sem atraso:** a espera de 0,4 s incomodava. Agora a ação é imediata e, se outra tecla chegar
+  em até 0,7 s (começo de uma palavra), ela é desfeita sozinha, sem deixar rastro no Refazer.
+  Letra no meio de palavra continua sendo ignorada. A mesma tecla duas vezes (T, T) cria dois
+  elementos.
+- **Tecla segurada:** cria um elemento só e não mostra aviso.
+- **Posição do mouse:** T, A e N criam o elemento onde está o ponteiro (respeitando "alinhar à
+  grade"); fora do desenho, no centro da tela como antes. `addTable`, `addArea` e `addNote`
+  ganharam um parâmetro opcional de posição (mudança mínima no upstream).
+- **Organizar automaticamente: tecla O**, com as mesmas proteções; sempre avisa que Ctrl+Z
+  desfaz, por ser uma mudança grande.
+- **Menu da grade** na barra de ferramentas (um botão com menu, no padrão do menu de layout):
+  mostrar grade, alinhar objetos à grade e tamanho (12, 24 ou 48 px). O tamanho passou a ser
+  configuração (`settings.gridSize`, padrão 24).
+- **Janela de atalhos compacta:** linhas de 23 px, atalhos em uma linha, observações curtas. Os
+  atalhos de uma tecla viraram um grupo com a chave no cabeçalho; desligado, o grupo encolhe para
+  uma linha. Saiu o aviso de "atalhos fixos".
 
 **Fase B (pendente):** personalização das teclas. O catálogo `src/catolica/shortcuts.js` já tem
 ids estáveis por ação; falta ler as teclas do catálogo nos `useHotkeys` do `ControlPanel.jsx`,

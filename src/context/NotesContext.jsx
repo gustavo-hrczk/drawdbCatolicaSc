@@ -21,7 +21,8 @@ export default function NotesContextProvider({ children }) {
   const { emitDelta, isApplyingRemoteRef } = useCollab();
   const shouldEmit = () => !isApplyingRemoteRef?.current;
 
-  const addNote = (data, addToHistory = true) => {
+  // center (opcional): centro da nota nova, por exemplo o ponteiro do mouse.
+  const addNote = (data, addToHistory = true, center = null) => {
     let created = data;
     if (data) {
       setNotes((prev) => {
@@ -34,7 +35,9 @@ export default function NotesContextProvider({ children }) {
       created = {
         id: notes.length,
         ...cascadePosition(
-          { x: transform.pan.x, y: transform.pan.y - height / 2 },
+          center
+            ? { x: center.x - noteWidth / 2, y: center.y - height / 2 }
+            : { x: transform.pan.x, y: transform.pan.y - height / 2 },
           notes,
         ),
         title: `note_${notes.length}`,

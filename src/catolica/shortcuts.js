@@ -1,32 +1,37 @@
 // Catálogo dos atalhos do editor, exibido na janela "Atalhos do teclado".
-// Nesta versão é só leitura: os atalhos do upstream continuam definidos em
-// ControlPanel.jsx (useHotkeys) e os de uma tecla em useSafeKeyShortcuts.js.
-// Para permitir personalização no futuro, cada ação já tem um id estável.
+// É só leitura: os atalhos do upstream continuam definidos em ControlPanel.jsx
+// (useHotkeys) e os de uma tecla em useSafeKeyShortcuts.js. Cada ação já tem
+// um id estável, para permitir personalização no futuro.
 //
-// label: chave de tradução; keys: combinações exibidas (cada uma é uma lista
-// de teclas); note: chave de tradução da observação.
+// label: chave de tradução; keys: combinações (cada uma é uma lista de
+// teclas); note: chave de tradução da observação. O grupo com singleKey é o
+// dos atalhos de uma tecla, que a janela mostra ou oculta conforme a chave.
 export const SHORTCUT_GROUPS = [
   {
-    group: "shortcut_group_create",
+    group: "shortcuts_single_key_group",
+    singleKey: true,
     items: [
       {
         id: "add_table",
         label: "add_table",
         keys: [["T"]],
-        note: "shortcut_note_single_key",
+        note: "shortcut_note_at_pointer",
       },
       {
         id: "add_area",
         label: "add_area",
         keys: [["A"]],
-        note: "shortcut_note_single_key",
+        note: "shortcut_note_at_pointer",
       },
       {
         id: "add_note",
         label: "add_note",
         keys: [["N"]],
-        note: "shortcut_note_single_key",
+        note: "shortcut_note_at_pointer",
       },
+      { id: "auto_arrange", label: "auto_arrange", keys: [["O"]] },
+      { id: "fit", label: "shortcut_fit_diagram", keys: [["F"]] },
+      { id: "shortcuts", label: "shortcut_list", keys: [["?"]] },
     ],
   },
   {
@@ -89,22 +94,18 @@ export const SHORTCUT_GROUPS = [
     group: "shortcut_group_view",
     items: [
       {
-        id: "fit",
+        id: "fit_ctrl",
         label: "shortcut_fit_diagram",
-        keys: [["F"], ["Ctrl", "Alt", "W"]],
-        note: "shortcut_note_single_key",
+        keys: [["Ctrl", "Alt", "W"]],
       },
       { id: "reset_view", label: "shortcut_center_view", keys: [["Enter"]] },
       {
-        id: "zoom_in",
-        label: "zoom_in",
-        keys: [["Ctrl", "↑"]],
-        note: "shortcut_note_wheel",
-      },
-      {
-        id: "zoom_out",
-        label: "zoom_out",
-        keys: [["Ctrl", "↓"]],
+        id: "zoom",
+        label: "shortcut_zoom",
+        keys: [
+          ["Ctrl", "↑"],
+          ["Ctrl", "↓"],
+        ],
         note: "shortcut_note_wheel",
       },
       { id: "pan", label: "shortcut_pan", keys: [["←"], ["↑"], ["→"], ["↓"]] },
@@ -120,17 +121,6 @@ export const SHORTCUT_GROUPS = [
         id: "copy_image",
         label: "copy_as_image",
         keys: [["Ctrl", "Alt", "C"]],
-      },
-    ],
-  },
-  {
-    group: "shortcut_group_help",
-    items: [
-      {
-        id: "shortcuts",
-        label: "shortcut_list",
-        keys: [["?"]],
-        note: "shortcut_note_single_key",
       },
     ],
   },

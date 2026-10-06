@@ -4,20 +4,20 @@ import { isTypingTarget } from "./clipboard";
 import { readShortcutPrefs, writeShortcutPrefs } from "./shortcuts";
 
 // Proteções contra atalhos acionados sem querer (principalmente os de uma
-// tecla, como T, A, N e F, que coincidem com letras digitadas):
+// tecla, como T, A, N, O e F, que coincidem com letras digitadas):
 //
 // 1. Nunca disparam dentro de campos de texto, editores ou conteúdo editável.
 // 2. Nunca disparam com Ctrl, Alt ou Cmd (nem com AltGr, que é Ctrl+Alt).
-// 3. Ignoram a repetição de tecla segurada (não cria dez tabelas).
+// 3. Tecla segurada (repetição automática) é ignorada, sem aviso.
 // 4. Ignoram teclas pressionadas logo depois de digitar em um campo (o foco
 //    saiu do campo, mas a pessoa continua digitando).
-// 5. Exigem isolamento: nenhuma outra letra logo antes e logo depois. Por
-//    isso a ação espera ISOLATION_MS antes de executar; se outra letra chegar
-//    nesse intervalo, é digitação e nada acontece.
-// 6. Não disparam com janelas, painéis laterais ou menus abertos.
-// 7. Criar elementos é bloqueado no modo somente leitura.
-// 8. Podem ser desligados na janela "Atalhos do teclado".
-const ISOLATION_MS = 400;
+// 5. Letra no meio de uma palavra (outra tecla logo antes) não dispara.
+// 6. A ação é imediata, mas se outra tecla chegar logo depois (era o começo
+//    de uma palavra), ela é desfeita automaticamente.
+// 7. Não disparam com janelas, painéis laterais ou menus abertos.
+// 8. Criar e mover elementos é bloqueado no modo somente leitura.
+// 9. Podem ser desligados na janela "Atalhos do teclado".
+const TYPING_WINDOW_MS = 700;
 const AFTER_FIELD_MS = 1500;
 const DELETE_CONFIRM_MS = 3000;
 const TYPING_WARNING_INTERVAL_MS = 10000;
@@ -79,8 +79,10 @@ export function allowDelete() {
   return false;
 }
 
-// singleKeys: { tecla: { run, label, creates } }, com a tecla em minúscula
-// (ou "?"). onEscape e onFind: Esc e Ctrl+F; onFind devolve true se tratou.
+// singleKeys: { tecla: { run, rollback, label, changes, hint } }, com a tecla
+// em minúscula (ou "?"). changes: altera o diagrama (bloqueado em somente
+// leitura). hint: "first" (dica nas primeiras vezes) ou "always".
+// onEscape e onFind: Esc e Ctrl+F; onFind devolve true se tratou o atalho.
 export default function useSafeKeyShortcuts({
   singleKeys,
   enabled,
@@ -93,8 +95,8 @@ export default function useSafeKeyShortcuts({
   configRef.current = { singleKeys, enabled, readOnly, onEscape, onFind, t };
 
   useEffect(() => {
-    let lastPrintableAt = -Infinity;
-    let pending = null;
+    let lastKeyAt = -Infinity;
+    let lastRun = null; // { key, at }
     let warnedAt = -Infinity;
 
     const warnTyping = () => {
@@ -107,29 +109,20 @@ export default function useSafeKeyShortcuts({
       });
     };
 
-    const blocked = (action) => {
-      const config = configRef.current;
-      return (
-        !config.enabled ||
-        hasOpenOverlay() ||
-        (action.creates && config.readOnly)
-      );
-    };
-
-    const run = (key, action) => {
-      action.run();
-      if (!action.creates) return;
-      // Nas primeiras vezes, explica o que aconteceu e como desfazer.
-      const prefs = readShortcutPrefs();
-      const shown = prefs.hintsShown ?? 0;
-      if (shown >= USAGE_HINTS) return;
-      writeShortcutPrefs({ ...prefs, hintsShown: shown + 1 });
+    const showHint = (key, action) => {
+      if (!action.hint) return;
+      if (action.hint === "first") {
+        const prefs = readShortcutPrefs();
+        const shown = prefs.hintsShown ?? 0;
+        if (shown >= USAGE_HINTS) return;
+        writeShortcutPrefs({ ...prefs, hintsShown: shown + 1 });
+      }
       Toast.info({
         content: configRef.current.t("shortcut_used", {
           action: action.label,
           key: key.toUpperCase(),
         }),
-        duration: 4,
+        duration: 3,
       });
     };
 
@@ -150,40 +143,53 @@ export default function useSafeKeyShortcuts({
       }
       if (withMod || e.altKey || e.key.length !== 1) return;
 
-      const now = performance.now();
-      const sincePrevious = now - lastPrintableAt;
-      lastPrintableAt = now;
-
-      // Outra letra durante a espera: era digitação, cancela o atalho.
-      if (pending) {
-        clearTimeout(pending);
-        pending = null;
-        warnTyping();
+      // Tecla segurada: só o primeiro toque conta, sem aviso.
+      if (e.repeat) {
+        if (lastRun) e.preventDefault();
         return;
       }
 
+      const now = performance.now();
+      const sinceLastKey = now - lastKeyAt;
+      lastKeyAt = now;
       const key = e.key === "?" ? "?" : e.key.toLowerCase();
+
+      // A mesma tecla de novo (T, T) é intencional: cria outro elemento.
+      const repeatedShortcut =
+        lastRun && lastRun.key === key && now - lastRun.at < TYPING_WINDOW_MS;
+
+      // Outra tecla logo depois de um atalho: era o começo de uma palavra.
+      // Desfaz o que o atalho fez.
+      if (lastRun && now - lastRun.at < TYPING_WINDOW_MS && !repeatedShortcut) {
+        const ran = config.singleKeys[lastRun.key];
+        lastRun = null;
+        // Espera o React aplicar a ação antes de desfazer.
+        setTimeout(() => ran?.rollback?.(), 0);
+        warnTyping();
+        return;
+      }
+      lastRun = null;
+
       const action = config.singleKeys[key];
       if (!action || !config.enabled) return;
       if (e.shiftKey && key !== "?") return;
-      if (sincePrevious < ISOLATION_MS || recentlyTypedInField()) {
+      // Letra no meio de uma palavra ou logo depois de digitar num campo.
+      if (
+        (sinceLastKey < TYPING_WINDOW_MS && !repeatedShortcut) ||
+        recentlyTypedInField()
+      ) {
         warnTyping();
         return;
       }
-      if (e.repeat || blocked(action)) return;
+      if (hasOpenOverlay() || (action.changes && config.readOnly)) return;
 
       e.preventDefault();
-      pending = setTimeout(() => {
-        pending = null;
-        const current = configRef.current.singleKeys[key];
-        if (current && !blocked(current)) run(key, current);
-      }, ISOLATION_MS);
+      action.run();
+      lastRun = { key, at: now };
+      showHint(key, action);
     };
 
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      clearTimeout(pending);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 }

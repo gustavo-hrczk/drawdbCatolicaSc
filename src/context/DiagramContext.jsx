@@ -36,12 +36,14 @@ export default function DiagramContextProvider({ children }) {
     [emitDelta, isApplyingRemoteRef],
   );
 
-  const addTable = (data, addToHistory = true) => {
+  // position (opcional): canto superior esquerdo da tabela nova, por exemplo
+  // sob o ponteiro do mouse; sem ela, a tabela nasce no centro da tela.
+  const addTable = (data, addToHistory = true, position = null) => {
     const id = nanoid();
     const newTable = {
       id,
       name: `table_${id}`,
-      ...cascadePosition(transform.pan, tables),
+      ...cascadePosition(position ?? transform.pan, tables),
       locked: false,
       fields: [
         {
