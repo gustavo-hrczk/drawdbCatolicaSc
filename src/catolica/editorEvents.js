@@ -36,3 +36,25 @@ export function onElementCreated(listener) {
   target.addEventListener("element-created", handler);
   return () => target.removeEventListener("element-created", handler);
 }
+
+// Linha do tempo (Sprint 1E): passos novos receberam horário e frase
+// (useHistoryStamps), e pedido para desfazer (steps < 0) ou refazer
+// (steps > 0) vários passos seguidos (useHistoryJump).
+export function notifyHistoryStamped() {
+  target.dispatchEvent(new Event("history-stamped"));
+}
+
+export function onHistoryStamped(listener) {
+  target.addEventListener("history-stamped", listener);
+  return () => target.removeEventListener("history-stamped", listener);
+}
+
+export function requestHistoryJump(steps) {
+  target.dispatchEvent(new CustomEvent("history-jump", { detail: steps }));
+}
+
+export function onHistoryJump(listener) {
+  const handler = (e) => listener(e.detail);
+  target.addEventListener("history-jump", handler);
+  return () => target.removeEventListener("history-jump", handler);
+}

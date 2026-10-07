@@ -16,7 +16,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
-| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | próximo (aprovado) |
+| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | em andamento: fase A (linha do tempo) na `homolog` |
 | 1F | Menus enxutos e janelas padronizadas | concluído na `homolog` |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
@@ -546,6 +546,40 @@ da homologação, analisados um a um e depois em conjunto.
   por T, A, N ou C digitada fora de um campo depois de uma pausa (ex.: "teste") cria o elemento
   com o resto da palavra no nome ("este"), já aberto para edição, em vez de ser desfeita
   sozinha. Fica visível na hora e sai com Esc e Delete.
+
+## Sprint 1E: Histórico de alterações e versões
+
+Escopo aprovado em "Pendências registradas em 06/10/2026" (abaixo). Feito em três fases, cada uma
+publicada na homologação para teste antes da seguinte.
+
+**Fase A, linha do tempo (07/10/2026, na `homolog`):**
+
+- Painel "Histórico de alterações" à direita do desenho, no encaixe `right-panel` que o upstream
+  já oferece: o desenho encolhe em vez de ficar coberto. Abre em Editar → Histórico de
+  alterações, no lugar da linha do tempo antiga do upstream (que continua no código, sem uso).
+- **Fonte única: as pilhas de desfazer e refazer.** Cada passo novo recebe o horário e a frase
+  (`useHistoryStamps`), montada com o diagrama logo depois da ação, para os nomes ficarem como
+  eram ('Tabela "tabela_1" renomeada para "clientes"'). A frase guarda a chave de tradução e os
+  parâmetros e sai no idioma atual. Ícone por tipo de ação, horário relativo (o completo na
+  dica), passos iguais seguidos numa linha só ("(3 vezes)") e ações só de exibição (recolher
+  colunas) fora da lista.
+- **Clicar num passo volta o diagrama até ele**, um desfazer por vez (`useHistoryJump`: o
+  desfazer do upstream lê o estado atual, então cada passo espera o anterior ser aplicado). Os
+  passos desfeitos ficam esmaecidos acima do atual, e clicar neles refaz até o ponto. Uma
+  alteração nova descarta os desfeitos, como no Ctrl+Z.
+- **Guarda:** 500 passos por diagrama (antes 100), com o limite de 1 MB, gravados junto com o
+  diagrama (`editorHistory.js`): a linha do tempo volta ao recarregar a página.
+- Passos gravados antes desta versão aparecem "sem horário registrado" e com a frase montada a
+  partir do diagrama atual (área e nota criadas, sem nome); refazer não lhes dá horário.
+- Código em `src/catolica/history/` (`describeChange.js`, `historyRows.js`, `HistoryPanel.jsx`,
+  `useEditorHistory.js`; testes em `history.test.js`).
+
+**Fase B, versões (próxima):** aba Versões no mesmo painel e botão "Histórico de versões" no lugar
+de "Compartilhar" (que depende de servidor), com versões automáticas e manuais conforme o escopo
+aprovado.
+
+**Fase C, histórico no pacote .zip:** pasta `historico/` na exportação e leitura na importação.
+Decisão pendente: a opção "Incluir histórico" vem marcada ou desmarcada.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

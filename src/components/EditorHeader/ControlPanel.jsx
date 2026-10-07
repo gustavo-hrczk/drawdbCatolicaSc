@@ -140,6 +140,11 @@ import {
 } from "../../catolica/editorEvents";
 import { elementUnderPointer } from "../../catolica/canvasHit";
 import { escapeStep } from "../../catolica/escapeCascade";
+import {
+  useHistoryJump,
+  useHistoryStamps,
+} from "../../catolica/history/useEditorHistory";
+import { openHistoryPanel } from "../../catolica/history/panelState";
 import { flushSync } from "react-dom";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
@@ -307,6 +312,18 @@ export default function ControlPanel({
     });
     return { ...entry, data: { snapshot: current } };
   };
+
+  // Linha do tempo (Sprint 1E): horário e frase de cada passo, e voltar a um
+  // ponto pelo painel do histórico.
+  useHistoryStamps(undoStack, redoStack, {
+    tables,
+    relationships,
+    notes,
+    areas,
+    types,
+    enums,
+    views,
+  });
 
   const undo = () => {
     if (undoStack.length === 0) return;
@@ -755,6 +772,13 @@ export default function ControlPanel({
       setUndoStack((prev) => [...prev, a]);
     }
   };
+  useHistoryJump({
+    undoStack,
+    redoStack,
+    undo,
+    redo,
+    enabled: !layout.readOnly,
+  });
 
   // Janelas do menu Arquivo do fork (ver src/catolica/fileMenu.js).
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -2310,7 +2334,12 @@ export default function ControlPanel({
   });
   menu.edit = catolicaEditMenu(upstreamMenu.edit, {
     singleKeyShortcuts: shortcutPrefs.singleKey,
-    history: upstreamMenu.settings.show_timeline,
+    // Abre o painel do histórico (Sprint 1E) no lugar da linha do tempo do
+    // upstream.
+    history: {
+      ...upstreamMenu.settings.show_timeline,
+      function: openHistoryPanel,
+    },
   });
   menu.view = catolicaViewMenu(upstreamMenu.view, { t });
   menu.settings = catolicaSettingsMenu(upstreamMenu.settings, {

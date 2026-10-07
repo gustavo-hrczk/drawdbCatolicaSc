@@ -9,7 +9,8 @@ catolicaDb.version(1).stores({
   history: "diagramId",
 });
 
-const MAX_STEPS = 100;
+// 500 passos: é também o registro do painel "Histórico de alterações".
+const MAX_STEPS = 500;
 // Limite aproximado (em caracteres de JSON) de cada pilha: entradas do editor
 // DBML guardam o diagrama inteiro e podem ser grandes.
 const MAX_CHARS = 1_000_000;

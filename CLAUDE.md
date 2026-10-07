@@ -125,6 +125,10 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   `notifyElementCreated` (`src/catolica/editorEvents.js`), e o editor abre o nome selecionado.
   Ao sincronizar com o upstream, confira se surgiram novos caminhos de criação. O Esc em cascata
   fica em `src/catolica/escapeCascade.js`.
+- Histórico (Sprint 1E): `src/catolica/history/`. Cada passo novo da pilha de desfazer ganha `at`
+  (horário) e `desc` (frase da linha do tempo) logo depois da ação; o painel fica no encaixe
+  `right-panel`. Ao sincronizar com o upstream, ações novas com entrada de desfazer precisam de
+  frase em `describeChange.js` (sem ela, a linha do tempo mostra a mensagem do upstream).
 
 ## Versionamento (público)
 

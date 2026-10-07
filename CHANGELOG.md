@@ -31,7 +31,11 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Botões de grade e de ímã (alinhar objetos à grade) na barra de ferramentas, com o mesmo visual
   de ligado e desligado e o estado na dica; a grade liga direto no ícone, e a seta ao lado escolhe
   o tamanho.
-- Desfazer e refazer continuam funcionando depois de recarregar a página ou reabrir o diagrama.
+- Desfazer e refazer continuam funcionando depois de recarregar a página ou reabrir o diagrama
+  (até 500 alterações por diagrama).
+- Histórico de alterações (Editar → Histórico de alterações): painel ao lado do diagrama com cada
+  alteração em uma frase, com ícone e horário. Clicar numa alteração volta o diagrama até ela, e
+  as desfeitas ficam esmaecidas até serem refeitas.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
   conflito de gravação, sem perder nada.
 - Nome do diagrama no título da aba do navegador.
