@@ -50,7 +50,10 @@ import {
   saveHistory,
   SaveConflictError,
 } from "../catolica/editorHistory";
-import { notifyDiagramLoaded } from "../catolica/editorEvents";
+import {
+  notifyDiagramLoaded,
+  notifyEditorReset,
+} from "../catolica/editorEvents";
 import ConflictModal from "../catolica/ConflictModal";
 import { tabTitle } from "../catolica/tabTitle";
 import { untitledTitle } from "../catolica/i18n";
@@ -429,6 +432,11 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       setLoadedFromGistId("");
       setLayout((prev) => ({ ...prev, readOnly: false }));
       setDiagramSource(null);
+      // Diagrama novo nesta mesma aba (Arquivo > Novo): pede o banco de novo
+      // e o indicador de salvamento recomeça em "Sem alterações".
+      setSelectedDb("");
+      setSaveState(State.NONE);
+      notifyEditorReset();
     };
 
     const loadLatestDiagram = async () => {

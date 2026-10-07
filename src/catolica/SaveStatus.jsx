@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Spin, Tag } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { State } from "../data/constants";
+import { onEditorReset } from "./editorEvents";
 
 // Um save rápido não troca o texto: "Salvando..." só aparece se demorar.
 const SLOW_SAVE_MS = 1000;
@@ -22,6 +23,9 @@ export default function SaveStatus({ saveState }) {
   const { t, i18n } = useTranslation();
   const [savedAt, setSavedAt] = useState(null);
   const [slow, setSlow] = useState(false);
+
+  // Diagrama novo nesta aba: o horário do diagrama anterior não vale mais.
+  useEffect(() => onEditorReset(() => setSavedAt(null)), []);
 
   useEffect(() => {
     if (saveState === State.SAVED) setSavedAt(new Date());

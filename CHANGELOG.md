@@ -31,12 +31,14 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   conflito de gravação, sem perder nada.
 - Nome do diagrama no título da aba do navegador.
 - Botão para reexibir a barra de menu quando ela estiver oculta.
-- Exportar para entrega: só o SQL, SQL + JSON ou um pacote .zip com o SQL, o diagrama, uma imagem
-  e instruções, com data e hora no nome dos arquivos.
-- Importar arquivo (Ctrl+I): aceita o .json, o .sql, os dois juntos ou o pacote .zip, com resumo
-  antes de abrir, conferência do SQL com o desenho e aviso de arquivo já importado.
+- Exportar: uma janela só, com o diagrama completo (pacote .zip para entrega, .sql + .json ou só o
+  .json), o SQL, imagem (PNG, JPEG, SVG ou PDF) e outros formatos (DBML, Mermaid e documentação),
+  com data e hora no nome dos arquivos.
+- Importar (Ctrl+I): uma janela só para o diagrama completo (.zip ou .json), o SQL (arquivo ou
+  código colado) e o DBML, com resumo antes de abrir, conferência do SQL com o desenho e aviso de
+  arquivo já importado.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
-- F2 renomeia a tabela, área, nota ou view selecionada.
+- F2 renomeia a tabela, área, nota ou view selecionada; sem nada selecionado, renomeia o diagrama.
 
 ### Melhorias
 
@@ -47,8 +49,15 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Copiar e colar elementos funcionam entre abas e em todos os navegadores.
 - Copiar como imagem e exportar PNG, JPEG, SVG e PDF: imagem fiel ao editor, recortada no
   conteúdo e gerada sem travar a página.
-- Importar um arquivo abre um diagrama novo, sem substituir o que está aberto.
-- Diagrama aberto a partir de um .sql vem organizado e enquadrado na tela.
+- Menu Arquivo mais enxuto: Novo, Nova aba, Abrir, Salvar, Salvar como, Importar, Exportar e Sair.
+- Novo começa o diagrama nesta aba, depois de salvar o atual, e pede um nome se ele ainda não
+  tiver um. Nova aba começa o diagrama em outra aba.
+- Abrir mostra os diagramas mais recentes primeiro, abre com dois cliques e também abre arquivos
+  do computador.
+- Salvar como tem a opção de salvar como modelo.
+- Lápis para renomear sempre visível ao lado do nome do diagrama.
+- Importar sempre cria um diagrama novo e o abre em uma nova aba, sem mexer no que está aberto.
+- Diagrama aberto a partir de um .sql ou .dbml vem organizado e enquadrado na tela.
 - Diagramas novos se chamam "Diagrama sem título".
 - Organizar automaticamente: desfazer também volta o zoom anterior.
 - Delete logo depois de digitar em um campo pede confirmação.
@@ -63,8 +72,13 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Alterações muito rápidas ou troca de diagrama durante o salvamento podiam gravar o conteúdo
   errado.
 - Exportar JPEG e PDF podia sair com fundo preto.
+- Nova janela abria o mesmo diagrama da aba atual, com aviso de conflito entre abas.
 
 ### Removido
 
 - Versões (dependia de um servidor que esta versão não tem).
 - Atalho Ctrl+Alt+W, que fazia o mesmo que F.
+- Abrir recente (a janela Abrir já mostra os recentes primeiro).
+- Excluir diagrama do menu Arquivo; voltará em outra tela, com mais segurança.
+- Importar para dentro do diagrama aberto (o DBML substituía o diagrama atual e apagava o
+  histórico de desfazer).

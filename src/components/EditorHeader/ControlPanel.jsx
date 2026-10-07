@@ -137,14 +137,19 @@ import useSafeKeyShortcuts, {
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
 import GridDropdown, { SnapToGridButton } from "../../catolica/GridDropdown";
-import { untitledTitle } from "../../catolica/i18n";
+import { isDefaultTitle, untitledTitle } from "../../catolica/i18n";
 import ExportDialog from "../../catolica/ExportDialog";
 import ImportDialog from "../../catolica/ImportDialog";
+import NewDialog from "../../catolica/NewDialog";
+import OpenDialog from "../../catolica/OpenDialog";
+import SaveAsDialog from "../../catolica/SaveAsDialog";
+import { catolicaFileMenu } from "../../catolica/fileMenu";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
-  canRename,
+  focusDialogField,
   focusNameField,
   openForRename,
+  renameTarget,
 } from "../../catolica/renameField";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
@@ -675,9 +680,12 @@ export default function ControlPanel({
     }
   };
 
-  // Importar arquivo (.json, .sql, .zip) e exportar para entrega (Sprint 1C).
+  // Janelas do menu Arquivo do fork (ver src/catolica/fileMenu.js).
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
+  const [newMode, setNewMode] = useState(null); // null, "here" ou "tab"
   const fileImport = () => setShowImportDialog(true);
   const viewGrid = () =>
     setSettings((prev) => ({ ...prev, showGrid: !prev.showGrid }));
@@ -944,12 +952,23 @@ export default function ControlPanel({
       }
     }
   };
-  // F2: abre a edição do elemento selecionado com o campo do nome em foco.
+  // F2: abre a edição do elemento selecionado com o campo do nome em foco;
+  // sem nada selecionado, renomeia o diagrama.
   const rename = () => {
-    if (layout.readOnly || !canRename(selectedElement)) return;
+    if (layout.readOnly) return;
     if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
-    setSelectedElement((prev) => openForRename(prev, layout.sidebar));
-    focusNameField(selectedElement.element, selectedElement.id, layout.sidebar);
+    const target = renameTarget(selectedElement);
+    if (target === "diagram") {
+      setModal(MODAL.RENAME);
+      focusDialogField();
+    } else if (target === "element") {
+      setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+      focusNameField(
+        selectedElement.element,
+        selectedElement.id,
+        layout.sidebar,
+      );
+    }
   };
   const del = () => {
     if (layout.readOnly) {
@@ -1232,8 +1251,24 @@ export default function ControlPanel({
     return recent;
   }, [cloud, local]);
 
-  const open = () => setModal(MODAL.OPEN);
-  const saveDiagramAs = () => setModal(MODAL.SAVEAS);
+  const open = () => setShowOpenDialog(true);
+  const saveDiagramAs = () => setShowSaveAsDialog(true);
+  const saveAsTemplate = async (templateTitle) => {
+    await db.templates.add({
+      title: templateTitle,
+      tables: tables,
+      database: database,
+      relationships: relationships,
+      notes: notes,
+      subjectAreas: areas,
+      views: views,
+      custom: 1,
+      templateId: uuidv4(),
+      ...(databases[database].hasEnums && { enums: enums }),
+      ...(databases[database].hasTypes && { types: types }),
+    });
+    Toast.success(t("template_saved"));
+  };
 
   const saveAsCopy = async (newTitle) => {
     const newId = uuidv4();
@@ -1243,6 +1278,7 @@ export default function ControlPanel({
       name: newTitle,
       gistId: "",
       loadedFromGistId: "",
+      createdAt: new Date(),
       lastModified: new Date(),
       tables,
       references: relationships,
@@ -1310,16 +1346,50 @@ export default function ControlPanel({
     writeShortcutPrefs(prefs);
   };
 
-  const [exitRequested, setExitRequested] = useState(false);
+  // Sair e Novo (nesta aba) só deixam o diagrama depois que o save termina.
+  const [leaveTarget, setLeaveTarget] = useState(null);
   useEffect(() => {
-    if (!exitRequested) return;
+    if (!leaveTarget) return;
     if (saveState === State.SAVED || saveState === State.NONE) {
-      navigate("/");
+      setLeaveTarget(null);
+      navigate(leaveTarget);
     } else if (saveState === State.ERROR) {
-      setExitRequested(false);
+      setLeaveTarget(null);
       Toast.error(t("failed_to_save"));
     }
-  }, [exitRequested, saveState, navigate, t]);
+  }, [leaveTarget, saveState, navigate, t]);
+
+  const diagramIsEmpty = () =>
+    tables.length === 0 &&
+    areas.length === 0 &&
+    notes.length === 0 &&
+    views.length === 0 &&
+    types.length === 0;
+
+  // Novo (nesta aba ou em nova aba). Nesta aba, salva o diagrama atual antes,
+  // com o nome escolhido se ele ainda tinha o nome padrão.
+  const createNew = (templateId, newTitle) => {
+    const path = `/editor/templates/${templateId}`;
+    const mode = newMode;
+    setNewMode(null);
+    if (mode === "tab") {
+      window.open(appUrl(path + window.location.search), "_blank");
+      return;
+    }
+    if (layout.readOnly || diagramIsEmpty()) {
+      navigate(path);
+      return;
+    }
+    if (newTitle) setTitle(newTitle);
+    setLeaveTarget(path);
+    save();
+  };
+
+  // Código mostrado na janela de código do upstream (Exportar > Ver código).
+  const showExportCode = ({ data, extension, filename }) => {
+    setExportData({ data, extension, filename });
+    setModal(MODAL.CODE);
+  };
 
   const fullscreen = useFullscreen();
 
@@ -1380,25 +1450,7 @@ export default function ControlPanel({
         disabled: layout.readOnly,
       },
       save_as_template: {
-        function: async () => {
-          await db.templates
-            .add({
-              title: title,
-              tables: tables,
-              database: database,
-              relationships: relationships,
-              notes: notes,
-              subjectAreas: areas,
-              views: views,
-              custom: 1,
-              templateId: uuidv4(),
-              ...(databases[database].hasEnums && { enums: enums }),
-              ...(databases[database].hasTypes && { types: types }),
-            })
-            .then(() => {
-              Toast.success(t("template_saved"));
-            });
-        },
+        function: () => saveAsTemplate(title),
       },
       rename: {
         function: () => {
@@ -1438,8 +1490,12 @@ export default function ControlPanel({
       import_from: {
         children: [
           {
-            function: fileImport,
-            name: t("import_file_child"),
+            function: () => {
+              setModal(MODAL.IMPORT);
+              setImportFrom(IMPORT_FROM.JSON);
+            },
+            name: "JSON",
+            disabled: layout.readOnly,
           },
           {
             function: () => {
@@ -1511,9 +1567,6 @@ export default function ControlPanel({
           setModal(MODAL.IMPORT_SRC);
         },
         disabled: layout.readOnly,
-      },
-      export_delivery: {
-        function: () => setShowExportDialog(true),
       },
       export_source: {
         ...(database === DB.GENERIC && {
@@ -1777,8 +1830,8 @@ export default function ControlPanel({
             navigate("/");
             return;
           }
-          // Sai só depois que o save terminar (ver efeito de exitRequested).
-          setExitRequested(true);
+          // Sai só depois que o save terminar (ver efeito de leaveTarget).
+          setLeaveTarget("/");
           save();
         },
       },
@@ -1820,7 +1873,7 @@ export default function ControlPanel({
       rename_selected: {
         function: rename,
         shortcut: "F2",
-        disabled: layout.readOnly || !canRename(selectedElement),
+        disabled: layout.readOnly || !renameTarget(selectedElement),
       },
       cut: {
         function: cut,
@@ -2113,6 +2166,13 @@ export default function ControlPanel({
     },
   };
 
+  menu.file = catolicaFileMenu(menu.file, {
+    newHere: () => setNewMode("here"),
+    newTab: () => setNewMode("tab"),
+    importFile: fileImport,
+    exportFile: () => setShowExportDialog(true),
+  });
+
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
   useHotkeys("mod+z", undo, EDITOR_HOTKEY);
   useHotkeys("mod+y", redo, EDITOR_HOTKEY);
@@ -2291,10 +2351,43 @@ export default function ControlPanel({
         onClose={() => setShowExportDialog(false)}
         title={title}
         diagramId={diagramId}
+        onShowCode={showExportCode}
       />
       <ImportDialog
         visible={showImportDialog}
         onClose={() => setShowImportDialog(false)}
+        currentDiagramId={diagramId}
+      />
+      <NewDialog
+        mode={newMode}
+        onClose={() => setNewMode(null)}
+        onCreate={createNew}
+        askName={
+          newMode === "here" &&
+          !layout.readOnly &&
+          !diagramIsEmpty() &&
+          isDefaultTitle(title)
+        }
+        currentTitle={title}
+      />
+      <OpenDialog
+        visible={showOpenDialog}
+        onClose={() => setShowOpenDialog(false)}
+        onOpen={(id) => {
+          setShowOpenDialog(false);
+          navigate(`/editor/diagrams/${id}`);
+        }}
+        onOpenFile={() => {
+          setShowOpenDialog(false);
+          setShowImportDialog(true);
+        }}
+      />
+      <SaveAsDialog
+        visible={showSaveAsDialog}
+        onClose={() => setShowSaveAsDialog(false)}
+        title={title}
+        onSaveCopy={saveAsCopy}
+        onSaveTemplate={saveAsTemplate}
       />
       <Modal
         modal={modal}
@@ -2602,8 +2695,17 @@ export default function ControlPanel({
                   </Tag>
                 )}
               </div>
-              {(showEditName || modal === MODAL.RENAME) && !layout.readOnly && (
-                <IconEdit />
+              {/* Lápis sempre visível: Renomear saiu do menu Arquivo. */}
+              {!layout.readOnly && (
+                <IconEdit
+                  role="button"
+                  aria-label={t("rename_diagram")}
+                  className="cursor-pointer"
+                  style={{
+                    opacity: showEditName || modal === MODAL.RENAME ? 1 : 0.55,
+                  }}
+                  onClick={() => setModal(MODAL.RENAME)}
+                />
               )}
             </div>
             <div className="flex items-center">

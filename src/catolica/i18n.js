@@ -139,10 +139,12 @@ const overrides = {
   "pt-BR": {
     fit_window_reset: "Ajustar diagrama à tela",
     snap_to_grid: "Alinhar objetos à grade",
+    template_saved: "Modelo salvo! Ele aparece em Arquivo → Novo.",
   },
   en: {
     fit_window_reset: "Fit diagram to screen",
     snap_to_grid: "Snap objects to grid",
+    template_saved: "Template saved! It is shown in File → New.",
   },
 };
 
@@ -150,21 +152,61 @@ for (const [lng, translation] of Object.entries(overrides)) {
   i18n.addResourceBundle(lng, "translation", translation, true, true);
 }
 
-// Exportação e importação de arquivos (Sprint 1C), banco padrão e F2.
+// Menu Arquivo, exportação e importação (Sprints 1C e 1F), banco padrão e F2.
 const fileTexts = {
   "pt-BR": {
     untitled_diagram: "Diagrama sem título",
-    export_delivery: "Exportar para entrega…",
-    export_dialog_title: "Exportar para entrega",
-    export_option_zip: "Pacote ZIP (recomendado)",
+    file_new: "Novo…",
+    file_new_tab: "Nova aba…",
+    file_open: "Abrir…",
+    file_save_as: "Salvar como…",
+    file_import: "Importar…",
+    file_export: "Exportar…",
+    new_dialog_title: "Novo diagrama",
+    new_tab_dialog_title: "Novo diagrama em nova aba",
+    new_name_title: "Dê um nome ao diagrama atual",
+    new_name_body:
+      "Antes de começar o novo, o diagrama atual será salvo. Ele ainda se chama “{{title}}”; com um nome, fica mais fácil encontrá-lo em Arquivo → Abrir.",
+    new_name_skip: "Agora não",
+    new_name_save: "Salvar e continuar",
+    open_from_computer: "Abrir arquivo do computador…",
+    save_as_template_option: "Salvar como modelo (aparece em Arquivo → Novo)",
+    export_dialog_title: "Exportar",
+    export_group_complete: "Diagrama completo",
+    export_group_sql: "SQL",
+    export_group_image: "Imagem",
+    export_group_other: "Outros formatos",
+    export_option_zip: "Pacote .zip (recomendado)",
     export_option_zip_hint:
-      "Um único arquivo com o SQL, o diagrama completo, uma imagem e instruções. Ideal para enviar pelo Teams.",
-    export_option_pair: "SQL + JSON",
+      "Um único arquivo com o SQL, o diagrama completo, uma imagem e instruções. Ideal para entregar pelo Teams.",
+    export_option_pair: ".sql + .json",
     export_option_pair_hint:
       "Dois arquivos com o mesmo nome: o SQL e o diagrama completo, que reabre o desenho no editor.",
-    export_option_sql: "Só o SQL",
+    export_option_json: "Só o .json",
+    export_option_json_hint:
+      "O diagrama completo, com o desenho, para reabrir no editor ou guardar uma cópia de segurança.",
+    export_option_sql: "Arquivo .sql",
     export_option_sql_hint:
       "Script para criar o banco de dados. Use quando só o SQL for pedido ou para levar o banco para produção.",
+    export_option_png: "PNG",
+    export_option_png_hint:
+      "Imagem do diagrama com boa qualidade, para documentos e apresentações.",
+    export_option_jpeg: "JPEG",
+    export_option_jpeg_hint: "Imagem mais leve, com fundo sólido.",
+    export_option_svg: "SVG",
+    export_option_svg_hint: "Imagem vetorial: não perde qualidade ao ampliar.",
+    export_option_pdf: "PDF",
+    export_option_pdf_hint:
+      "Uma página do tamanho do diagrama, para imprimir ou anexar.",
+    export_option_dbml: "DBML",
+    export_option_dbml_hint:
+      "Texto no formato DBML, usado pelo dbdiagram.io e por outras ferramentas.",
+    export_option_mermaid: "Mermaid",
+    export_option_mermaid_hint:
+      "Diagrama em texto Mermaid, que aparece desenhado no GitHub e em outros editores de Markdown.",
+    export_option_markdown: "Documentação (Markdown)",
+    export_option_markdown_hint:
+      "Descrição das tabelas e dos campos em texto Markdown.",
     export_dialect: "Banco de dados do SQL",
     export_dialect_hint:
       "O diagrama é Genérico: escolha para qual banco de dados o SQL será gerado.",
@@ -173,17 +215,21 @@ const fileTexts = {
     export_download_both: "Baixar os dois",
     export_download_sql_only: "Só o .sql",
     export_download_json_only: "Só o .json",
+    export_view_code: "Ver e copiar o código",
     export_multiple_downloads_hint:
       "O navegador pode pedir permissão para baixar dois arquivos de uma vez.",
     export_started: "Download iniciado: {{files}}",
     export_failed: "Não foi possível gerar os arquivos.",
-    import_file_child: "Arquivo do diagrama (.json, .sql, .zip)",
-    import_dialog_title: "Importar arquivo",
-    import_drop_here: "Arraste os arquivos para cá ou clique para escolher",
+    import_dialog_title: "Importar",
+    import_drop_here: "Arraste o arquivo para cá ou clique para escolher",
     import_accepted:
-      "Aceita o .json do diagrama, o .sql, os dois juntos ou o pacote .zip.",
+      "Diagrama completo (.zip ou .json), SQL (.sql) ou DBML (.dbml). O diagrama abre em uma nova aba.",
+    import_paste_sql: "Colar código SQL",
+    import_paste_placeholder: "Cole aqui o código SQL (CREATE TABLE …)",
+    import_back: "Voltar",
+    import_continue: "Continuar",
     import_reading: "Lendo os arquivos…",
-    import_choose_other: "Escolher outros arquivos",
+    import_choose_other: "Escolher outro arquivo",
     import_database: "Banco de dados",
     import_tables: "Tabelas",
     import_exported_at: "Exportado em",
@@ -196,19 +242,25 @@ const fileTexts = {
     import_sql_only:
       "Só o SQL: as tabelas serão organizadas automaticamente. Sem o .json, o desenho original não pode ser restaurado.",
     import_sql_dialect: "Banco de dados do SQL",
+    import_dbml_database: "Banco de dados do diagrama",
+    import_dbml_info:
+      "O DBML não guarda o desenho: as tabelas serão organizadas automaticamente.",
     import_duplicate: "Este arquivo já foi importado antes, como “{{name}}”.",
-    import_open: "Abrir",
+    import_open: "Abrir em nova aba",
     import_open_existing: "Abrir o existente",
     import_new_copy: "Importar uma nova cópia",
     import_open_sql_instead: "Abrir o SQL como outro diagrama",
     import_open_json_instead: "Voltar e abrir pelo .json",
+    import_already_open: "Esse diagrama já está aberto nesta aba.",
+    diagram_imported_new_tab:
+      "Diagrama “{{title}}” salvo neste navegador e aberto em uma nova aba.",
     import_error_no_files: "Nenhum arquivo escolhido.",
     import_error_rar_not_supported:
       "Arquivos .rar não são aceitos. Compacte em .zip (no Windows: botão direito → Enviar para → Pasta compactada) e tente de novo.",
     import_error_unsupported:
-      "Formato não aceito ({{name}}). Use .json, .sql ou .zip.",
+      "Formato não aceito ({{name}}). Use .zip, .json, .sql ou .dbml.",
     import_error_ambiguous:
-      "Escolha um diagrama por vez: há mais de um arquivo .json ou .sql na seleção.",
+      "Escolha um diagrama por vez: a seleção tem arquivos de mais de um diagrama.",
     import_error_invalid_zip:
       "O arquivo .zip está corrompido ou não pôde ser lido.",
     import_error_too_large: "Arquivo grande demais para importar.",
@@ -228,23 +280,65 @@ const fileTexts = {
     import_error_sql_syntax_no_position: "O SQL tem erros de sintaxe.",
     import_error_sql_unsupported:
       "Não foi possível converter este SQL em diagrama.",
+    import_error_dbml_syntax:
+      "Erro no DBML na linha {{line}}, coluna {{column}}.",
+    import_error_dbml_syntax_no_position: "O DBML tem erros de sintaxe.",
     default_database: "Banco de dados padrão",
     default_database_current: "padrão",
-    rename_selected: "Renomear elemento selecionado",
+    rename_selected: "Renomear (elemento selecionado ou diagrama)",
   },
   en: {
     untitled_diagram: "Untitled diagram",
-    export_delivery: "Export for submission…",
-    export_dialog_title: "Export for submission",
-    export_option_zip: "ZIP package (recommended)",
+    file_new: "New…",
+    file_new_tab: "New tab…",
+    file_open: "Open…",
+    file_save_as: "Save as…",
+    file_import: "Import…",
+    file_export: "Export…",
+    new_dialog_title: "New diagram",
+    new_tab_dialog_title: "New diagram in a new tab",
+    new_name_title: "Name the current diagram",
+    new_name_body:
+      "The current diagram will be saved before the new one starts. It is still called “{{title}}”; a name makes it easier to find in File → Open.",
+    new_name_skip: "Not now",
+    new_name_save: "Save and continue",
+    open_from_computer: "Open a file from this computer…",
+    save_as_template_option: "Save as template (shown in File → New)",
+    export_dialog_title: "Export",
+    export_group_complete: "Full diagram",
+    export_group_sql: "SQL",
+    export_group_image: "Image",
+    export_group_other: "Other formats",
+    export_option_zip: ".zip package (recommended)",
     export_option_zip_hint:
       "A single file with the SQL, the full diagram, an image and instructions.",
-    export_option_pair: "SQL + JSON",
+    export_option_pair: ".sql + .json",
     export_option_pair_hint:
       "Two files with the same name: the SQL and the full diagram, which reopens the drawing in the editor.",
-    export_option_sql: "SQL only",
+    export_option_json: ".json only",
+    export_option_json_hint:
+      "The full diagram, with the drawing, to reopen in the editor or keep as a backup.",
+    export_option_sql: ".sql file",
     export_option_sql_hint:
       "Script to create the database. Use it when only the SQL is required or to take the database to production.",
+    export_option_png: "PNG",
+    export_option_png_hint:
+      "Good quality image of the diagram, for documents and presentations.",
+    export_option_jpeg: "JPEG",
+    export_option_jpeg_hint: "Lighter image with a solid background.",
+    export_option_svg: "SVG",
+    export_option_svg_hint: "Vector image: keeps its quality when enlarged.",
+    export_option_pdf: "PDF",
+    export_option_pdf_hint:
+      "A single page the size of the diagram, to print or attach.",
+    export_option_dbml: "DBML",
+    export_option_dbml_hint: "DBML text, used by dbdiagram.io and other tools.",
+    export_option_mermaid: "Mermaid",
+    export_option_mermaid_hint:
+      "Mermaid text diagram, rendered by GitHub and other Markdown editors.",
+    export_option_markdown: "Documentation (Markdown)",
+    export_option_markdown_hint:
+      "Description of the tables and fields in Markdown.",
     export_dialect: "SQL database",
     export_dialect_hint:
       "The diagram is Generic: choose which database the SQL is generated for.",
@@ -253,17 +347,21 @@ const fileTexts = {
     export_download_both: "Download both",
     export_download_sql_only: ".sql only",
     export_download_json_only: ".json only",
+    export_view_code: "View and copy the code",
     export_multiple_downloads_hint:
       "The browser may ask for permission to download two files at once.",
     export_started: "Download started: {{files}}",
     export_failed: "Could not generate the files.",
-    import_file_child: "Diagram file (.json, .sql, .zip)",
-    import_dialog_title: "Import file",
-    import_drop_here: "Drop the files here or click to choose",
+    import_dialog_title: "Import",
+    import_drop_here: "Drop the file here or click to choose",
     import_accepted:
-      "Accepts the diagram .json, the .sql, both together or the .zip package.",
+      "Full diagram (.zip or .json), SQL (.sql) or DBML (.dbml). The diagram opens in a new tab.",
+    import_paste_sql: "Paste SQL code",
+    import_paste_placeholder: "Paste the SQL code here (CREATE TABLE …)",
+    import_back: "Back",
+    import_continue: "Continue",
     import_reading: "Reading the files…",
-    import_choose_other: "Choose other files",
+    import_choose_other: "Choose another file",
     import_database: "Database",
     import_tables: "Tables",
     import_exported_at: "Exported at",
@@ -276,19 +374,25 @@ const fileTexts = {
     import_sql_only:
       "SQL only: tables will be arranged automatically. Without the .json, the original drawing cannot be restored.",
     import_sql_dialect: "SQL database",
+    import_dbml_database: "Diagram database",
+    import_dbml_info:
+      "DBML does not keep the drawing: tables will be arranged automatically.",
     import_duplicate: "This file was already imported as “{{name}}”.",
-    import_open: "Open",
+    import_open: "Open in a new tab",
     import_open_existing: "Open the existing one",
     import_new_copy: "Import a new copy",
     import_open_sql_instead: "Open the SQL as another diagram",
     import_open_json_instead: "Go back and open from the .json",
+    import_already_open: "This diagram is already open in this tab.",
+    diagram_imported_new_tab:
+      "Diagram “{{title}}” saved in this browser and opened in a new tab.",
     import_error_no_files: "No file chosen.",
     import_error_rar_not_supported:
       ".rar files are not accepted. Compress as .zip and try again.",
     import_error_unsupported:
-      "Unsupported format ({{name}}). Use .json, .sql or .zip.",
+      "Unsupported format ({{name}}). Use .zip, .json, .sql or .dbml.",
     import_error_ambiguous:
-      "Choose one diagram at a time: there is more than one .json or .sql file.",
+      "Choose one diagram at a time: the selection has files from more than one diagram.",
     import_error_invalid_zip:
       "The .zip file is corrupted or could not be read.",
     import_error_too_large: "File too large to import.",
@@ -305,9 +409,11 @@ const fileTexts = {
     import_error_sql_syntax: "SQL error at line {{line}}, column {{column}}.",
     import_error_sql_syntax_no_position: "The SQL has syntax errors.",
     import_error_sql_unsupported: "Could not convert this SQL into a diagram.",
+    import_error_dbml_syntax: "DBML error at line {{line}}, column {{column}}.",
+    import_error_dbml_syntax_no_position: "The DBML has syntax errors.",
     default_database: "Default database",
     default_database_current: "default",
-    rename_selected: "Rename selected element",
+    rename_selected: "Rename (selected element or diagram)",
   },
 };
 
@@ -318,4 +424,16 @@ for (const [lng, translation] of Object.entries(fileTexts)) {
 // Título de diagramas novos, no idioma atual.
 export function untitledTitle() {
   return i18n.t("untitled_diagram");
+}
+
+// Nomes padrão de diagrama (de qualquer idioma e os antigos do upstream).
+const DEFAULT_TITLES = new Set([
+  "Untitled Diagram",
+  "Untitled diagram",
+  ...Object.values(fileTexts).map((texts) => texts.untitled_diagram),
+]);
+
+export function isDefaultTitle(title) {
+  const value = (title ?? "").trim();
+  return !value || DEFAULT_TITLES.has(value);
 }

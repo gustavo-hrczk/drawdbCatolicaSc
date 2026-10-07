@@ -27,8 +27,7 @@ export function packageReadme({
     "Conteúdo:",
     `- ${baseName}.sql: script SQL para criar o banco de dados.`,
     `- ${baseName}.json: o diagrama completo, com o desenho. Para reabrir no editor, use`,
-    "  Arquivo > Importar > Arquivo do diagrama (ou Ctrl+I) e escolha este .zip",
-    "  inteiro ou o .json.",
+    "  Arquivo > Importar (ou Ctrl+I) e escolha este .zip inteiro ou o .json.",
     hasImage
       ? `- ${baseName}.png: imagem do diagrama, para visualizar sem o editor.`
       : null,

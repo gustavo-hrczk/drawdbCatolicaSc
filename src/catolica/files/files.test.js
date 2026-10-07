@@ -31,6 +31,8 @@ import {
 import { buildPackage, readPackage } from "./zipPackage";
 import { planImport } from "./importPlan";
 import { parseSqlDiagram } from "./sqlImport";
+import { parseDbmlDiagram } from "./dbmlImport";
+import { toDBML } from "../../utils/exportAs/dbml";
 
 const TEMPLATES = [
   template1,
@@ -412,6 +414,48 @@ describe("importação: encaixe dos arquivos", () => {
   it("outros formatos são recusados", async () => {
     const plan = await planImport([{ name: "t.docx", bytes: bytes("x") }]);
     expect(plan).toMatchObject({ ok: false, error: "unsupported" });
+  });
+
+  it(".dbml sozinho é aceito", async () => {
+    const plan = await planImport([{ name: "Loja.DBML", bytes: bytes("x") }]);
+    expect(plan).toMatchObject({ ok: true, kind: "dbml" });
+    expect(plan.dbml.name).toBe("Loja.DBML");
+  });
+
+  it(".dbml junto com outro arquivo é ambíguo", async () => {
+    const { json } = await makeExport(template1);
+    const plan = await planImport([
+      { name: "a.dbml", bytes: bytes("x") },
+      { name: "a.json", bytes: bytes(json) },
+    ]);
+    expect(plan).toMatchObject({ ok: false, error: "ambiguous" });
+  });
+});
+
+describe("abrir um .dbml como diagrama novo", () => {
+  for (const template of TEMPLATES) {
+    it(`${template.title} exportado e reimportado`, () => {
+      const diagram = asDiagram(template);
+      const text = toDBML({ ...diagram, enums: template.enums ?? [] });
+      const parsed = parseDbmlDiagram(`\uFEFF${text}`, DB.POSTGRES);
+      expect(parsed.ok).toBe(true);
+      expect(parsed.data.database).toBe(DB.POSTGRES);
+      expect(parsed.data.tables.map((t) => t.name).sort()).toEqual(
+        diagram.tables.map((t) => t.name).sort(),
+      );
+      expect(parsed.data.relationships).toHaveLength(
+        diagram.relationships.length,
+      );
+    });
+  }
+
+  it("DBML com erro informa linha e coluna", () => {
+    const parsed = parseDbmlDiagram("Table a {\n  id int\n", DB.POSTGRES);
+    expect(parsed).toMatchObject({
+      ok: false,
+      error: "dbml_syntax",
+      detail: { line: 3, column: 1 },
+    });
   });
 });
 

@@ -3,7 +3,8 @@ import { openOverlays } from "./useSafeKeyShortcuts";
 
 // F2: renomear o elemento selecionado (tabela, área, nota ou view). Abre a
 // edição do elemento, como o Ctrl+E, e já coloca o cursor no campo do nome
-// com o texto selecionado. Enter confirma; Esc volta o nome anterior.
+// com o texto selecionado. Enter confirma; Esc volta o nome anterior. Sem
+// nada selecionado, o F2 renomeia o próprio diagrama.
 
 const WAIT_MS = 1500;
 const RETRY_MS = 50;
@@ -36,6 +37,14 @@ const RENAMABLE = {
 
 export function canRename(selectedElement) {
   return Boolean(RENAMABLE[selectedElement?.element]);
+}
+
+// O que o F2 renomeia: "element", "diagram" (nada selecionado) ou null
+// (seleção que não tem nome editável aqui, como um relacionamento).
+export function renameTarget(selectedElement) {
+  if (canRename(selectedElement)) return "element";
+  const element = selectedElement?.element ?? ObjectType.NONE;
+  return element === ObjectType.NONE ? "diagram" : null;
 }
 
 // Estado da seleção que abre a edição do elemento: no painel lateral (aba
@@ -101,17 +110,52 @@ function startRename(input) {
   input.addEventListener("blur", stop);
 }
 
-// Espera o campo aparecer (troca de aba, item expandindo, popover abrindo) e
-// começa a renomeação.
-export function focusNameField(element, id, sidebar) {
+// Espera o campo aparecer (troca de aba, item expandindo, janela abrindo) e
+// chama run com ele.
+function whenFieldReady(find, run) {
   const startedAt = performance.now();
   const attempt = () => {
-    const input = findNameInput(element, id, sidebar);
+    const input = find();
     if (input && input.getClientRects().length > 0 && !input.readOnly) {
-      startRename(input);
+      run(input);
     } else if (performance.now() - startedAt < WAIT_MS) {
       setTimeout(attempt, RETRY_MS);
     }
   };
   setTimeout(attempt, 0);
+}
+
+export function focusNameField(element, id, sidebar) {
+  whenFieldReady(() => findNameInput(element, id, sidebar), startRename);
+}
+
+// Campo de texto da janela aberta: cursor no campo e texto selecionado. Com
+// submitOnEnter, Enter confirma (clica no botão principal da janela), como
+// na janela "Renomear diagrama" do upstream, que não trata o Enter.
+export function focusDialogField({ submitOnEnter = true } = {}) {
+  const dialog = () =>
+    openOverlays()
+      .filter((el) => el.matches(".semi-modal-wrap"))
+      .pop();
+  whenFieldReady(
+    () => dialog()?.querySelector(NAME_INPUT),
+    (input) => {
+      input.focus();
+      input.select();
+      if (!submitOnEnter) return;
+      const onKeyDown = (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        dialog()
+          ?.querySelector(".semi-modal-footer .semi-button-primary")
+          ?.click();
+      };
+      input.addEventListener("keydown", onKeyDown);
+      input.addEventListener(
+        "blur",
+        () => input.removeEventListener("keydown", onKeyDown),
+        { once: true },
+      );
+    },
+  );
 }

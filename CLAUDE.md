@@ -113,6 +113,8 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 - Exportação e importação de entrega (Sprint 1C): núcleo testado em `src/catolica/files/` e
   janelas `src/catolica/ExportDialog.jsx` e `ImportDialog.jsx`. O SQL exportado tem de ser
   idêntico ao dos exportadores do upstream (há teste para isso); metadados do fork só no `.json`.
+- Menu Arquivo (Sprint 1F): `src/catolica/fileMenu.js` escolhe e reorganiza os itens do upstream,
+  que continuam definidos em `ControlPanel.jsx`. Para mudar o menu, mexa no `fileMenu.js`.
 
 ## Versionamento (público)
 
@@ -144,6 +146,9 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 ## Arquitetura (resumo para orientação)
 
 - React 18 + Vite, UI com Semi UI (`@douyinfe/semi-ui`), Tailwind. Cerca de 52 mil linhas.
+  No `tailwind.config.js` do upstream, `sm`, `md` e `lg` são de **largura máxima** (`sm:` vale
+  para telas de até 639px): escreva o layout de computador sem prefixo e ajuste o de telas
+  pequenas com `sm:`.
 - Persistência local no navegador (IndexedDB via Dexie, `src/data/db.js`). Não há conta nem
   nuvem: limpar dados do navegador apaga os diagramas.
 - i18n com i18next. `src/i18n/locales/pt-br.js` está completo (366 chaves, mesmas do `en.js`).

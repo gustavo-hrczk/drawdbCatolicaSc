@@ -16,6 +16,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
+| 1F | Menu Arquivo enxuto | concluído na `homolog` |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -347,6 +348,57 @@ SQL não roda no PostgreSQL nem é reimportado pelo editor. Os testes marcam ess
 falha esperada (`it.fails`) e vão avisar quando o defeito for corrigido. Como o SQL precisa ser
 idêntico ao do exportador, a correção deve ser feita no próprio exportador
 (`src/utils/exportSQL/generic.js`) e, de preferência, contribuída ao projeto original.
+
+## Sprint 1F: Menu Arquivo enxuto
+
+Pedido do mantenedor em 07/10/2026, antes de seguir com os próximos sprints: higienizar o menu
+Arquivo, que tinha 15 itens, alguns repetidos e um com defeito.
+
+**Diagnóstico:**
+
+- **Nova janela** abria `/editor` sem diagrama; o editor carrega o último salvo, que era o próprio
+  diagrama aberto, e aparecia o aviso de conflito entre abas.
+- **Novo** escolhia o modelo e abria em outra aba.
+- Abrir e Abrir recente, Importar e Importar de SQL, e Exportar SQL, Exportar como e Exportar para
+  entrega faziam a mesma coisa por caminhos diferentes.
+
+**Decisões do mantenedor:**
+
+- Menu com 8 itens: Novo, Nova aba, Abrir, Salvar, Salvar como, Importar, Exportar e Sair.
+- **Novo** começa o diagrama nesta aba, salvando o atual antes; se o atual ainda tem o nome padrão,
+  pede um nome (o "Salvar como" do primeiro salvamento). **Nova aba** (antes "Nova janela") faz o
+  mesmo em outra aba, sem mexer na atual. Os dois usam a escolha de modelo.
+- **Abrir** fica com a lista (os recentes primeiro), dois cliques para abrir e o botão "Abrir
+  arquivo do computador". Os modelos ficam em Novo.
+- **Salvar como modelo** vira opção de Salvar como.
+- **Renomear** sai do menu: lápis sempre visível ao lado do nome e F2 sem nada selecionado.
+- **Excluir diagrama** sai do menu; voltará em outra tela (sugestão: na janela Abrir ou na home
+  do Sprint 3, com confirmação). Até lá, só "Limpar armazenamento" apaga, e apaga tudo.
+- **Importar e Exportar** com a mesma ordem: diagrama completo, SQL, imagem (só exportar) e outros
+  formatos. Todo diagrama importado (inclusive SQL e DBML) abre como diagrama novo em uma nova aba;
+  saem as opções do upstream de adicionar ao diagrama aberto ou substituí-lo.
+
+**Implementação:**
+
+- `src/catolica/fileMenu.js` monta o menu a partir dos itens do upstream, que continuam em
+  `ControlPanel.jsx` sem alteração de conteúdo (menos conflito ao sincronizar).
+- Janelas próprias em `src/catolica/`: `NewDialog.jsx` (grade de modelos do upstream),
+  `OpenDialog.jsx` (lista do upstream), `SaveAsDialog.jsx`, `ExportDialog.jsx` (quatro seções)
+  e `ImportDialog.jsx` (DBML e SQL colado). Exportar reaproveita os geradores do upstream (DBML,
+  Mermaid, documentação) e "Ver e copiar o código" usa a janela de código do upstream.
+- Abrir em nova aba: a aba é aberta já no clique (senão o navegador bloqueia) e recebe o endereço
+  quando o diagrama está salvo; se o navegador bloquear, abre nesta aba.
+- Novo nesta aba usa o mesmo mecanismo do Sair: navega só depois que o save termina.
+- Correções que apareceram nos testes: o editor não pedia o banco de dados de novo ao começar um
+  diagrama na mesma aba (o upstream só pedia uma vez por aba) e o indicador continuava com o
+  horário do diagrama anterior (`notifyEditorReset` em `editorEvents.js`).
+- Testes: DBML no plano de importação e ida e volta dos 6 modelos em DBML (94 testes).
+- Conferido no build de homologação local: menu, Importar (diagrama completo, SQL, SQL colado,
+  DBML, erros, duplicata do diagrama aberto), Exportar (os 11 formatos, nomes e conteúdo dos
+  arquivos, "Ver e copiar o código"), Abrir (dois cliques, abrir arquivo do computador), Novo com
+  e sem nome, Nova aba, Salvar como (cópia e modelo), F2 sem seleção, lápis e Sair. O painel de
+  testes não abre abas por `window.open`; o caminho principal foi conferido simulando o
+  `window.open`, e o plano B (abrir nesta aba) na prática.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

@@ -9,7 +9,8 @@ import { looksLikeRar, looksLikeZip, readPackage } from "./zipPackage";
 //
 // inputs: [{ name, bytes: Uint8Array }]
 // Devolve { ok: false, error, detail? } ou
-//   { ok: true, kind: "json" | "pair" | "sql", diagram?, sql?, sqlCheck, fromZip }
+//   { ok: true, kind: "json" | "pair" | "sql" | "dbml", diagram?, sql?, dbml?,
+//     sqlCheck, fromZip }
 // sqlCheck: "match" | "mismatch" | "not_checked" (JSON sem hash) | "absent".
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -18,13 +19,14 @@ const decoder = new TextDecoder("utf-8"); // remove o BOM sozinho
 const kindOf = (name) => {
   if (/\.(json|ddb)$/i.test(name)) return "json";
   if (/\.sql$/i.test(name)) return "sql";
+  if (/\.dbml$/i.test(name)) return "dbml";
   return null;
 };
 
 export async function planImport(inputs) {
   if (!inputs?.length) return { ok: false, error: "no_files" };
 
-  const found = { json: [], sql: [] };
+  const found = { json: [], sql: [], dbml: [] };
   let fromZip = null;
 
   for (const { name, bytes } of inputs) {
@@ -52,6 +54,14 @@ export async function planImport(inputs) {
   }
   if (found.sql.length > 1) {
     return { ok: false, error: "ambiguous", detail: "sql" };
+  }
+  // DBML só sozinho: não há como conferir com um .json ou .sql.
+  if (found.dbml.length) {
+    if (found.dbml.length > 1 || found.json.length || found.sql.length) {
+      return { ok: false, error: "ambiguous", detail: "dbml" };
+    }
+    const [dbml] = found.dbml;
+    return { ok: true, kind: "dbml", dbml, sqlCheck: "absent", fromZip };
   }
   const [json] = found.json;
   const [sql] = found.sql;

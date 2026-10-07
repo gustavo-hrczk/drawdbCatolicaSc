@@ -1,3 +1,5 @@
+import jsPDF from "jspdf";
+
 // Gera imagens do diagrama: Copiar como imagem (Ctrl+Alt+C) e Exportar como
 // PNG/JPEG/SVG/PDF.
 //
@@ -372,6 +374,26 @@ function blobToDataUrl(blob) {
 export async function diagramDataUrl(options) {
   const result = await diagramBlob(options);
   return { ...result, dataUrl: await blobToDataUrl(result.blob) };
+}
+
+export function diagramSvgBlob() {
+  return new Blob([diagramSvg().markup], { type: "image/svg+xml" });
+}
+
+// PDF de uma página do tamanho do conteúdo do diagrama (como o "Exportar como
+// PDF").
+export async function diagramPdfBlob() {
+  const { dataUrl, svgWidth, svgHeight } = await diagramDataUrl({
+    type: "image/jpeg",
+    quality: 0.95,
+    scale: 2,
+  });
+  const doc = new jsPDF(svgWidth >= svgHeight ? "l" : "p", "px", [
+    svgWidth,
+    svgHeight,
+  ]);
+  doc.addImage(dataUrl, "jpeg", 0, 0, svgWidth, svgHeight);
+  return doc.output("blob");
 }
 
 let copying = false;
