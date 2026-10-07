@@ -9,6 +9,7 @@ import { template6 } from "../../templates/template6";
 import { DB } from "../../data/constants";
 import { exportSQL } from "../../utils/exportSQL";
 import {
+  getTypeString,
   jsonToMariaDB,
   jsonToMySQL,
   jsonToOracleSQL,
@@ -655,19 +656,45 @@ describe("abrir um .dbml como diagrama novo", () => {
   });
 });
 
-describe("abrir um .sql como diagrama novo", () => {
-  // Defeito do exportador do upstream (docs/sprints.md, "Defeito conhecido"): de
-  // "Genérico" para PostgreSQL, campos TEXT com tamanho viram "text(65535)", que
-  // o PostgreSQL não aceita. it.fails passa enquanto o defeito existir e avisa
-  // quando ele for corrigido.
-  const knownUpstreamBug = (template, dialect) =>
-    dialect === DB.POSTGRES &&
-    ["Human resources schema", "E-commerce schema"].includes(template.title);
+describe("tipos do Genérico exportados para PostgreSQL", () => {
+  // Corrige o exportador do upstream, que escrevia tipos que o PostgreSQL não
+  // aceita, como "text(65535)" (docs/sprints.md, Sprint 1E).
+  const pg = (type, size = "") =>
+    getTypeString({ name: "c", type, size }, DB.GENERIC, DB.POSTGRES);
 
+  it("tipos sem tamanho no PostgreSQL saem sem tamanho", () => {
+    expect(pg("TEXT", 65535)).toBe("text");
+    expect(pg("TEXT")).toBe("text");
+    expect(pg("CLOB")).toBe("text");
+    expect(pg("NCLOB")).toBe("text");
+    expect(pg("DOUBLE", "10,2")).toBe("double precision");
+  });
+
+  it("tipos que o PostgreSQL não tem viram os equivalentes", () => {
+    expect(pg("BLOB")).toBe("bytea");
+    expect(pg("NUMBER", "10,2")).toBe("numeric(10,2)");
+    expect(pg("NUMBER")).toBe("numeric");
+    expect(pg("VARCHAR2", 100)).toBe("varchar(100)");
+    expect(pg("BINARY")).toBe("bytea");
+    expect(pg("VARBINARY")).toBe("bytea");
+  });
+
+  it("os demais tipos continuam como antes", () => {
+    expect(pg("VARCHAR", 255)).toBe("varchar(255)");
+    expect(pg("CHAR", 2)).toBe("char(2)");
+    expect(pg("BINARY", 8)).toBe("bit(8)");
+    expect(pg("VARBINARY", 8)).toBe("bit varying(8)");
+    expect(pg("DECIMAL", "10,2")).toBe("decimal(10,2)");
+    expect(pg("INT")).toBe("int");
+    expect(pg("DATETIME")).toBe("timestamp");
+    expect(pg("TIMESTAMP")).toBe("TIMESTAMPTZ");
+  });
+});
+
+describe("abrir um .sql como diagrama novo", () => {
   for (const dialect of [DB.POSTGRES, DB.MYSQL]) {
     for (const template of TEMPLATES) {
-      const test = knownUpstreamBug(template, dialect) ? it.fails : it;
-      test(`${template.title} exportado e reimportado em ${dialect}`, () => {
+      it(`${template.title} exportado e reimportado em ${dialect}`, () => {
         const diagram = asDiagram(template);
         const sql = diagramSql(diagram, dialect);
         const parsed = parseSqlDiagram(`\uFEFF${sql}`, dialect);

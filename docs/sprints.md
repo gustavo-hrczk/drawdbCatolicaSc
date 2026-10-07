@@ -342,13 +342,18 @@ testes certos falharem.
   RAR, `.docx`, dois JSON, SQL com erro (linha e coluna) e SQL sozinho; F2 em tabela e nota, com
   e sem painel lateral; banco padrão no menu e no seletor de diagramas novos.
 
-**Defeito conhecido (upstream, decisão pendente):** o exportador do drawDB original, ao gerar
-PostgreSQL a partir de um diagrama "Genérico", escreve tipos que o PostgreSQL não aceita, como
-`text(65535)`. Nos modelos prontos, isso afeta "Human resources schema" e "E-commerce schema": o
-SQL não roda no PostgreSQL nem é reimportado pelo editor. Os testes marcam esses dois casos como
-falha esperada (`it.fails`) e vão avisar quando o defeito for corrigido. Como o SQL precisa ser
-idêntico ao do exportador, a correção deve ser feita no próprio exportador
-(`src/utils/exportSQL/generic.js`) e, de preferência, contribuída ao projeto original.
+**Defeito do upstream, corrigido em 07/10/2026:** o exportador do drawDB original, ao gerar
+PostgreSQL a partir de um diagrama "Genérico", escrevia tipos que o PostgreSQL não aceita, como
+`text(65535)`. Nos modelos prontos, isso afetava "Human resources schema" e "E-commerce schema": o
+SQL não rodava no PostgreSQL nem era reimportado pelo editor. A correção está no próprio exportador
+(`getTypeString` em `src/utils/exportSQL/generic.js`, que continua igual ao do upstream no resto):
+TEXT, CLOB e NCLOB viram `text`; BLOB e BINARY/VARBINARY sem tamanho, `bytea`; DOUBLE,
+`double precision`; NUMBER, `numeric`; VARCHAR2, `varchar`. Os demais tipos saem como antes. Os
+dois casos deixaram de ser falha esperada, e há testes para cada tipo. O `generic.js` do upstream
+continuava com o defeito (conferido em 07/10/2026, sem issue aberta): candidato a contribuição.
+Os pacotes antigos continuam conferindo na importação, porque a conferência compara o `.sql` com a
+impressão digital gravada no `.json` do mesmo pacote. Ainda não revisados: tipos do Genérico só de
+Oracle (NUMBER, VARCHAR2, CLOB) exportados para MySQL e outros bancos.
 
 ## Sprint 1F: Menu Arquivo enxuto
 

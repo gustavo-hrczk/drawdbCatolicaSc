@@ -104,6 +104,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Relatar um erro não funcionava (dependia de um servidor que esta versão não tem).
 - Nova janela abria o mesmo diagrama da janela atual, com aviso de conflito entre abas.
 - "Ver o código" de um diagrama vazio abria uma tela de carregamento sem fim.
+- SQL para PostgreSQL de diagramas no banco Genérico saía com tipos que o PostgreSQL não aceita,
+  como text(65535).
 
 ### Removido
 
