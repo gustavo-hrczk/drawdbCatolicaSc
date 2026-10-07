@@ -14,7 +14,6 @@ import {
 } from "@douyinfe/semi-icons";
 import {
   Cardinality,
-  Constraint,
   Action,
   ObjectType,
   defaultRelationshipColor,
@@ -24,6 +23,10 @@ import { getRelationshipFields } from "../../../utils/utils";
 import ColorPicker from "../ColorPicker";
 import { useTranslation } from "react-i18next";
 import { useMemo, useRef, useState } from "react";
+import {
+  constraintOptions,
+  constraintSelected,
+} from "../../../catolica/constraintOptions";
 
 export default function RelationshipInfo({ data }) {
   const { setUndoStack, setRedoStack } = useUndoRedo();
@@ -270,16 +273,36 @@ export default function RelationshipInfo({ data }) {
           }}
         />
       </div>
-      <div className="flex justify-between items-center mb-1">
-        <div className="me-3">
-          <span className="font-semibold">{t("primary")}: </span>
-          {endTableName}
-        </div>
-        <div className="mx-1">
-          <span className="font-semibold">{t("foreign")}: </span>
-          {startTableName}
-        </div>
-      </div>
+      <Row gutter={6} className="mb-1">
+        <Col span={12}>
+          <div className="font-semibold my-1">{t("primary")}:</div>
+          <div
+            className="flex items-center gap-2 rounded-md px-3 py-1.5"
+            style={{
+              backgroundColor: "var(--semi-color-fill-0)",
+              color: "var(--semi-color-text-0)",
+            }}
+            title={endTableName}
+          >
+            <i className="bi bi-table opacity-60" aria-hidden />
+            <span className="truncate">{endTableName}</span>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div className="font-semibold my-1">{t("foreign")}:</div>
+          <div
+            className="flex items-center gap-2 rounded-md px-3 py-1.5"
+            style={{
+              backgroundColor: "var(--semi-color-fill-0)",
+              color: "var(--semi-color-text-0)",
+            }}
+            title={startTableName}
+          >
+            <i className="bi bi-table opacity-60" aria-hidden />
+            <span className="truncate">{startTableName}</span>
+          </div>
+        </Col>
+      </Row>
 
       <div className="font-semibold my-1">{t("cardinality")}:</div>
       <Select
@@ -330,10 +353,9 @@ export default function RelationshipInfo({ data }) {
         <Col span={12}>
           <div className="font-semibold">{t("on_update")}: </div>
           <Select
-            optionList={Object.values(Constraint).map((v) => ({
-              label: v,
-              value: v,
-            }))}
+            optionList={constraintOptions(t)}
+            renderSelectedItem={constraintSelected(t)}
+            dropdownStyle={{ minWidth: 240 }}
             value={data.updateConstraint}
             className="w-full"
             onChange={(value) => changeConstraint("update", value)}
@@ -342,10 +364,9 @@ export default function RelationshipInfo({ data }) {
         <Col span={12}>
           <div className="font-semibold">{t("on_delete")}: </div>
           <Select
-            optionList={Object.values(Constraint).map((v) => ({
-              label: v,
-              value: v,
-            }))}
+            optionList={constraintOptions(t)}
+            renderSelectedItem={constraintSelected(t)}
+            dropdownStyle={{ minWidth: 240 }}
             value={data.deleteConstraint}
             className="w-full"
             onChange={(value) => changeConstraint("delete", value)}

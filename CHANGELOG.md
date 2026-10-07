@@ -92,6 +92,9 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   mostra o atalho O.
 - Apagar todos os diagramas do navegador pede confirmação explícita.
 - Diagramas novos se chamam "Diagrama sem título".
+- Painel lateral: a aba Relacionamentos vem logo depois de Tabelas.
+- Relacionamento: tabelas primária e estrangeira em destaque, e opções de "Na atualização" e
+  "Na exclusão" traduzidas, com o termo SQL ao lado (CASCADE, SET NULL...).
 - Organizar automaticamente: desfazer também volta o zoom anterior.
 - Delete logo depois de digitar em um campo pede confirmação.
 - Mensagens revisadas em português.

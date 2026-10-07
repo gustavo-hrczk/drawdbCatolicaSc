@@ -40,6 +40,12 @@ const resources = {
     shortcut_pan: "Mover a visualização",
     shortcut_deselect: "Desmarcar seleção",
     shortcut_escape: "Sair do campo › fechar edição › desmarcar",
+    // Opções de "Na atualização/Na exclusão" (a chave é o valor do upstream).
+    "No action": "Nenhuma ação",
+    Restrict: "Restringir",
+    Cascade: "Em cascata",
+    "Set null": "Definir como nulo",
+    "Set default": "Definir como padrão",
     shortcut_add_column: "Adicionar coluna à tabela selecionada",
     shortcut_f2_hover: "F2 renomeia o item sob o mouse",
     default_table_prefix: "tabela",
