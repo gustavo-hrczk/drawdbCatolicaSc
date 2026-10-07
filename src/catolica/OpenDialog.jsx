@@ -3,11 +3,12 @@ import { Button, Modal } from "@douyinfe/semi-ui";
 import { IconUpload } from "@douyinfe/semi-icons";
 import { useTranslation } from "react-i18next";
 import Open from "../components/EditorHeader/Modal/Open";
+import { DialogFooter } from "./dialogParts";
 
-// Arquivo > Abrir (Ctrl+O): a lista de diagramas do upstream, que já vem com
-// os mais recentes primeiro (por isso o "Abrir recente" saiu do menu). Dois
+// Arquivo > Abrir (Ctrl+O): a lista de diagramas do upstream, com os mais
+// recentes primeiro (Arquivo > Abrir recente mostra os 5 últimos). Dois
 // cliques abrem o diagrama, e o botão "Abrir arquivo do computador" leva à
-// janela Importar, para quem procura o .zip recebido pelo Teams em "Abrir".
+// janela Importar, para quem procura o arquivo recebido em "Abrir".
 export default function OpenDialog({ visible, onClose, onOpen, onOpenFile }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState(null);
@@ -26,21 +27,22 @@ export default function OpenDialog({ visible, onClose, onOpen, onOpenFile }) {
       centered
       width={740}
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button icon={<IconUpload />} onClick={onOpenFile}>
-            {t("open_from_computer")}
-          </Button>
-          <div className="flex gap-2">
-            <Button onClick={onClose}>{t("cancel")}</Button>
-            <Button
-              theme="solid"
-              disabled={!selected}
-              onClick={() => onOpen(selected)}
-            >
-              {t("open")}
+        <DialogFooter
+          extra={
+            <Button icon={<IconUpload />} onClick={onOpenFile}>
+              {t("open_from_computer")}
             </Button>
-          </div>
-        </div>
+          }
+        >
+          <Button onClick={onClose}>{t("cancel")}</Button>
+          <Button
+            theme="solid"
+            disabled={!selected}
+            onClick={() => onOpen(selected)}
+          >
+            {t("open")}
+          </Button>
+        </DialogFooter>
       }
     >
       <div

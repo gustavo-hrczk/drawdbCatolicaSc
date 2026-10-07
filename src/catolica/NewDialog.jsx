@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Button, Input, Modal } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import New from "../components/EditorHeader/Modal/New";
+import { DialogFooter } from "./dialogParts";
 
-// Arquivo > Novo e Arquivo > Nova aba: escolha entre "Em branco" e os modelos
-// (a grade é a do upstream). mode: null (fechada), "here" (nesta aba) ou
-// "tab" (em nova aba).
+// Arquivo > Novo e Arquivo > Nova janela: escolha entre "Em branco" e os
+// modelos (a grade é a do upstream). mode: null (fechada), "here" (nesta
+// janela) ou "window" (em nova janela).
 //
-// Novo nesta aba deixa o diagrama atual: se ele ainda tem o nome padrão,
-// pede um nome antes (o "Salvar como" do primeiro salvamento). onCreate
+// Novo nesta janela deixa o diagrama atual: se ele ainda tem o nome padrão,
+// oferece renomeá-lo antes (o "Salvar como" do primeiro salvamento). onCreate
 // recebe o modelo escolhido e o novo nome do diagrama atual (ou null).
 export default function NewDialog({
   mode,
@@ -47,14 +48,15 @@ export default function NewDialog({
         centered
         width={480}
         footer={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <DialogFooter>
+            <Button onClick={onClose}>{t("cancel")}</Button>
             <Button onClick={() => onCreate(templateId, null)}>
               {t("new_name_skip")}
             </Button>
             <Button theme="solid" disabled={!name.trim()} onClick={saveName}>
               {t("new_name_save")}
             </Button>
-          </div>
+          </DialogFooter>
         }
       >
         <p className="mb-3 text-sm">
@@ -65,7 +67,7 @@ export default function NewDialog({
           value={name}
           onChange={setName}
           onEnterPress={saveName}
-          placeholder={t("name")}
+          placeholder={t("diagram_name_placeholder")}
         />
       </Modal>
     );
@@ -73,18 +75,20 @@ export default function NewDialog({
 
   return (
     <Modal
-      title={t(mode === "tab" ? "new_tab_dialog_title" : "new_dialog_title")}
+      title={t(
+        mode === "window" ? "new_window_dialog_title" : "new_dialog_title",
+      )}
       visible={Boolean(mode)}
       onCancel={onClose}
       centered
       width={740}
       footer={
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <DialogFooter>
           <Button onClick={onClose}>{t("cancel")}</Button>
           <Button theme="solid" onClick={choose}>
             {t("create")}
           </Button>
-        </div>
+        </DialogFooter>
       }
     >
       {/* Dois cliques num modelo também criam o diagrama. */}

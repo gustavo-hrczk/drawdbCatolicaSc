@@ -400,6 +400,47 @@ Arquivo, que tinha 15 itens, alguns repetidos e um com defeito.
   testes não abre abas por `window.open`; o caminho principal foi conferido simulando o
   `window.open`, e o plano B (abrir nesta aba) na prática.
 
+**Ajustes de textos, janelas e importação (07/10/2026):** pedidos do mantenedor depois do teste
+da homologação, analisados um a um e depois em conjunto.
+
+- **Menu:** rótulos do drawDB original, sem reticências: Novo, Nova janela, Abrir, Abrir recente,
+  Salvar, Salvar como, Importar, Exportar e Sair. "Nova janela" (termo do original e do mercado)
+  vale em todo lugar, inclusive na importação. **Abrir recente** volta com os 5 diagramas
+  editados por último, sem o que está aberto, e "Ver todos os diagramas".
+- **Exportar:** SQL primeiro (opção já marcada), depois diagrama completo, imagem e outros
+  formatos; títulos das seções maiores; nome do diagrama editável na própria janela (renomeia o
+  diagrama); "Arquivo gerado" sempre na mesma altura; diagrama vazio (ou sem tabelas, nos
+  formatos de texto) mostra aviso e desativa os botões, em vez de abrir a tela de carregamento sem
+  fim do upstream. **Saem ".sql + .json" e "Só o .json":** o diagrama completo sai sempre no
+  pacote .zip; a importação continua aceitando .json, .sql e o par.
+- **Textos sem recomendação:** descrições dizem o que cada opção é ou contém, sem indicar usos,
+  sem dizer qual é "melhor" e sem citar outros produtos (Teams, dbdiagram.io, GitHub). Mensagens
+  de erro continuam dizendo como resolver. Orientações de uso ficam no LEIA-ME.
+- **Padrão de janelas** (`src/catolica/dialogParts.jsx`): rodapé com ações extras à esquerda e
+  "Cancelar" + ação principal à direita, em todas as janelas do fork; blocos repetidos sempre no
+  mesmo lugar; Importar e Exportar com a mesma largura.
+- **Janela do nome antes do Novo:** "Salvar diagrama atual", com "Manter nome padrão" e
+  "Renomear e continuar"; o X ou "Cancelar" desistem do Novo.
+- **Marca:** os arquivos exportados não usam mais o nome da instituição (autorização pendente): o
+  LEIA-ME diz "versão modificada do drawDB" e os metadados do .json ficam em `exportacao` (os
+  exportados na homologação, em `catolica`, continuam sendo lidos).
+- **Importação**, depois de testar 14 cenários contra o código:
+  - nada é gravado antes de tudo ser validado; o .zip é lido só na memória; o tipo é reconhecido
+    pelo conteúdo; limites de 20 MB por arquivo, 200 arquivos por .zip, 20 MB por arquivo interno
+    (conferido antes de descompactar) e, novo, 50 MB descompactados por .zip;
+  - arquivos agrupados por diagrama (seleção solta, pasta do .zip e .zip dentro de .zip, um
+    nível); com mais de um diagrama, lista para escolher (ex.: "Baixar tudo" das Tarefas do
+    Teams); antes era erro;
+  - arquivos que acompanham o diagrama (.png, LEIA-ME, .docx) são ignorados e listados no resumo;
+    antes, selecionar os 4 arquivos extraídos dava erro;
+  - .sql e .json em ANSI (Windows-1252) mantêm os acentos; antes viravam "�";
+  - mensagens novas: arquivo vazio, tamanho e limite, conteúdo descompactado grande demais,
+    pacotes dentro de pacotes; .json ilegível junto de um .sql abre o SQL e avisa;
+  - duplicata também pelo conteúdo, para arquivos sem identificador (como os do drawDB original)
+    e para o diagrama original que ainda está no navegador; um diagrama alterado depois não conta
+    como igual.
+- Testes: 107 (13 novos para os casos acima). Conferido no build de homologação local.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O

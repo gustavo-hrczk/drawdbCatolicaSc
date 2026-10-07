@@ -8,7 +8,8 @@ import { stripBom } from "./sql";
 
 // Arquivo .json do diagrama (formato v1). Os campos do topo são os mesmos do
 // "Exportar como JSON" do drawDB original, então o arquivo também abre lá;
-// os metadados do fork ficam em "catolica".
+// os metadados da exportação ficam em "exportacao". Arquivos exportados
+// durante a homologação usavam "catolica" e continuam sendo lidos.
 
 export const FILE_VERSION = 1;
 const KNOWN_DATABASES = new Set(Object.values(DB));
@@ -43,7 +44,7 @@ export function buildDiagramJson(diagram, meta) {
     ...(enums?.length ? { enums } : {}),
     pan: pan ?? { x: 0, y: 0 },
     zoom: zoom ?? 1,
-    catolica: {
+    exportacao: {
       formato: FILE_VERSION,
       exportId: meta.exportId,
       exportadoEm: asIso(meta.exportedAt ?? new Date()),
@@ -51,7 +52,7 @@ export function buildDiagramJson(diagram, meta) {
       modificadoEm: asIso(meta.modifiedAt),
       dialetoSql: meta.dialect ?? null,
       sqlSha256: meta.sqlFingerprint ?? null,
-      editor: "drawDB Católica SC",
+      editor: "drawDB (versão modificada)",
     },
   };
 }
@@ -92,7 +93,8 @@ export function parseDiagramFile(text, fileName = "") {
   const valid = isDdb ? ddbDiagramIsValid(data) : jsonDiagramIsValid(data);
   if (!valid) return { ok: false, error: "not_a_diagram" };
 
-  if (data.catolica?.formato > FILE_VERSION) {
+  const meta = data.exportacao ?? data.catolica ?? null;
+  if (meta?.formato > FILE_VERSION) {
     return { ok: false, error: "newer_format" };
   }
   const database = data.database || DB.GENERIC;
@@ -106,6 +108,22 @@ export function parseDiagramFile(text, fileName = "") {
   return {
     ok: true,
     data: { ...data, database, title: data.title || data.name || "" },
-    meta: data.catolica ?? null,
+    meta,
   };
+}
+
+// Conteúdo do diagrama, sem nome, datas e enquadramento: dois diagramas com a
+// mesma chave são o mesmo desenho. Aceita o formato do arquivo (relationships,
+// subjectAreas) e o do banco local (references, areas).
+export function diagramContentKey(diagram) {
+  return JSON.stringify([
+    diagram.database || DB.GENERIC,
+    diagram.tables ?? [],
+    diagram.relationships ?? diagram.references ?? [],
+    diagram.notes ?? [],
+    diagram.subjectAreas ?? diagram.areas ?? [],
+    diagram.views ?? [],
+    diagram.types ?? [],
+    diagram.enums ?? [],
+  ]);
 }

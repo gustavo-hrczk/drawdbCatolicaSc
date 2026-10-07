@@ -115,6 +115,10 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   idêntico ao dos exportadores do upstream (há teste para isso); metadados do fork só no `.json`.
 - Menu Arquivo (Sprint 1F): `src/catolica/fileMenu.js` escolhe e reorganiza os itens do upstream,
   que continuam definidos em `ControlPanel.jsx`. Para mudar o menu, mexa no `fileMenu.js`.
+- Janelas e textos do fork (Sprint 1F): rodapé padrão em `src/catolica/dialogParts.jsx` (extras à
+  esquerda, "Cancelar" + ação principal à direita). Descrições de opções dizem o que a opção é ou
+  contém, sem recomendar usos nem citar outros produtos; mensagens de erro dizem como resolver.
+  Termos: sempre "diagrama" e "nova janela".
 
 ## Versionamento (público)
 

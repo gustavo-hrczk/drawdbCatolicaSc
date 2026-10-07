@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Banner,
   Button,
   Modal,
   Select,
@@ -8,7 +7,7 @@ import {
   TextArea,
   Toast,
 } from "@douyinfe/semi-ui";
-import { IconUpload } from "@douyinfe/semi-icons";
+import { IconChevronLeft, IconUpload } from "@douyinfe/semi-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigateWithParams, useSettings } from "../hooks";
 import { databases } from "../data/databases";
@@ -16,20 +15,22 @@ import { appUrl } from "../utils/appUrl";
 import { autoArrange } from "../utils/autoArrange";
 import { getTableHeight, getTableWidth } from "../utils/utils";
 import { preferredDatabase, preferredSqlDialect } from "./databasePreference";
-import { findImportedCopy, importAsNewDiagram } from "./importAsNewDiagram";
+import { findDuplicate, importAsNewDiagram } from "./importAsNewDiagram";
 import { untitledTitle } from "./i18n";
+import { DialogFooter, Notice, Summary } from "./dialogParts";
 import { planImport } from "./files/importPlan";
 import { parseSqlDiagram } from "./files/sqlImport";
 import { parseDbmlDiagram } from "./files/dbmlImport";
 import { SQL_DIALECTS } from "./files/sql";
 import { LIMITS } from "./files/zipPackage";
 
-// Janela "Importar" (Arquivo > Importar, Ctrl+I): diagrama completo (.zip ou
-// .json), SQL (.sql ou código colado) ou DBML. Mostra um resumo antes de abrir
-// e avisa se o mesmo arquivo já foi importado. O importado é sempre salvo como
-// um diagrama novo e aberto em uma nova aba; o diagrama desta aba não muda.
+// Janela "Importar" (Arquivo > Importar, Ctrl+I): SQL (arquivo ou código
+// colado), diagrama completo (.zip ou .json) ou DBML. Mostra um resumo antes
+// de abrir, avisa se o diagrama já existe neste navegador e, se os arquivos
+// tiverem mais de um diagrama, pede para escolher. O importado é sempre salvo
+// como um diagrama novo e aberto em uma nova janela; o desta não muda.
 
-const ACCEPT = ".zip,.json,.ddb,.sql,.dbml,.rar";
+const ACCEPT = ".sql,.zip,.json,.ddb,.dbml,.rar";
 
 const withoutExtension = (name) => name.replace(/\.[^.]+$/, "");
 
@@ -42,15 +43,31 @@ function formatDate(iso) {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : null;
 }
 
+function formatBytes(bytes) {
+  const mb = bytes / (1024 * 1024);
+  const number = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: mb >= 10 ? 0 : 1,
+  });
+  return mb >= 1
+    ? `${number.format(mb)} MB`
+    : `${number.format(bytes / 1024)} KB`;
+}
+
 function errorText(t, { error, detail }) {
   if (error === "sql_syntax" || error === "dbml_syntax") {
     return detail
       ? t(`import_error_${error}`, detail)
       : t(`import_error_${error}_no_position`);
   }
-  const key = `import_error_${error}`;
-  return t(key, {
-    name: detail ?? "",
+  if (error === "too_large" && typeof detail === "object" && detail) {
+    return t("import_error_too_large_size", {
+      name: detail.name,
+      size: formatBytes(detail.size),
+      limit: formatBytes(detail.limit),
+    });
+  }
+  return t(`import_error_${error}`, {
+    name: (typeof detail === "string" ? detail : detail?.name) ?? "",
     defaultValue: t("oops_smth_went_wrong"),
   });
 }
@@ -100,8 +117,19 @@ function arrangeImported(data, settings) {
 
 async function readInputs(fileList) {
   const files = Array.from(fileList);
+  // Antes de ler: um arquivo enorme nem é carregado na memória.
   const tooLarge = files.find((file) => file.size > LIMITS.maxZipBytes);
-  if (tooLarge) return { ok: false, error: "too_large", detail: tooLarge.name };
+  if (tooLarge) {
+    return {
+      ok: false,
+      error: "too_large",
+      detail: {
+        name: tooLarge.name,
+        size: tooLarge.size,
+        limit: LIMITS.maxZipBytes,
+      },
+    };
+  }
   const inputs = await Promise.all(
     files.map(async (file) => ({
       name: file.name,
@@ -111,30 +139,28 @@ async function readInputs(fileList) {
   return planImport(inputs);
 }
 
-function Summary({ rows }) {
-  return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-      {rows
-        .filter(([, value]) => value !== null && value !== undefined)
-        .map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="opacity-70">{label}</dt>
-            <dd className="break-all font-semibold">{value}</dd>
-          </div>
-        ))}
-    </dl>
-  );
-}
+const fileTitle = (file) =>
+  file.name ? withoutExtension(file.name) : untitledTitle();
 
-function Notice({ type, children }) {
-  return (
-    <Banner
-      type={type}
-      fullMode={false}
-      closeIcon={null}
-      description={children}
-    />
-  );
+// Título e detalhes de um diagrama encontrado nos arquivos.
+function describeCandidate(t, candidate) {
+  if (candidate.kind === "sql" || candidate.kind === "dbml") {
+    const file = candidate[candidate.kind];
+    return {
+      title: fileTitle(file),
+      details: [candidate.location, t(`import_kind_${candidate.kind}`)],
+    };
+  }
+  const { data, meta, name } = candidate.diagram;
+  return {
+    title: data.title || withoutExtension(name),
+    details: [
+      candidate.location,
+      t(`import_kind_${candidate.kind}`),
+      t("import_tables_count", { count: data.tables.length }),
+      formatDate(meta?.exportadoEm),
+    ],
+  };
 }
 
 export default function ImportDialog({ visible, onClose, currentDiagramId }) {
@@ -145,6 +171,10 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
 
   const [reading, setReading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  // Resultado da leitura com mais de um diagrama (a pessoa escolhe qual).
+  const [choices, setChoices] = useState(null);
+  const [chosen, setChosen] = useState(0);
+  // Diagrama a abrir (ou o erro da leitura).
   const [plan, setPlan] = useState(null);
   const [duplicate, setDuplicate] = useState(null);
   // Abrir o .sql em vez do .json (só quando os dois não conferem).
@@ -158,6 +188,8 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
   const [importing, setImporting] = useState(false);
 
   const reset = () => {
+    setChoices(null);
+    setChosen(0);
     setPlan(null);
     setDuplicate(null);
     setUseSql(false);
@@ -192,19 +224,28 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
     };
   }, [visible]);
 
+  // Mostra o resumo de um diagrama e confere se ele já existe aqui.
+  const showPlan = async (next) => {
+    setUseSql(false);
+    setDuplicate(null);
+    if (next.ok && next.diagram) {
+      const { data, meta } = next.diagram;
+      setDuplicate((await findDuplicate(data, meta?.exportId)) ?? null);
+      if (meta?.dialetoSql && databases[meta.dialetoSql]) {
+        setDialect(meta.dialetoSql);
+      }
+    }
+    setPlan(next);
+  };
+
   const handleFiles = async (fileList) => {
     if (!fileList?.length) return;
     reset();
     setReading(true);
     try {
       const result = await readInputs(fileList);
-      if (result.ok && result.diagram) {
-        const exportId = result.diagram.meta?.exportId;
-        setDuplicate((await findImportedCopy(exportId)) ?? null);
-        const dialetoSql = result.diagram.meta?.dialetoSql;
-        if (dialetoSql && databases[dialetoSql]) setDialect(dialetoSql);
-      }
-      setPlan(result);
+      if (result.ok && result.kind === "choose") setChoices(result);
+      else await showPlan(result);
     } catch (err) {
       console.error(err);
       setPlan({ ok: false, error: "invalid_zip" });
@@ -213,8 +254,13 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
     }
   };
 
+  const chooseCandidate = (index) => {
+    const { ignored, warnings } = choices;
+    showPlan({ ok: true, ...choices.candidates[index], ignored, warnings });
+  };
+
   const usePastedSql = () => {
-    setPlan({
+    showPlan({
       ok: true,
       kind: "sql",
       sql: { name: null, text: pastedSql },
@@ -226,8 +272,6 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
 
   const openingSql = plan?.ok && (plan.kind === "sql" || useSql);
   const openingDbml = plan?.ok && plan.kind === "dbml";
-  const sourceTitle = (file) =>
-    file.name ? withoutExtension(file.name) : untitledTitle();
 
   // Convertido de novo a cada troca de banco de dados.
   const parsed = useMemo(() => {
@@ -236,36 +280,36 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
     return null;
   }, [openingSql, openingDbml, plan, dialect, dbmlDatabase]);
 
-  // Abre em nova aba. A aba é aberta já no clique (senão o navegador a
+  // Abre em nova janela. Ela é aberta já no clique (senão o navegador a
   // bloqueia) e recebe o endereço quando o diagrama estiver salvo. Se o
-  // navegador bloquear mesmo assim, abre nesta aba.
-  const openInNewTab = async (createDiagram) => {
-    const tab = window.open("", "_blank");
+  // navegador bloquear mesmo assim, abre nesta.
+  const openInNewWindow = async (createDiagram) => {
+    const target = window.open("", "_blank");
     try {
       const { diagramId, title } = await createDiagram();
       onClose();
-      if (tab && !tab.closed) {
-        tab.location.href = diagramUrl(diagramId);
-        Toast.success(t("diagram_imported_new_tab", { title }));
+      if (target && !target.closed) {
+        target.location.href = diagramUrl(diagramId);
+        Toast.success(t("diagram_imported_new_window", { title }));
       } else {
         navigate(`/editor/diagrams/${diagramId}`);
         Toast.success(t("diagram_imported", { title }));
       }
     } catch (err) {
-      tab?.close();
+      target?.close();
       throw err;
     }
   };
 
   const importDiagram = () => {
     setImporting(true);
-    openInNewTab(async () => {
+    openInNewWindow(async () => {
       let data;
       let source = null;
       if (openingSql || openingDbml) {
         data = {
           ...arrangeImported(parsed.data, settings),
-          title: sourceTitle(openingSql ? plan.sql : plan.dbml),
+          title: fileTitle(openingSql ? plan.sql : plan.dbml),
         };
       } else {
         data = plan.diagram.data;
@@ -286,16 +330,22 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
       onClose();
       return;
     }
-    openInNewTab(async () => ({
+    openInNewWindow(async () => ({
       diagramId: duplicate.diagramId,
       title: duplicate.name,
     }));
   };
 
   const pickFiles = () => inputRef.current?.click();
+  const cancel = <Button onClick={onClose}>{t("cancel")}</Button>;
+  const chooseOther = (
+    <Button onClick={pickFiles} disabled={importing}>
+      {t("import_choose_other")}
+    </Button>
+  );
 
   const dropZone = (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <div
         role="button"
         tabIndex={0}
@@ -328,12 +378,15 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
           <>
             <IconUpload size="extra-large" />
             <div className="font-semibold">{t("import_drop_here")}</div>
-            <div className="text-xs opacity-70">{t("import_accepted")}</div>
+            <div className="text-xs opacity-70">
+              <div>{t("import_accepted")}</div>
+              <div>{t("import_opens_new_window")}</div>
+            </div>
           </>
         )}
       </div>
       {!reading && (
-        <div className="text-center">
+        <div className="pb-1 text-center">
           <Button theme="borderless" onClick={() => setPastedSql("")}>
             {t("import_paste_sql")}
           </Button>
@@ -356,9 +409,27 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
     />
   );
 
+  // Arquivos ignorados e arquivos de diagrama que não puderam ser lidos.
+  const fileNotes = plan?.ok && (
+    <>
+      {plan.warnings?.length > 0 && (
+        <Notice type="warning">
+          {plan.warnings.map((warning) => (
+            <div key={warning.detail}>
+              {warning.detail}: {errorText(t, warning)}
+            </div>
+          ))}
+        </Notice>
+      )}
+    </>
+  );
+  const ignoredRow = [
+    t("import_ignored"),
+    plan?.ignored?.length ? plan.ignored.join(", ") : null,
+  ];
+
   let body;
-  let footer = null;
-  let canImport = false;
+  let footer;
 
   if (pastedSql !== null) {
     body = (
@@ -372,8 +443,12 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
       />
     );
     footer = (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button onClick={() => setPastedSql(null)}>{t("import_back")}</Button>
+      <DialogFooter
+        extra={
+          <Button onClick={() => setPastedSql(null)}>{t("import_back")}</Button>
+        }
+      >
+        {cancel}
         <Button
           theme="solid"
           disabled={!pastedSql.trim()}
@@ -381,119 +456,201 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
         >
           {t("import_continue")}
         </Button>
-      </div>
+      </DialogFooter>
     );
-  } else if (!plan || reading) {
+  } else if (reading || (!plan && !choices)) {
     body = dropZone;
-  } else if (!plan.ok) {
+    footer = <DialogFooter>{cancel}</DialogFooter>;
+  } else if (plan && !plan.ok) {
     body = (
       <div className="flex flex-col gap-3">
         <Notice type="danger">{errorText(t, plan)}</Notice>
         {dropZone}
       </div>
     );
-  } else if (openingSql || openingDbml) {
-    canImport = parsed?.ok;
-    const file = openingSql ? plan.sql : plan.dbml;
+    footer = <DialogFooter>{cancel}</DialogFooter>;
+  } else if (!plan) {
     body = (
       <div className="flex flex-col gap-3">
-        <Summary
-          rows={[
-            [t("title"), sourceTitle(file)],
-            [t("import_from_package"), plan.fromZip],
-            [t("import_tables"), parsed?.ok ? parsed.data.tables.length : null],
-          ]}
-        />
-        <div>
-          <div className="mb-1 font-semibold">
-            {t(openingSql ? "import_sql_dialect" : "import_dbml_database")}
-          </div>
-          {openingSql ? (
-            <Select
-              value={dialect}
-              onChange={setDialect}
-              className="w-full"
-              optionList={SQL_DIALECTS.map((value) => ({
-                value,
-                label: databases[value].name,
-              }))}
-            />
-          ) : (
-            <Select
-              value={dbmlDatabase}
-              onChange={setDbmlDatabase}
-              className="w-full"
-              optionList={Object.entries(databases).map(([value, info]) => ({
-                value,
-                label: info.name,
-              }))}
-            />
-          )}
+        <div className="text-sm">
+          {t("import_choose_intro", { count: choices.candidates.length })}
         </div>
-        {parsed?.ok ? (
-          <Notice type="info">
-            {t(openingSql ? "import_sql_only" : "import_dbml_info")}
-          </Notice>
-        ) : (
-          <Notice type="danger">{errorText(t, parsed)}</Notice>
-        )}
-        {useSql && (
-          <div>
-            <Button size="small" onClick={() => setUseSql(false)}>
-              {t("import_open_json_instead")}
-            </Button>
+        <div
+          role="radiogroup"
+          className="flex max-h-80 flex-col gap-1 overflow-auto"
+        >
+          {choices.candidates.map((candidate, index) => {
+            const { title, details } = describeCandidate(t, candidate);
+            const selected = index === chosen;
+            return (
+              <button
+                key={index}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setChosen(index)}
+                onDoubleClick={() => chooseCandidate(index)}
+                className="rounded-md border px-3 py-2 text-start"
+                style={{
+                  borderColor: selected
+                    ? "var(--semi-color-primary)"
+                    : "var(--semi-color-border)",
+                  background: selected
+                    ? "var(--semi-color-primary-light-default)"
+                    : undefined,
+                }}
+              >
+                <div className="font-semibold">{title}</div>
+                <div className="text-xs opacity-70">
+                  {details.filter(Boolean).join(" · ")}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {choices.ignored?.length > 0 && (
+          <div className="text-xs opacity-70">
+            {t("import_ignored")}: {choices.ignored.join(", ")}
           </div>
         )}
       </div>
+    );
+    footer = (
+      <DialogFooter extra={chooseOther}>
+        {cancel}
+        <Button theme="solid" onClick={() => chooseCandidate(chosen)}>
+          {t("import_continue")}
+        </Button>
+      </DialogFooter>
     );
   } else {
-    const { data, meta } = plan.diagram;
-    canImport = true;
-    body = (
-      <div className="flex flex-col gap-3">
-        <Summary
-          rows={[
-            [t("title"), data.title || t("untitled_diagram")],
-            [t("import_database"), databases[data.database]?.name],
-            [t("import_tables"), data.tables.length],
-            [t("import_exported_at"), formatDate(meta?.exportadoEm)],
-            [t("import_from_package"), plan.fromZip],
-          ]}
-        />
-        {plan.sqlCheck === "match" && (
-          <Notice type="success">{t("import_sql_match")}</Notice>
-        )}
-        {plan.sqlCheck === "mismatch" && (
-          <Notice type="warning">
-            <div>{t("import_sql_mismatch")}</div>
-            <Button
-              size="small"
-              className="mt-2"
-              onClick={() => setUseSql(true)}
-            >
-              {t("import_open_sql_instead")}
-            </Button>
-          </Notice>
-        )}
-        {plan.sqlCheck === "not_checked" && (
-          <Notice type="info">{t("import_sql_not_checked")}</Notice>
-        )}
-        {duplicate && (
-          <Notice type="warning">
-            {t("import_duplicate", { name: duplicate.name })}
-          </Notice>
-        )}
-      </div>
-    );
-  }
+    let canImport;
+    if (openingSql || openingDbml) {
+      canImport = parsed?.ok;
+      const file = openingSql ? plan.sql : plan.dbml;
+      body = (
+        <div className="flex flex-col gap-3">
+          <Summary
+            rows={[
+              [t("title"), fileTitle(file)],
+              [t("import_from_package"), plan.location],
+              [
+                t("import_tables"),
+                parsed?.ok ? parsed.data.tables.length : null,
+              ],
+              ignoredRow,
+            ]}
+          />
+          <div>
+            <div className="mb-1 font-semibold">
+              {t(openingSql ? "import_sql_dialect" : "import_dbml_database")}
+            </div>
+            {openingSql ? (
+              <Select
+                value={dialect}
+                onChange={setDialect}
+                className="w-full"
+                optionList={SQL_DIALECTS.map((value) => ({
+                  value,
+                  label: databases[value].name,
+                }))}
+              />
+            ) : (
+              <Select
+                value={dbmlDatabase}
+                onChange={setDbmlDatabase}
+                className="w-full"
+                optionList={Object.entries(databases).map(([value, info]) => ({
+                  value,
+                  label: info.name,
+                }))}
+              />
+            )}
+          </div>
+          {parsed?.ok ? (
+            <Notice type="info">
+              {t(openingSql ? "import_sql_only" : "import_dbml_info")}
+            </Notice>
+          ) : (
+            <Notice type="danger">{errorText(t, parsed)}</Notice>
+          )}
+          {fileNotes}
+          {useSql && (
+            <div>
+              <Button size="small" onClick={() => setUseSql(false)}>
+                {t("import_open_json_instead")}
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      const { data, meta } = plan.diagram;
+      canImport = true;
+      body = (
+        <div className="flex flex-col gap-3">
+          <Summary
+            rows={[
+              [t("title"), data.title || t("untitled_diagram")],
+              [t("import_database"), databases[data.database]?.name],
+              [t("import_tables"), data.tables.length],
+              [t("import_exported_at"), formatDate(meta?.exportadoEm)],
+              [t("import_from_package"), plan.location],
+              ignoredRow,
+            ]}
+          />
+          {plan.sqlCheck === "match" && (
+            <Notice type="success">{t("import_sql_match")}</Notice>
+          )}
+          {plan.sqlCheck === "mismatch" && (
+            <Notice type="warning">
+              <div>{t("import_sql_mismatch")}</div>
+              <Button
+                size="small"
+                className="mt-2"
+                onClick={() => setUseSql(true)}
+              >
+                {t("import_open_sql_instead")}
+              </Button>
+            </Notice>
+          )}
+          {plan.sqlCheck === "not_checked" && (
+            <Notice type="info">{t("import_sql_not_checked")}</Notice>
+          )}
+          {duplicate && (
+            <Notice type="warning">
+              {t("import_duplicate", { name: duplicate.name })}
+            </Notice>
+          )}
+          {fileNotes}
+        </div>
+      );
+    }
 
-  if (plan?.ok && !reading && pastedSql === null) {
+    // Veio da lista de diagramas: link para voltar a ela.
+    if (choices) {
+      body = (
+        <div className="flex flex-col gap-2">
+          <div>
+            <Button
+              theme="borderless"
+              size="small"
+              icon={<IconChevronLeft />}
+              disabled={importing}
+              onClick={() => setPlan(null)}
+            >
+              {t("import_back_to_list")}
+            </Button>
+          </div>
+          {body}
+        </div>
+      );
+    }
+
     const offerExisting = duplicate && !openingSql;
     footer = (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button onClick={pickFiles} disabled={importing}>
-          {t("import_choose_other")}
-        </Button>
+      <DialogFooter extra={chooseOther}>
+        {cancel}
         {offerExisting && (
           <Button onClick={openExisting}>{t("import_open_existing")}</Button>
         )}
@@ -505,7 +662,7 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
         >
           {offerExisting ? t("import_new_copy") : t("import_open")}
         </Button>
-      </div>
+      </DialogFooter>
     );
   }
 
@@ -515,7 +672,7 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
       visible={visible}
       onCancel={onClose}
       centered
-      width={560}
+      width={680}
       footer={footer}
     >
       {/* Arquivos soltos em qualquer ponto da janela, inclusive no resumo. */}

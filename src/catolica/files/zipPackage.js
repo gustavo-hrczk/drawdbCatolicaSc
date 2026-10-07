@@ -4,13 +4,20 @@ import JSZip from "jszip";
 // Extraído, vira exatamente o caso "SQL + JSON".
 
 export const LIMITS = {
+  // Arquivo escolhido (inclusive o .zip inteiro, com a imagem).
   maxZipBytes: 20 * 1024 * 1024,
+  // Arquivos dentro de um .zip (contando os .zip internos).
   maxEntries: 200,
+  // Cada .json/.sql/.dbml ou .zip interno, já descompactado.
   maxEntryBytes: 20 * 1024 * 1024,
+  // Soma de tudo o que é descompactado de um .zip (protege contra "bomba de
+  // compactação": arquivo pequeno que cresce muito ao abrir).
+  maxTotalBytes: 50 * 1024 * 1024,
 };
 
 // Arquivos que o editor procura dentro de um pacote.
-const RELEVANT = /\.(json|ddb|sql)$/i;
+const RELEVANT = /\.(json|ddb|sql|dbml)$/i;
+const IS_ZIP = /\.zip$/i;
 
 export function packageReadme({
   title,
@@ -32,7 +39,7 @@ export function packageReadme({
       ? `- ${baseName}.png: imagem do diagrama, para visualizar sem o editor.`
       : null,
     "",
-    "Gerado pelo drawDB Católica SC, uma versão do drawDB (https://github.com/drawdb-io/drawdb).",
+    "Gerado por uma versão modificada do drawDB, editor de código aberto (https://github.com/drawdb-io/drawdb).",
   ];
   // Quebras de linha do Windows, para abrir certo no Bloco de Notas.
   return lines.filter((line) => line !== null).join("\r\n");
@@ -72,11 +79,16 @@ export function looksLikeZip(name, bytes) {
 
 const basename = (path) => path.split("/").pop();
 
-// Lê o pacote só em memória e devolve os .json/.sql de qualquer pasta
-// interna (o "Enviar para > Pasta compactada" do Windows cria uma pasta).
-// Ignora pastas, arquivos de sistema do macOS e o que não for do diagrama.
-// Devolve { ok: true, files: [{ name, text }] } ou { ok: false, error }.
-export async function readPackage(bytes) {
+// Lê o pacote só em memória e devolve os arquivos de diagrama (.json, .ddb,
+// .sql, .dbml) de qualquer pasta interna (o "Enviar para > Pasta compactada"
+// do Windows cria uma pasta) e, com withZips, os .zip internos (o "Baixar
+// tudo" das Tarefas do Teams junta as entregas, uma por aluno). Ignora pastas,
+// arquivos de sistema do macOS e o que não for do diagrama.
+//
+// Devolve { ok: true, files, zips, deepZips } ou { ok: false, error }.
+// files e zips: [{ path, name, bytes }]; deepZips: .zip internos ignorados
+// (quando withZips é false).
+export async function readPackage(bytes, { withZips = true } = {}) {
   if (bytes.byteLength > LIMITS.maxZipBytes) {
     return { ok: false, error: "too_large" };
   }
@@ -98,23 +110,36 @@ export async function readPackage(bytes) {
   }
 
   const files = [];
+  const zips = [];
+  let deepZips = 0;
+  let total = 0;
   for (const entry of entries) {
-    if (!RELEVANT.test(entry.name)) continue;
+    const isZip = IS_ZIP.test(entry.name);
+    if (!isZip && !RELEVANT.test(entry.name)) continue;
+    if (isZip && !withZips) {
+      deepZips += 1;
+      continue;
+    }
     // Tamanho declarado no próprio ZIP: evita descompactar um arquivo gigante.
     const declared = entry._data?.uncompressedSize;
     if (declared > LIMITS.maxEntryBytes) {
       return { ok: false, error: "too_large" };
     }
-    let text;
+    let data;
     try {
-      text = await entry.async("string");
+      data = await entry.async("uint8array");
     } catch {
       return { ok: false, error: "invalid_zip" };
     }
-    if (text.length > LIMITS.maxEntryBytes) {
+    total += data.byteLength;
+    if (data.byteLength > LIMITS.maxEntryBytes) {
       return { ok: false, error: "too_large" };
     }
-    files.push({ name: basename(entry.name), text });
+    if (total > LIMITS.maxTotalBytes) {
+      return { ok: false, error: "package_too_large" };
+    }
+    const file = { path: entry.name, name: basename(entry.name), bytes: data };
+    (isZip ? zips : files).push(file);
   }
-  return { ok: true, files };
+  return { ok: true, files, zips, deepZips };
 }

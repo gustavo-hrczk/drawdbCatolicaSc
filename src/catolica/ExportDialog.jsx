@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, Toast } from "@douyinfe/semi-ui";
+import { Button, Input, Modal, Select, Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
 import { v4 as uuidv4 } from "uuid";
@@ -26,6 +26,7 @@ import {
   EmptyDiagramError,
 } from "./canvasImage";
 import { preferredSqlDialect } from "./databasePreference";
+import { DialogFooter, Notice, SectionTitle } from "./dialogParts";
 import { fileStamp, safeBaseName } from "./files/naming";
 import {
   diagramSql,
@@ -36,20 +37,24 @@ import {
 import { buildDiagramJson, serializeDiagramJson } from "./files/diagramJson";
 import { buildPackage, packageReadme } from "./files/zipPackage";
 
-// Janela "Exportar" (Arquivo > Exportar), que reúne o que antes ficava em
-// "Exportar para entrega", "Exportar SQL" e "Exportar como". A ordem das
-// seções é a mesma da janela Importar: diagrama completo, SQL, imagem e
-// outros formatos. O SQL é exatamente o dos exportadores do upstream.
+// Janela "Exportar" (Arquivo > Exportar). A ordem das seções é a mesma da
+// janela Importar: SQL, diagrama completo, imagem e outros formatos. O SQL é
+// exatamente o dos exportadores do upstream; o diagrama completo é sempre o
+// pacote .zip (SQL, .json, imagem e LEIA-ME).
+//
+// As descrições dizem o que cada arquivo é ou contém, sem indicar usos.
 
 const GROUPS = [
-  { id: "complete", options: ["zip", "pair", "json"] },
   { id: "sql", options: ["sql"] },
+  { id: "complete", options: ["zip"] },
   { id: "image", options: ["png", "jpeg", "svg", "pdf"] },
   { id: "other", options: ["dbml", "mermaid", "markdown"] },
 ];
 
 // Opções que geram SQL: em diagramas "Genérico", pedem o banco de dados.
-const USES_DIALECT = new Set(["zip", "pair", "sql"]);
+const USES_DIALECT = new Set(["sql", "zip"]);
+// Opções geradas a partir das tabelas (sem tabelas, não há o que gerar).
+const NEEDS_TABLES = new Set(["sql", "dbml", "mermaid", "markdown"]);
 // Opções de texto, que também podem ser vistas e copiadas antes de baixar.
 const CODE_EXTENSION = {
   sql: "sql",
@@ -57,21 +62,19 @@ const CODE_EXTENSION = {
   mermaid: "md",
   markdown: "md",
 };
-const SECOND_DOWNLOAD_DELAY_MS = 500;
 
-const fileNamesFor = (base) => ({
-  zip: [`${base}.zip`],
-  pair: [`${base}.sql`, `${base}.json`],
-  json: [`${base}.json`],
-  sql: [`${base}.sql`],
-  png: [`${base}.png`],
-  jpeg: [`${base}.jpg`],
-  svg: [`${base}.svg`],
-  pdf: [`${base}.pdf`],
-  dbml: [`${base}.dbml`],
-  mermaid: [`${base}_mermaid.md`],
-  markdown: [`${base}_documentacao.md`],
-});
+const fileNameFor = (base, option) =>
+  ({
+    zip: `${base}.zip`,
+    sql: `${base}.sql`,
+    png: `${base}.png`,
+    jpeg: `${base}.jpg`,
+    svg: `${base}.svg`,
+    pdf: `${base}.pdf`,
+    dbml: `${base}.dbml`,
+    mermaid: `${base}_mermaid.md`,
+    markdown: `${base}_documentacao.md`,
+  })[option];
 
 const textBlob = (text, type = "text/plain") =>
   new Blob([text], { type: `${type};charset=utf-8` });
@@ -82,6 +85,7 @@ export default function ExportDialog({
   visible,
   onClose,
   title,
+  setTitle,
   diagramId,
   onShowCode,
 }) {
@@ -95,27 +99,41 @@ export default function ExportDialog({
   const { enums } = useEnums();
   const { transform } = useTransform();
 
-  const [option, setOption] = useState("zip");
+  const [option, setOption] = useState("sql");
+  const [name, setName] = useState(title);
   const [dialect, setDialect] = useState(() => preferredSqlDialect(settings));
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
-  // Ao abrir a janela: horário novo no nome dos arquivos e o banco de dados
-  // preferido para o SQL de diagramas genéricos.
+  // Ao abrir a janela: nome atual do diagrama, horário novo no nome dos
+  // arquivos e o banco de dados preferido para diagramas genéricos.
   useEffect(() => {
     if (!visible) return;
+    setName(title);
     setNow(new Date());
     setDialect(preferredSqlDialect(settings));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  const trimmedName = name.trim();
   const isGeneric = database === DB.GENERIC;
   const sqlDialect = sqlDialectFor(database, dialect);
-  const fileBase = `${safeBaseName(title)}_${fileStamp(now)}`;
-  const fileNames = fileNamesFor(fileBase);
+  const fileBase = `${safeBaseName(trimmedName || title)}_${fileStamp(now)}`;
+  const fileName = fileNameFor(fileBase, option);
+
+  const isEmpty =
+    tables.length === 0 &&
+    notes.length === 0 &&
+    areas.length === 0 &&
+    views.length === 0;
+  const unavailable = isEmpty
+    ? t("export_empty_diagram")
+    : NEEDS_TABLES.has(option) && tables.length === 0
+      ? t("export_no_tables")
+      : null;
 
   const diagram = () => ({
-    title,
+    title: trimmedName,
     database,
     tables,
     relationships,
@@ -141,7 +159,7 @@ export default function ExportDialog({
           notes,
           subjectAreas: areas,
           database,
-          title,
+          title: trimmedName,
         });
       case "markdown":
         return jsonToDocumentation({
@@ -151,7 +169,7 @@ export default function ExportDialog({
           subjectAreas: areas,
           views,
           database,
-          title,
+          title: trimmedName,
           ...(databases[database].hasTypes && { types }),
           ...(databases[database].hasEnums && { enums }),
         });
@@ -160,7 +178,12 @@ export default function ExportDialog({
     }
   };
 
-  const buildFiles = async () => {
+  // O nome escrito aqui também renomeia o diagrama.
+  const applyName = () => {
+    if (trimmedName !== title) setTitle(trimmedName);
+  };
+
+  const packageBlob = async () => {
     const exportedAt = new Date();
     const sql = textFor("sql");
     const record = diagramId
@@ -176,14 +199,42 @@ export default function ExportDialog({
         sqlFingerprint: await sqlFingerprint(sql),
       }),
     );
-    return { sql, json, exportedAt };
+    // A imagem é um extra: se não puder ser gerada, o pacote sai sem ela.
+    let png = null;
+    try {
+      png = (await diagramBlob({ scale: 2 })).blob;
+    } catch (err) {
+      if (!(err instanceof EmptyDiagramError)) console.warn(err);
+    }
+    const readme = packageReadme({
+      title: trimmedName,
+      exportedAt: exportedAt.toLocaleString(),
+      dialectLabel: databases[sqlDialect]?.name,
+      baseName: fileBase,
+      hasImage: Boolean(png),
+    });
+    return buildPackage({ baseName: fileBase, sql, json, png, readme });
   };
 
-  const run = async (task) => {
+  const blobFor = {
+    zip: packageBlob,
+    sql: async () => textBlob(textFor("sql"), "application/sql"),
+    png: async () => (await diagramBlob({ scale: 2 })).blob,
+    jpeg: async () =>
+      (await diagramBlob({ type: "image/jpeg", quality: 0.95, scale: 2 })).blob,
+    svg: async () => diagramSvgBlob(),
+    pdf: diagramPdfBlob,
+    dbml: async () => textBlob(textFor("dbml")),
+    mermaid: async () => textBlob(textFor("mermaid")),
+    markdown: async () => textBlob(textFor("markdown")),
+  };
+
+  const download = async () => {
     setBusy(true);
     try {
-      const files = await task();
-      Toast.success(t("export_started", { files: files.join(", ") }));
+      saveAs(await blobFor[option](), fileName);
+      applyName();
+      Toast.success(t("export_started", { files: fileName }));
       onClose();
     } catch (err) {
       if (err instanceof EmptyDiagramError) {
@@ -197,117 +248,36 @@ export default function ExportDialog({
     }
   };
 
-  const save = (blob, name) => {
-    saveAs(blob, name);
-    return [name];
-  };
-
-  const downloadSqlFile = async () =>
-    save(
-      textBlob((await buildFiles()).sql, "application/sql"),
-      fileNames.sql[0],
-    );
-
-  const downloadJsonFile = async () =>
-    save(
-      textBlob((await buildFiles()).json, "application/json"),
-      fileNames.json[0],
-    );
-
-  const downloadPair = async () => {
-    const { sql, json } = await buildFiles();
-    saveAs(textBlob(sql, "application/sql"), fileNames.pair[0]);
-    // Um pequeno intervalo ajuda o navegador a aceitar o segundo download.
-    await new Promise((resolve) =>
-      setTimeout(resolve, SECOND_DOWNLOAD_DELAY_MS),
-    );
-    saveAs(textBlob(json, "application/json"), fileNames.pair[1]);
-    return fileNames.pair;
-  };
-
-  const downloadZip = async () => {
-    const { sql, json, exportedAt } = await buildFiles();
-    // A imagem é um extra: se não puder ser gerada, o pacote sai sem ela.
-    let png = null;
-    try {
-      png = (await diagramBlob({ scale: 2 })).blob;
-    } catch (err) {
-      if (!(err instanceof EmptyDiagramError)) console.warn(err);
-    }
-    const readme = packageReadme({
-      title,
-      exportedAt: exportedAt.toLocaleString(),
-      dialectLabel: databases[sqlDialect]?.name,
-      baseName: fileBase,
-      hasImage: Boolean(png),
-    });
-    const zip = await buildPackage({
-      baseName: fileBase,
-      sql,
-      json,
-      png,
-      readme,
-    });
-    return save(zip, fileNames.zip[0]);
-  };
-
-  const downloads = {
-    zip: downloadZip,
-    pair: downloadPair,
-    json: downloadJsonFile,
-    sql: downloadSqlFile,
-    png: async () =>
-      save((await diagramBlob({ scale: 2 })).blob, fileNames.png[0]),
-    jpeg: async () =>
-      save(
-        (await diagramBlob({ type: "image/jpeg", quality: 0.95, scale: 2 }))
-          .blob,
-        fileNames.jpeg[0],
-      ),
-    svg: async () => save(diagramSvgBlob(), fileNames.svg[0]),
-    pdf: async () => save(await diagramPdfBlob(), fileNames.pdf[0]),
-    dbml: async () => save(textBlob(textFor("dbml")), fileNames.dbml[0]),
-    mermaid: async () =>
-      save(textBlob(textFor("mermaid")), fileNames.mermaid[0]),
-    markdown: async () =>
-      save(textBlob(textFor("markdown")), fileNames.markdown[0]),
-  };
-
   // Mostra o código na janela de código do upstream (com botão de copiar).
   const showCode = () => {
+    applyName();
     onShowCode({
       data: textFor(option),
       extension: CODE_EXTENSION[option],
-      filename: withoutExtension(fileNames[option][0]),
+      filename: withoutExtension(fileName),
     });
     onClose();
   };
 
+  const blocked = Boolean(unavailable) || !trimmedName;
+
   const footer = (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <DialogFooter>
+      <Button onClick={onClose}>{t("cancel")}</Button>
       {CODE_EXTENSION[option] && (
-        <Button disabled={busy} onClick={showCode}>
+        <Button disabled={blocked || busy} onClick={showCode}>
           {t("export_view_code")}
         </Button>
-      )}
-      {option === "pair" && (
-        <>
-          <Button disabled={busy} onClick={() => run(downloadSqlFile)}>
-            {t("export_download_sql_only")}
-          </Button>
-          <Button disabled={busy} onClick={() => run(downloadJsonFile)}>
-            {t("export_download_json_only")}
-          </Button>
-        </>
       )}
       <Button
         theme="solid"
         loading={busy}
-        onClick={() => run(downloads[option])}
+        disabled={blocked}
+        onClick={download}
       >
-        {option === "pair" ? t("export_download_both") : t("export_download")}
+        {t("export_download")}
       </Button>
-    </div>
+    </DialogFooter>
   );
 
   return (
@@ -319,13 +289,21 @@ export default function ExportDialog({
       width={680}
       footer={footer}
     >
+      <div className="mb-4">
+        <div className="mb-1 font-semibold">{t("export_name")}</div>
+        <Input
+          value={name}
+          onChange={setName}
+          placeholder={t("export_name")}
+          validateStatus={trimmedName ? "default" : "error"}
+        />
+      </div>
+
       <div className="grid grid-cols-[210px_1fr] gap-4 sm:grid-cols-1">
         <div role="radiogroup" className="flex flex-col gap-3">
           {GROUPS.map((group) => (
             <div key={group.id}>
-              <div className="mb-1 px-2 text-xs font-semibold uppercase opacity-60">
-                {t(`export_group_${group.id}`)}
-              </div>
+              <SectionTitle>{t(`export_group_${group.id}`)}</SectionTitle>
               {group.options.map((value) => (
                 <button
                   key={value}
@@ -333,7 +311,7 @@ export default function ExportDialog({
                   role="radio"
                   aria-checked={option === value}
                   onClick={() => setOption(value)}
-                  className="block w-full rounded px-2 py-1 text-start"
+                  className="block w-full rounded px-2 py-1 text-start text-sm"
                   style={
                     option === value
                       ? {
@@ -351,6 +329,8 @@ export default function ExportDialog({
           ))}
         </div>
 
+        {/* "Arquivo gerado" fica sempre no rodapé desta coluna, na mesma
+            altura para qualquer opção. */}
         <div className="flex flex-col gap-4">
           <div>
             <div className="mb-1 font-semibold">
@@ -379,18 +359,11 @@ export default function ExportDialog({
             </div>
           )}
 
-          <div>
-            <div className="mb-1 font-semibold">{t("export_files")}</div>
-            {fileNames[option].map((name) => (
-              <div key={name} className="break-all font-mono text-xs">
-                {name}
-              </div>
-            ))}
-            {option === "pair" && (
-              <div className="mt-2 text-xs opacity-70">
-                {t("export_multiple_downloads_hint")}
-              </div>
-            )}
+          {unavailable && <Notice type="info">{unavailable}</Notice>}
+
+          <div className="mt-auto">
+            <div className="mb-1 font-semibold">{t("export_file")}</div>
+            <div className="break-all font-mono text-xs">{fileName}</div>
           </div>
         </div>
       </div>

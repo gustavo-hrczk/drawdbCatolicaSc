@@ -25,11 +25,12 @@ import {
 import { diagramSql, SQL_DIALECTS, sqlFingerprint } from "./sql";
 import {
   buildDiagramJson,
+  diagramContentKey,
   parseDiagramFile,
   serializeDiagramJson,
 } from "./diagramJson";
-import { buildPackage, readPackage } from "./zipPackage";
-import { planImport } from "./importPlan";
+import { buildPackage, LIMITS, readPackage } from "./zipPackage";
+import { decodeText, planImport } from "./importPlan";
 import { parseSqlDiagram } from "./sqlImport";
 import { parseDbmlDiagram } from "./dbmlImport";
 import { toDBML } from "../../utils/exportAs/dbml";
@@ -254,7 +255,7 @@ describe("arquivo .json do diagrama", () => {
     );
 
     const newer = JSON.parse(json);
-    newer.catolica.formato = 99;
+    newer.exportacao.formato = 99;
     expect(parseDiagramFile(JSON.stringify(newer), "x.json").error).toBe(
       "newer_format",
     );
@@ -398,7 +399,11 @@ describe("importação: encaixe dos arquivos", () => {
       { name: "a.json", bytes: bytes(json) },
       { name: "b.json", bytes: bytes(json) },
     ]);
-    expect(plan).toMatchObject({ ok: false, error: "ambiguous" });
+    expect(plan).toMatchObject({ ok: true, kind: "choose" });
+    expect(plan.candidates.map((c) => c.diagram.name)).toEqual([
+      "a.json",
+      "b.json",
+    ]);
   });
 
   it("RAR é recusado com explicação, pelo nome ou pelo conteúdo", async () => {
@@ -422,13 +427,204 @@ describe("importação: encaixe dos arquivos", () => {
     expect(plan.dbml.name).toBe("Loja.DBML");
   });
 
-  it(".dbml junto com outro arquivo é ambíguo", async () => {
+  it(".dbml junto com um .json: pede para escolher", async () => {
     const { json } = await makeExport(template1);
     const plan = await planImport([
       { name: "a.dbml", bytes: bytes("x") },
       { name: "a.json", bytes: bytes(json) },
     ]);
-    expect(plan).toMatchObject({ ok: false, error: "ambiguous" });
+    expect(plan).toMatchObject({ ok: true, kind: "choose" });
+    expect(plan.candidates.map((c) => c.kind).sort()).toEqual(["dbml", "json"]);
+  });
+});
+
+describe("importação: casos reais de entrega (Sprint 1F)", () => {
+  const zipOf = async (files) => {
+    const zip = new JSZip();
+    for (const [name, content] of Object.entries(files))
+      zip.file(name, content);
+    return zip.generateAsync({ type: "uint8array" });
+  };
+
+  it("arquivos extraídos do .zip, todos selecionados: ignora imagem e LEIA-ME", async () => {
+    const { sql, json } = await makeExport(template2);
+    const plan = await planImport([
+      { name: "Blog.sql", bytes: bytes(sql) },
+      { name: "Blog.json", bytes: bytes(json) },
+      { name: "Blog.png", bytes: bytes("png") },
+      { name: "LEIA-ME.txt", bytes: bytes("leia") },
+    ]);
+    expect(plan).toMatchObject({ ok: true, kind: "pair", sqlCheck: "match" });
+    expect(plan.ignored).toEqual(["Blog.png", "LEIA-ME.txt"]);
+  });
+
+  it("só arquivos que não são de diagrama: formato não aceito", async () => {
+    const plan = await planImport([
+      { name: "Blog.png", bytes: bytes("png") },
+      { name: "LEIA-ME.txt", bytes: bytes("leia") },
+    ]);
+    expect(plan).toMatchObject({
+      ok: false,
+      error: "unsupported",
+      detail: "Blog.png",
+    });
+  });
+
+  it("“Baixar tudo” do Teams: um .zip por aluno, dentro de outro .zip", async () => {
+    const a = await makeExport(template1);
+    const b = await makeExport(template3);
+    const plan = await planImport([
+      {
+        name: "Tarefa.zip",
+        bytes: await zipOf({
+          "Aluno A/Blog.zip": await buildPackage(
+            { baseName: "Blog", sql: a.sql, json: a.json },
+            "uint8array",
+          ),
+          "Aluno B/Loja.zip": await buildPackage(
+            { baseName: "Loja", sql: b.sql, json: b.json },
+            "uint8array",
+          ),
+        }),
+      },
+    ]);
+    expect(plan).toMatchObject({ ok: true, kind: "choose" });
+    expect(plan.candidates).toHaveLength(2);
+    for (const candidate of plan.candidates) {
+      expect(candidate).toMatchObject({
+        kind: "pair",
+        sqlCheck: "match",
+        fromZip: "Tarefa.zip",
+      });
+    }
+    expect(plan.candidates.map((c) => c.location)).toEqual([
+      "Tarefa.zip › Aluno A/Blog.zip",
+      "Tarefa.zip › Aluno B/Loja.zip",
+    ]);
+  });
+
+  it("uma pasta por aluno no .zip, com os arquivos soltos", async () => {
+    const a = await makeExport(template1);
+    const b = await makeExport(template3);
+    const plan = await planImport([
+      {
+        name: "Turma.zip",
+        bytes: await zipOf({
+          "Aluno A/Blog.json": a.json,
+          "Aluno A/Blog.sql": a.sql,
+          "Aluno B/Loja.json": b.json,
+          "Aluno B/Loja.sql": b.sql,
+        }),
+      },
+    ]);
+    expect(plan.kind).toBe("choose");
+    expect(plan.candidates.map((c) => [c.location, c.sqlCheck])).toEqual([
+      ["Turma.zip › Aluno A", "match"],
+      ["Turma.zip › Aluno B", "match"],
+    ]);
+  });
+
+  it("duas versões no mesmo .zip: pede para escolher", async () => {
+    const { json } = await makeExport(template1);
+    const plan = await planImport([
+      {
+        name: "v.zip",
+        bytes: await zipOf({ "v1.json": json, "v2.json": json }),
+      },
+    ]);
+    expect(plan).toMatchObject({ ok: true, kind: "choose" });
+    expect(plan.candidates).toHaveLength(2);
+  });
+
+  it("pacotes dentro de pacotes dentro de pacotes: explica", async () => {
+    const { json } = await makeExport(template1);
+    const inner = await zipOf({ "a.json": json });
+    const middle = await zipOf({ "a.zip": inner });
+    const plan = await planImport([
+      { name: "x.zip", bytes: await zipOf({ "b.zip": middle }) },
+    ]);
+    expect(plan).toMatchObject({ ok: false, error: "nested_package" });
+  });
+
+  it("arquivo vazio (download interrompido)", async () => {
+    const plan = await planImport([
+      { name: "a.json", bytes: new Uint8Array() },
+    ]);
+    expect(plan).toMatchObject({
+      ok: false,
+      error: "empty_file",
+      detail: "a.json",
+    });
+  });
+
+  it("arquivo grande demais informa o tamanho e o limite", async () => {
+    const size = LIMITS.maxZipBytes + 1;
+    const plan = await planImport([
+      { name: "a.json", bytes: new Uint8Array(size) },
+    ]);
+    expect(plan).toMatchObject({
+      ok: false,
+      error: "too_large",
+      detail: { name: "a.json", size, limit: LIMITS.maxZipBytes },
+    });
+  });
+
+  it("conteúdo descompactado grande demais (bomba de compactação)", async () => {
+    const saved = LIMITS.maxTotalBytes;
+    LIMITS.maxTotalBytes = 1000;
+    try {
+      const zip = await zipOf({ "a.sql": "x".repeat(2000) });
+      expect((await planImport([{ name: "a.zip", bytes: zip }])).error).toBe(
+        "package_too_large",
+      );
+    } finally {
+      LIMITS.maxTotalBytes = saved;
+    }
+  });
+
+  it(".json corrompido com .sql na mesma pasta: abre o SQL e avisa", async () => {
+    const { sql } = await makeExport(template1);
+    const plan = await planImport([
+      { name: "a.json", bytes: bytes("{ quebrado") },
+      { name: "a.sql", bytes: bytes(sql) },
+    ]);
+    expect(plan).toMatchObject({ ok: true, kind: "sql" });
+    expect(plan.warnings).toEqual([
+      { error: "invalid_json", detail: "a.json" },
+    ]);
+  });
+
+  it(".sql salvo em ANSI (Windows-1252) mantém os acentos", async () => {
+    const text = "-- Descrição dos alunos\nCREATE TABLE aluno (id INT);";
+    const ansi = Uint8Array.from([...text].map((c) => c.charCodeAt(0)));
+    expect(decodeText(ansi)).toBe(text);
+    const plan = await planImport([{ name: "a.sql", bytes: ansi }]);
+    expect(plan.sql.text).toBe(text);
+  });
+
+  it("UTF-8 com BOM continua igual", () => {
+    expect(decodeText(bytes("\uFEFFAção"))).toBe("Ação");
+  });
+
+  it("chave de conteúdo: o .json e o diagrama salvo no navegador conferem", async () => {
+    const { json } = await makeExport(template4);
+    const { data } = parseDiagramFile(json, "a.json");
+    const stored = {
+      name: "outro nome",
+      database: data.database,
+      tables: data.tables,
+      references: data.relationships,
+      notes: data.notes,
+      areas: data.subjectAreas,
+      views: data.views,
+      types: data.types,
+      enums: data.enums,
+      pan: { x: 1, y: 2 },
+      zoom: 3,
+    };
+    expect(diagramContentKey(stored)).toBe(diagramContentKey(data));
+    const changed = { ...stored, tables: data.tables.slice(1) };
+    expect(diagramContentKey(changed)).not.toBe(diagramContentKey(data));
   });
 });
 

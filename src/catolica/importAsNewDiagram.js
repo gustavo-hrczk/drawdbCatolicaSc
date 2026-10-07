@@ -4,6 +4,7 @@ import { DB } from "../data/constants";
 import { databases } from "../data/databases";
 import { mergeCustomTypes } from "../utils/customTypes";
 import { untitledTitle } from "./i18n";
+import { diagramContentKey } from "./files/diagramJson";
 
 // Salva um diagrama importado de arquivo (.json/.ddb/.zip/.sql) como um
 // diagrama novo neste navegador, sem tocar no diagrama aberto. Retorna o
@@ -43,10 +44,17 @@ export async function importAsNewDiagram(data, source = null) {
   return diagramId;
 }
 
-// Diagrama deste navegador que veio do mesmo arquivo exportado, se houver.
-export function findImportedCopy(exportId) {
-  if (!exportId) return Promise.resolve(null);
-  return db.diagrams
-    .filter((diagram) => diagram.importedFrom?.exportId === exportId)
-    .first();
+// Diagrama deste navegador igual ao que vai ser importado, se houver: o que
+// veio do mesmo arquivo exportado (exportId) ou, para arquivos sem esse
+// identificador (como os do drawDB original), um com o mesmo conteúdo. Um
+// diagrama alterado depois da importação não conta mais como igual.
+export async function findDuplicate(data, exportId) {
+  const key = diagramContentKey(data);
+  let sameContent = null;
+  for (const diagram of await db.diagrams.toArray()) {
+    if (exportId && diagram.importedFrom?.exportId === exportId) return diagram;
+    if (!sameContent && diagramContentKey(diagram) === key)
+      sameContent = diagram;
+  }
+  return sameContent;
 }

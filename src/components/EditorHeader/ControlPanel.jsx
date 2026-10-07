@@ -685,7 +685,7 @@ export default function ControlPanel({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
-  const [newMode, setNewMode] = useState(null); // null, "here" ou "tab"
+  const [newMode, setNewMode] = useState(null); // null, "here" ou "window"
   const fileImport = () => setShowImportDialog(true);
   const viewGrid = () =>
     setSettings((prev) => ({ ...prev, showGrid: !prev.showGrid }));
@@ -1366,13 +1366,13 @@ export default function ControlPanel({
     views.length === 0 &&
     types.length === 0;
 
-  // Novo (nesta aba ou em nova aba). Nesta aba, salva o diagrama atual antes,
-  // com o nome escolhido se ele ainda tinha o nome padrão.
+  // Novo (nesta janela ou em nova janela). Nesta, salva o diagrama atual
+  // antes, com o nome escolhido se ele ainda tinha o nome padrão.
   const createNew = (templateId, newTitle) => {
     const path = `/editor/templates/${templateId}`;
     const mode = newMode;
     setNewMode(null);
-    if (mode === "tab") {
+    if (mode === "window") {
       window.open(appUrl(path + window.location.search), "_blank");
       return;
     }
@@ -2168,9 +2168,15 @@ export default function ControlPanel({
 
   menu.file = catolicaFileMenu(menu.file, {
     newHere: () => setNewMode("here"),
-    newTab: () => setNewMode("tab"),
+    newWindow: () => setNewMode("window"),
     importFile: fileImport,
     exportFile: () => setShowExportDialog(true),
+    recent: recentlyOpenedDiagrams,
+    currentId: diagramId,
+    openDiagram: (id) => navigate(`/editor/diagrams/${id}`),
+    openAll: open,
+    t,
+    language: i18n.language,
   });
 
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
@@ -2350,6 +2356,7 @@ export default function ControlPanel({
         visible={showExportDialog}
         onClose={() => setShowExportDialog(false)}
         title={title}
+        setTitle={setTitle}
         diagramId={diagramId}
         onShowCode={showExportCode}
       />
