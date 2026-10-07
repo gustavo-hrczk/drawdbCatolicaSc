@@ -26,7 +26,9 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Novos atalhos: Esc (desmarcar e fechar mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
   claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+E (exportar, par com o Ctrl+I de importar) e
   Ctrl+Shift+Z (refazer).
-- Menu da grade na barra de ferramentas (mostrar e tamanho) e botão de ímã para alinhar objetos.
+- Botões de grade e de ímã (alinhar objetos à grade) na barra de ferramentas, com o mesmo visual
+  de ligado e desligado e o estado na dica; a grade liga direto no ícone, e a seta ao lado escolhe
+  o tamanho.
 - Desfazer e refazer continuam funcionando depois de recarregar a página ou reabrir o diagrama.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
   conflito de gravação, sem perder nada.

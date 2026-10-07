@@ -50,12 +50,13 @@ const resources = {
     shortcut_hint_area: "Área criada pelo atalho A. $t(undo_hint)",
     shortcut_hint_note: "Nota criada pelo atalho N. $t(undo_hint)",
     shortcut_hint_arrange: "Diagrama organizado pelo atalho O. $t(undo_hint)",
-    snap_button: "Alinhar objetos à grade (Ctrl+Alt+G)",
     shortcut_typing_detected:
       "Parece que você está digitando fora de um campo de texto, então o atalho foi ignorado ou desfeito. Clique no campo onde quer escrever.",
     shortcut_delete_blocked:
       "Exclusão ignorada: você estava digitando em um campo. Pressione Delete de novo para excluir o elemento selecionado.",
-    grid_menu: "Grade",
+    toolbar_toggle_tip: "{{label}}: {{state}} ({{keys}})",
+    toolbar_toggle_on: "ligado",
+    toolbar_toggle_off: "desligado",
     grid_snap: "Alinhar objetos à grade",
     grid_size: "Tamanho da grade",
     grid_size_small: "Pequena ({{size}} px)",
@@ -112,12 +113,13 @@ const resources = {
     shortcut_hint_note: "Note created with the N shortcut. $t(undo_hint)",
     shortcut_hint_arrange:
       "Diagram arranged with the O shortcut. $t(undo_hint)",
-    snap_button: "Snap objects to grid (Ctrl+Alt+G)",
     shortcut_typing_detected:
       "It looks like you are typing outside a text field, so the shortcut was ignored or undone. Click the field where you want to write.",
     shortcut_delete_blocked:
       "Delete ignored: you were typing in a field. Press Delete again to delete the selected element.",
-    grid_menu: "Grid",
+    toolbar_toggle_tip: "{{label}}: {{state}} ({{keys}})",
+    toolbar_toggle_on: "on",
+    toolbar_toggle_off: "off",
     grid_snap: "Snap objects to grid",
     grid_size: "Grid size",
     grid_size_small: "Small ({{size}} px)",

@@ -491,7 +491,13 @@ da homologação, analisados um a um e depois em conjunto.
 - **Consistência:** as dicas dos botões da barra inferior só mostram a tecla (T, A, N, O, ?)
   com os atalhos rápidos ligados, como no menu; "Redefinir visualização" mostra "Enter" em vez
   de "Enter/Return".
-- Em análise: padrão visual dos botões de liga/desliga da barra inferior (grade e ímã).
+- **Botões de liga/desliga da barra inferior (aprovado e aplicado):** mesmo visual para todos
+  (`ToolbarToggle` em `src/catolica/GridDropdown.jsx`): ligado, fundo azul-claro e ícone azul;
+  desligado, ícone neutro, sem fundo e sem transparência (que parecia "desabilitado"); sem borda
+  depois do clique (contorno só na navegação por teclado). A grade virou botão dividido: o ícone
+  liga e desliga direto e a seta abre o tamanho. A dica mostra o estado e o atalho ("Mostrar
+  grade: ligado (Ctrl+Shift+G)") e o estado é anunciado a leitores de tela (`aria-pressed`).
+  Conferido nos temas claro e escuro.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 
