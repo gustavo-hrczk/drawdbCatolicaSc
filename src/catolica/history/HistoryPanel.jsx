@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip } from "@douyinfe/semi-ui";
+import { Button, TabPane, Tabs, Tooltip } from "@douyinfe/semi-ui";
 import { IconClose } from "@douyinfe/semi-icons";
 import { DateTime } from "luxon";
 import {
@@ -14,7 +14,12 @@ import {
   useViews,
 } from "../../hooks";
 import { onHistoryStamped, requestHistoryJump } from "../editorEvents";
-import { closeHistoryPanel, useHistoryPanelOpen } from "./panelState";
+import {
+  closeHistoryPanel,
+  setHistoryTab,
+  useHistoryPanel,
+} from "./panelState";
+import VersionsTab from "./VersionsTab";
 import { historyRows } from "./historyRows";
 
 // Painel "Histórico de alterações", à direita do desenho (encaixe
@@ -181,17 +186,17 @@ function ChangesList() {
 
 export default function HistoryPanel() {
   const { t } = useTranslation();
-  const open = useHistoryPanelOpen();
+  const { open, tab } = useHistoryPanel();
   if (!open) return null;
 
   return (
     <aside
-      aria-label={t("history_title")}
+      aria-label={t("history_panel")}
       className="flex h-full w-[320px] shrink-0 flex-col border-s border-color sm:w-full"
       style={{ backgroundColor: "var(--semi-color-bg-0)" }}
     >
       <div className="flex items-center justify-between border-b border-color px-4 py-2">
-        <h2 className="text-base font-semibold">{t("history_title")}</h2>
+        <h2 className="text-base font-semibold">{t("history_panel")}</h2>
         <Tooltip content={t("history_close")} position="left">
           <Button
             theme="borderless"
@@ -202,9 +207,19 @@ export default function HistoryPanel() {
           />
         </Tooltip>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <ChangesList />
-      </div>
+      <Tabs
+        type="line"
+        activeKey={tab}
+        onChange={setHistoryTab}
+        className="flex min-h-0 flex-1 flex-col px-2 [&_.semi-tabs-content]:min-h-0 [&_.semi-tabs-content]:flex-1 [&_.semi-tabs-content]:overflow-y-auto [&_.semi-tabs-content]:p-0"
+      >
+        <TabPane tab={t("history_tab_changes")} itemKey="changes">
+          <ChangesList />
+        </TabPane>
+        <TabPane tab={t("history_tab_versions")} itemKey="versions">
+          <VersionsTab />
+        </TabPane>
+      </Tabs>
     </aside>
   );
 }

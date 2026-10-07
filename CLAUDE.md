@@ -129,6 +129,8 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   (horário) e `desc` (frase da linha do tempo) logo depois da ação; o painel fica no encaixe
   `right-panel`. Ao sincronizar com o upstream, ações novas com entrada de desfazer precisam de
   frase em `describeChange.js` (sem ela, a linha do tempo mostra a mensagem do upstream).
+  Versões: `versions.js` (banco do fork), `VersionKeeper.jsx` (automáticas) e restauração por
+  entrada de desfazer com `snapshot` (tratada no `undo`/`redo` do `ControlPanel.jsx`).
 
 ## Versionamento (público)
 
@@ -175,8 +177,8 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 ## Limitações conhecidas
 
 - **Compartilhar** (gist/link) depende do servidor `drawdb-server`, que não está configurado.
-  Nesta versão, o recurso falha. Opções: esconder o botão ou implementar compartilhamento sem
-  servidor (diagrama comprimido na URL).
+  Sem servidor, o botão dá lugar a "Histórico de versões" (Sprint 1E). Compartilhar sem servidor
+  (diagrama comprimido na URL) está no Sprint 7.
 - Recursos do drawDB Pro (nuvem, colaboração, IA, sync com GitHub) não existem no código aberto.
 - Respostas 402 do backend levam a `/checkout`, rota que não existe neste fork. Sem backend,
   isso não deve ocorrer, mas vale tratar se um backend for adicionado.

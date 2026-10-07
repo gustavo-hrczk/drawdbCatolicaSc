@@ -16,7 +16,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
-| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | em andamento: fase A (linha do tempo) na `homolog` |
+| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | em andamento: fases A (linha do tempo) e B (versões) na `homolog`; falta a C (histórico no .zip) |
 | 1F | Menus enxutos e janelas padronizadas | concluído na `homolog` |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
@@ -574,9 +574,36 @@ publicada na homologação para teste antes da seguinte.
 - Código em `src/catolica/history/` (`describeChange.js`, `historyRows.js`, `HistoryPanel.jsx`,
   `useEditorHistory.js`; testes em `history.test.js`).
 
-**Fase B, versões (próxima):** aba Versões no mesmo painel e botão "Histórico de versões" no lugar
-de "Compartilhar" (que depende de servidor), com versões automáticas e manuais conforme o escopo
-aprovado.
+**Fase B, versões (07/10/2026, na `homolog`):**
+
+- Painel "Histórico" com as abas **Alterações** (a linha do tempo da fase A) e **Versões**. O botão
+  **"Histórico de versões"** entra no lugar de "Compartilhar" quando não há servidor de
+  compartilhamento (`hasGistBackend`) e abre o painel na aba Versões; Editar → Histórico de
+  alterações abre na outra aba.
+- **Automáticas** (`VersionKeeper`, sempre montado no encaixe `canvas-overlay`): uma ao abrir o
+  diagrama e outra a cada 10 minutos de edição, só se o conteúdo mudou desde a última versão
+  (mesma chave de conteúdo da importação, sem nome nem enquadramento). Diagrama vazio não gera
+  versão. **Com nome:** botão "Salvar versão". Dar nome a uma automática a protege do descarte.
+- **Guarda** (`versionRules.js`, com testes): 20 automáticas mais recentes e, das mais antigas, a
+  última de cada dia por 30 dias; as com nome nunca são descartadas. Banco do fork
+  (`drawDB-catolica`, tabela `versions`); versões de diagramas excluídos são apagadas junto com o
+  histórico de desfazer.
+- **Ações:** Visualizar, Restaurar, Abrir como cópia em nova janela, Baixar (.json no formato da
+  exportação), Renomear e Excluir.
+- **Visualizar (decisão de 07/10/2026):** em vez de carregar a versão no editor (o que mexeria no
+  carregamento e no salvamento do diagrama aberto), uma janela mostra um desenho simplificado da
+  versão (tabelas com colunas, relacionamentos, áreas e notas nas posições gravadas,
+  `VersionPreview.jsx`) com os botões Restaurar e "Abrir como cópia em nova janela", que cria um
+  diagrama novo com o conteúdo da versão (o mesmo caminho da importação) e o diagrama aberto não
+  muda.
+- **Restaurar:** o diagrama atual é guardado antes como versão automática ("antes de restaurar
+  outra versão"); a troca vira um passo da linha do tempo ('Versão "Original" restaurada') que o
+  Ctrl+Z desfaz. O passo guarda o diagrama inteiro de antes (tabelas, relacionamentos, notas,
+  áreas, tipos, enums e views); no `undo`/`redo` do `ControlPanel.jsx`, entradas com `snapshot`
+  trocam um diagrama pelo outro. O mecanismo do editor DBML não servia: guarda só tabelas,
+  relacionamentos e enums.
+- Conferido no build de homologação local: versão ao abrir, salvar com nome, pré-visualização,
+  restaurar (6 → 5 tabelas), Ctrl+Z (volta a 6), abrir como cópia e as duas abas.
 
 **Fase C, histórico no pacote .zip:** pasta `historico/` na exportação e leitura na importação.
 Decisão pendente: a opção "Incluir histórico" vem marcada ou desmarcada.

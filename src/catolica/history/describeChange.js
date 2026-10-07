@@ -247,6 +247,13 @@ function describeEdit(entry, state) {
 // de agora (nomes que dependem do momento da ação ficam de fora).
 export function describeChange(entry, state = {}, { live = false } = {}) {
   if (!entry || typeof entry !== "object") return null;
+  if (entry.snapshot) {
+    return {
+      key: "history_version_restored",
+      params: { name: entry.restoredVersion ?? "" },
+      kind: "restore",
+    };
+  }
   if (entry.element === ObjectType.DBML) {
     return { key: "history_dbml", params: {}, kind: "dbml" };
   }

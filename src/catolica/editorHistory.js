@@ -8,6 +8,11 @@ export const catolicaDb = new Dexie(`${baseName}-catolica`);
 catolicaDb.version(1).stores({
   history: "diagramId",
 });
+// Versões do diagrama (Sprint 1E, src/catolica/history/versions.js).
+catolicaDb.version(2).stores({
+  history: "diagramId",
+  versions: "++id, diagramId",
+});
 
 // 500 passos: é também o registro do painel "Histórico de alterações".
 const MAX_STEPS = 500;
@@ -105,6 +110,10 @@ export async function pruneOrphanHistory(diagramsDb) {
     const stored = await catolicaDb.history.toCollection().primaryKeys();
     const orphans = stored.filter((id) => !existing.has(id));
     if (orphans.length > 0) await catolicaDb.history.bulkDelete(orphans);
+    // Versões de diagramas que não existem mais.
+    await catolicaDb.versions
+      .filter((version) => !existing.has(version.diagramId))
+      .delete();
   } catch (err) {
     console.warn("could not prune undo history:", err);
   }

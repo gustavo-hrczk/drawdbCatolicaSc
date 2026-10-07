@@ -36,6 +36,10 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Histórico de alterações (Editar → Histórico de alterações): painel ao lado do diagrama com cada
   alteração em uma frase, com ícone e horário. Clicar numa alteração volta o diagrama até ela, e
   as desfeitas ficam esmaecidas até serem refeitas.
+- Histórico de versões (botão no lugar de "Compartilhar"): versões automáticas ao abrir o diagrama
+  e a cada 10 minutos de edição, e versões com nome. Cada versão pode ser vista, restaurada (o
+  diagrama atual é guardado antes e o Ctrl+Z desfaz), aberta como cópia, baixada, renomeada ou
+  excluída.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
   conflito de gravação, sem perder nada.
 - Nome do diagrama no título da aba do navegador.
@@ -116,7 +120,10 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Removido
 
-- Versões (dependia de um servidor que esta versão não tem).
+- Botão Compartilhar, que dependia de um servidor que esta versão não tem (voltará com o
+  compartilhamento por link).
+- Versões do drawDB original, que dependiam de um servidor que esta versão não tem (substituídas
+  pelo Histórico de versões).
 - Atalho Ctrl+Alt+W, que fazia o mesmo que F.
 - Excluir diagrama do menu Arquivo; voltará em outra tela, com mais segurança.
 - Editar → Limpar, que apagava o diagrama inteiro de uma vez.

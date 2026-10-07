@@ -145,6 +145,9 @@ import {
   useHistoryStamps,
 } from "../../catolica/history/useEditorHistory";
 import { openHistoryPanel } from "../../catolica/history/panelState";
+import { snapshotOf } from "../../catolica/history/versionRules";
+import { addVersion } from "../../catolica/history/versions";
+import { onVersionRestore } from "../../catolica/editorEvents";
 import { flushSync } from "react-dom";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
@@ -325,10 +328,73 @@ export default function ControlPanel({
     views,
   });
 
+  // Versão restaurada (Sprint 1E): o passo guarda o diagrama inteiro de
+  // antes, e desfazer/refazer troca um pelo outro.
+  const currentSnapshot = () =>
+    snapshotOf({
+      database,
+      tables,
+      relationships,
+      notes,
+      areas,
+      types,
+      enums,
+      views,
+    });
+  const applySnapshot = (snapshot) => {
+    setSelectedElement((prev) => ({
+      ...prev,
+      element: ObjectType.NONE,
+      id: -1,
+      open: false,
+    }));
+    setTables(snapshot.tables);
+    setRelationships(snapshot.relationships);
+    setNotes(snapshot.notes);
+    setAreas(snapshot.areas);
+    setTypes(snapshot.types);
+    setEnums(snapshot.enums);
+    setViews(snapshot.views);
+  };
+  const swapSnapshot = (entry) => {
+    const current = currentSnapshot();
+    applySnapshot(entry.snapshot);
+    return { ...entry, snapshot: current };
+  };
+  const restoreVersion = ({ snapshot, label }) => {
+    if (layout.readOnly) return;
+    const current = currentSnapshot();
+    // O diagrama de agora fica guardado como versão antes de ser trocado.
+    addVersion(diagramId, current, { reason: "before_restore" });
+    applySnapshot(snapshot);
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.NONE,
+        snapshot: current,
+        restoredVersion: label,
+        message: t("history_version_restored", { name: label }),
+      },
+    ]);
+    setRedoStack([]);
+  };
+  const restoreRef = useRef(restoreVersion);
+  restoreRef.current = restoreVersion;
+  useEffect(
+    () => onVersionRestore((version) => restoreRef.current(version)),
+    [],
+  );
+
   const undo = () => {
     if (undoStack.length === 0) return;
     const a = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.filter((_, i) => i !== prev.length - 1));
+
+    if (a.snapshot) {
+      setRedoStack((prev) => [...prev, swapSnapshot(a)]);
+      return;
+    }
 
     if (a.bulk) {
       if (a.element === ObjectType.RELATIONSHIP && a.action === Action.ADD) {
@@ -557,6 +623,11 @@ export default function ControlPanel({
     if (redoStack.length === 0) return;
     const a = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.filter((e, i) => i !== prev.length - 1));
+
+    if (a.snapshot) {
+      setUndoStack((prev) => [...prev, swapSnapshot(a)]);
+      return;
+    }
 
     if (a.bulk) {
       if (a.element === ObjectType.RELATIONSHIP && a.action === Action.ADD) {
@@ -2338,7 +2409,7 @@ export default function ControlPanel({
     // upstream.
     history: {
       ...upstreamMenu.settings.show_timeline,
-      function: openHistoryPanel,
+      function: () => openHistoryPanel("changes"),
     },
   });
   menu.view = catolicaViewMenu(upstreamMenu.view, { t });
@@ -2610,7 +2681,9 @@ export default function ControlPanel({
             {header()}
             <div className="flex items-center gap-2 me-7">
               <Slot name="header-actions-start" />
-              {!isTemplate && (
+              {/* Sem servidor de compartilhamento, o fork mostra "Histórico
+                  de versões" no lugar (src/catolica/history/HistoryButton.jsx). */}
+              {!isTemplate && hasGistBackend && (
                 <Button
                   type="primary"
                   className="!text-base !pe-6 !ps-5 !py-[18px] !rounded-md"

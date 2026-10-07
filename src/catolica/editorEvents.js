@@ -58,3 +58,15 @@ export function onHistoryJump(listener) {
   target.addEventListener("history-jump", handler);
   return () => target.removeEventListener("history-jump", handler);
 }
+
+// Restaurar uma versão (Sprint 1E): { snapshot, label }. O ControlPanel troca
+// o diagrama e registra o passo para o Ctrl+Z.
+export function requestVersionRestore(version) {
+  target.dispatchEvent(new CustomEvent("version-restore", { detail: version }));
+}
+
+export function onVersionRestore(listener) {
+  const handler = (e) => listener(e.detail);
+  target.addEventListener("version-restore", handler);
+  return () => target.removeEventListener("version-restore", handler);
+}
