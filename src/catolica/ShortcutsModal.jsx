@@ -10,12 +10,21 @@ const kbdStyle = {
 };
 const borderStyle = { borderColor: "var(--semi-color-border)" };
 
+// Alternativas de teclas simples (← ↑ → ↓) ficam na mesma linha; combinações
+// alternativas (Ctrl+Y ou Ctrl+Shift+Z) ficam uma por linha, com o "ou" no
+// fim da linha de cima, para todas as teclas começarem na mesma coluna.
 function Keys({ combos }) {
+  const { t } = useTranslation();
+  const stacked = combos.length > 1 && combos.some((combo) => combo.length > 1);
   return (
-    <div className="flex items-center gap-1.5 whitespace-nowrap">
+    <div
+      className={`flex gap-1.5 whitespace-nowrap ${
+        stacked ? "flex-col items-start" : "items-center"
+      }`}
+    >
       {combos.map((combo, i) => (
         <Fragment key={combo.join("+")}>
-          {i > 0 && <span className="text-xs opacity-50">/</span>}
+          {i > 0 && !stacked && <span className="text-xs opacity-50">/</span>}
           <span className="inline-flex items-center gap-0.5">
             {combo.map((key, j) => (
               <Fragment key={key}>
@@ -28,6 +37,11 @@ function Keys({ combos }) {
                 </kbd>
               </Fragment>
             ))}
+            {stacked && i < combos.length - 1 && (
+              <span className="ms-1 text-xs opacity-50">
+                {t("shortcut_or")}
+              </span>
+            )}
           </span>
         </Fragment>
       ))}
@@ -55,8 +69,8 @@ function GroupHeader({ children, action }) {
 
 // Janela "Atalhos do teclado" (botão da barra de ferramentas, Ajuda →
 // Atalhos ou tecla "?"). Lista todos os atalhos, inclusive os fixos do
-// sistema. A chave do grupo "Atalhos de uma tecla" liga/desliga esses
-// atalhos e mostra ou oculta as linhas deles.
+// sistema. A chave do grupo "Atalhos rápidos" liga/desliga esses atalhos e
+// mostra ou oculta as linhas deles.
 export default function ShortcutsModal({
   visible,
   onClose,
@@ -83,43 +97,49 @@ export default function ShortcutsModal({
         paddingBottom: 12,
       }}
     >
-      <table className="w-full table-fixed border-collapse text-[13px]">
-        <colgroup>
-          <col style={{ width: "56%" }} />
-          <col style={{ width: "44%" }} />
-        </colgroup>
-        <tbody>
-          {SHORTCUT_GROUPS.map(({ group, items, singleKey }) => (
-            <Fragment key={group}>
-              <GroupHeader
-                action={
-                  singleKey && (
-                    <Switch
-                      size="small"
-                      checked={prefs.singleKey}
-                      onChange={(checked) =>
-                        onChangePrefs({ ...prefs, singleKey: checked })
-                      }
-                      aria-label={t(group)}
-                    />
-                  )
-                }
-              >
-                {t(group)}
-              </GroupHeader>
-              {(!singleKey || prefs.singleKey) &&
-                items.map((item) => (
-                  <tr key={item.id} className="border-t" style={borderStyle}>
-                    <td className="py-1 pr-3 align-middle">{t(item.label)}</td>
-                    <td className="py-1 align-middle">
-                      <Keys combos={item.keys} />
-                    </td>
-                  </tr>
-                ))}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+      {/* pe-3: a chave e as teclas não encostam na barra de rolagem (em
+          tabela com bordas colapsadas o padding não vale, por isso o div). */}
+      <div className="pe-3">
+        <table className="w-full table-fixed border-collapse text-[13px]">
+          <colgroup>
+            <col style={{ width: "56%" }} />
+            <col style={{ width: "44%" }} />
+          </colgroup>
+          <tbody>
+            {SHORTCUT_GROUPS.map(({ group, items, singleKey }) => (
+              <Fragment key={group}>
+                <GroupHeader
+                  action={
+                    singleKey && (
+                      <Switch
+                        size="small"
+                        checked={prefs.singleKey}
+                        onChange={(checked) =>
+                          onChangePrefs({ ...prefs, singleKey: checked })
+                        }
+                        aria-label={t(group)}
+                      />
+                    )
+                  }
+                >
+                  {t(group)}
+                </GroupHeader>
+                {(!singleKey || prefs.singleKey) &&
+                  items.map((item) => (
+                    <tr key={item.id} className="border-t" style={borderStyle}>
+                      <td className="py-1 pr-3 align-middle">
+                        {t(item.label)}
+                      </td>
+                      <td className="py-1 align-middle">
+                        <Keys combos={item.keys} />
+                      </td>
+                    </tr>
+                  ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Modal>
   );
 }

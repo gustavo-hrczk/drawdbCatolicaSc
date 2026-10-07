@@ -26,6 +26,7 @@ export const SHORTCUT_GROUPS = [
         label: "add_note",
         keys: [["N"]],
       },
+      { id: "edit", label: "shortcut_edit_selected", keys: [["E"]] },
       { id: "auto_arrange", label: "auto_arrange", keys: [["O"]] },
       { id: "fit", label: "shortcut_fit_diagram", keys: [["F"]] },
       { id: "shortcuts", label: "shortcut_list", keys: [["?"]] },
@@ -64,7 +65,6 @@ export const SHORTCUT_GROUPS = [
         label: "delete",
         keys: [["Delete"]],
       },
-      { id: "edit", label: "shortcut_edit_selected", keys: [["Ctrl", "E"]] },
       { id: "rename", label: "rename_selected", keys: [["F2"]] },
       { id: "deselect", label: "shortcut_deselect", keys: [["Esc"]] },
       {
@@ -81,7 +81,7 @@ export const SHORTCUT_GROUPS = [
       { id: "save", label: "save", keys: [["Ctrl", "S"]] },
       { id: "save_as", label: "save_as", keys: [["Ctrl", "Shift", "S"]] },
       { id: "import", label: "import", keys: [["Ctrl", "I"]] },
-      { id: "export", label: "export", keys: [["Ctrl", "Alt", "E"]] },
+      { id: "export", label: "export", keys: [["Ctrl", "E"]] },
     ],
   },
   {

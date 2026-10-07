@@ -2225,7 +2225,7 @@ export default function ControlPanel({
     t,
     confirmErase,
   });
-  menu.help = catolicaHelpMenu({
+  menu.help = catolicaHelpMenu(upstreamMenu.help, {
     showShortcuts: () => setShowShortcuts(true),
     singleKeyShortcuts: shortcutPrefs.singleKey,
     openDocs: () => window.open(UPSTREAM_DOCS_URL, "_blank"),
@@ -2235,13 +2235,14 @@ export default function ControlPanel({
   });
 
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
-  useHotkeys("mod+alt+e", () => setShowExportDialog(true), EDITOR_HOTKEY);
   useHotkeys("mod+z", undo, EDITOR_HOTKEY);
   useHotkeys("mod+y", redo, EDITOR_HOTKEY);
   useHotkeys("mod+shift+z", redo, EDITOR_HOTKEY);
   useHotkeys("mod+s", save, EDITOR_HOTKEY);
   useHotkeys("mod+o", open, EDITOR_HOTKEY);
-  useHotkeys("mod+e", edit, EDITOR_HOTKEY);
+  // Ctrl+E exporta (par com o Ctrl+I de importar); editar o elemento
+  // selecionado ficou na tecla E (atalhos rápidos, abaixo).
+  useHotkeys("mod+e", () => setShowExportDialog(true), EDITOR_HOTKEY);
   // F2 não digita texto: funciona também com o cursor num campo (por exemplo,
   // no texto de uma nota recém-clicada).
   useHotkeys("f2", rename, { ...EDITOR_HOTKEY, enableOnFormTags: true });
@@ -2291,6 +2292,10 @@ export default function ControlPanel({
   const isAdd = (element) => (entry) =>
     entry.action === Action.ADD && entry.element === element;
   const transformBeforeShortcut = useRef(null);
+  const selectionBeforeShortcut = useRef(null);
+  // Dica dos botões com a tecla do atalho rápido, só quando eles estão ligados.
+  const withQuickKey = (label, key) =>
+    shortcutPrefs.singleKey ? `${label} (${key})` : label;
   const rememberTransform = () => {
     transformBeforeShortcut.current = transform;
   };
@@ -2333,6 +2338,18 @@ export default function ControlPanel({
         hintText: t("shortcut_hint_note"),
         changes: true,
         hint: "first",
+      },
+      e: {
+        run: () => {
+          selectionBeforeShortcut.current = selectedElement;
+          edit();
+        },
+        rollback: () => {
+          if (selectionBeforeShortcut.current) {
+            setSelectedElement(selectionBeforeShortcut.current);
+          }
+        },
+        changes: true,
       },
       o: {
         run: () => {
@@ -2607,7 +2624,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={`${t("add_table")} (T)`} position="bottom">
+          <Tooltip content={withQuickKey(t("add_table"), "T")} position="bottom">
             <button
               className="flex items-center py-1 px-2 hover-2 rounded-sm disabled:opacity-50"
               onClick={() => addTable()}
@@ -2625,7 +2642,7 @@ export default function ControlPanel({
               <IconAddView />
             </button>
           </Tooltip>
-          <Tooltip content={`${t("add_area")} (A)`} position="bottom">
+          <Tooltip content={withQuickKey(t("add_area"), "A")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addArea()}
@@ -2634,7 +2651,7 @@ export default function ControlPanel({
               <IconAddArea />
             </button>
           </Tooltip>
-          <Tooltip content={`${t("add_note")} (N)`} position="bottom">
+          <Tooltip content={withQuickKey(t("add_note"), "N")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addNote()}
@@ -2644,7 +2661,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={`${t("auto_arrange")} (O)`} position="bottom">
+          <Tooltip content={withQuickKey(t("auto_arrange"), "O")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5 disabled:opacity-50"
               onClick={autoArrangeTables}
@@ -2664,7 +2681,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("shortcuts_button")} position="bottom">
+          <Tooltip content={withQuickKey(t("help_shortcuts"), "?")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
               onClick={() => setShowShortcuts(true)}

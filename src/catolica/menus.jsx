@@ -17,6 +17,24 @@ import { DateTime } from "luxon";
 
 const RECENT_COUNT = 5;
 
+// Itens do upstream que saíram de um menu continuam acessíveis pelo código,
+// só que fora da lista exibida (propriedade não enumerável): partes do
+// upstream chamam funções pelo menu, como o botão de tema da barra inferior
+// (menu.view.theme).
+function keepHidden(menu, upstream) {
+  for (const [key, item] of Object.entries(upstream)) {
+    if (!(key in menu)) {
+      Object.defineProperty(menu, key, { value: item, enumerable: false });
+    }
+  }
+  return menu;
+}
+
+const without = (menu, keys) =>
+  Object.fromEntries(
+    Object.entries(menu).filter(([key]) => !keys.includes(key)),
+  );
+
 // recent: diagramas em ordem de última edição ({ diagramId, name,
 // lastModified }); currentId: o diagrama aberto, que não entra na lista.
 function recentChildren({
@@ -46,7 +64,7 @@ function recentChildren({
 }
 
 export function catolicaFileMenu(upstream, actions) {
-  return {
+  const menu = {
     new: { function: actions.newHere },
     new_window: { function: actions.newWindow },
     open: upstream.open,
@@ -54,15 +72,11 @@ export function catolicaFileMenu(upstream, actions) {
     save: upstream.save,
     save_as: upstream.save_as,
     import: { function: actions.importFile, shortcut: "Ctrl+I" },
-    export: { function: actions.exportFile, shortcut: "Ctrl+Alt+E" },
+    export: { function: actions.exportFile, shortcut: "Ctrl+E" },
     exit: upstream.exit,
   };
+  return keepHidden(menu, upstream);
 }
-
-const without = (menu, keys) =>
-  Object.fromEntries(
-    Object.entries(menu).filter(([key]) => !keys.includes(key)),
-  );
 
 // Item de submenu com o atalho e o estado (liga/desliga) à direita, como nos
 // itens do primeiro nível (os submenus do upstream só têm nome e etiqueta).
@@ -84,17 +98,18 @@ function submenuItem(t, key, item) {
   };
 }
 
-// Editar: sai "Limpar" (apagava o diagrama inteiro de uma vez); entra
-// "Histórico de alterações" (a linha do tempo, que ficava em Configurações);
-// "Organizar automaticamente" mostra o atalho O quando os atalhos de uma
-// tecla estão ligados.
+// Editar: sai "Limpar" (apagava o diagrama inteiro de uma vez) e "Editar"
+// (menu Editar > Editar; a edição do elemento fica na tecla E, no F2 e nos
+// botões do próprio elemento); entra "Histórico de alterações" (a linha do
+// tempo, que ficava em Configurações); "Organizar automaticamente" mostra o
+// atalho O quando os atalhos rápidos estão ligados.
 export function catolicaEditMenu(upstream, { singleKeyShortcuts, history }) {
-  const { undo, redo, ...rest } = without(upstream, ["clear"]);
+  const { undo, redo, ...rest } = without(upstream, ["clear", "edit"]);
   const menu = { undo, redo, change_history: history, ...rest };
   if (singleKeyShortcuts) {
     menu.auto_arrange = { ...menu.auto_arrange, shortcut: "O" };
   }
-  return menu;
+  return keepHidden(menu, upstream);
 }
 
 // Ver: só o que muda a exibição do diagrama e não está na barra de
@@ -110,15 +125,16 @@ const ON_DIAGRAM = [
 ];
 
 export function catolicaViewMenu(upstream, { t }) {
-  return {
+  const menu = {
     view_on_diagram: {
       children: ON_DIAGRAM.map((key) => submenuItem(t, key, upstream[key])),
       function: () => {},
     },
     dbml_view: upstream.dbml_view,
     presentation_mode: upstream.presentation_mode,
-    reset_view: upstream.reset_view,
+    reset_view: { ...upstream.reset_view, shortcut: "Enter" },
   };
+  return keepHidden(menu, upstream);
 }
 
 // Configurações: o que é preferência do editor. Sai "Limpar cache" (cache de
@@ -129,7 +145,7 @@ export function catolicaSettingsMenu(
   upstream,
   { strictMode, t, confirmErase },
 ) {
-  return {
+  const menu = {
     autosave: upstream.autosave,
     strict_mode: strictMode,
     default_database: upstream.default_database,
@@ -150,13 +166,14 @@ export function catolicaSettingsMenu(
       function: () => {},
     },
   };
+  return keepHidden(menu, upstream);
 }
 
 // Ajuda: sai o Discord (comunidade do drawDB original) e o atalho Ctrl+H da
 // documentação (é o atalho do histórico do navegador); "Relatar um problema"
 // abre uma issue no repositório deste editor; entram Novidades e Sobre.
-export function catolicaHelpMenu(actions) {
-  return {
+export function catolicaHelpMenu(upstream, actions) {
+  const menu = {
     help_shortcuts: {
       function: actions.showShortcuts,
       ...(actions.singleKeyShortcuts && { shortcut: "?" }),
@@ -166,4 +183,5 @@ export function catolicaHelpMenu(actions) {
     help_report: { function: actions.reportProblem },
     help_about: { function: actions.showAbout },
   };
+  return keepHidden(menu, upstream);
 }

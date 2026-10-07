@@ -29,8 +29,8 @@ const resources = {
     nothing_to_paste:
       "Nada para colar: copie uma tabela, nota, área ou view do diagrama.",
     shortcuts_title: "Atalhos do teclado",
-    shortcuts_button: "Atalhos do teclado (?)",
-    shortcuts_single_key_group: "Atalhos de uma tecla",
+    shortcuts_single_key_group: "Atalhos rápidos",
+    shortcut_or: "ou",
     shortcut_group_edit: "Edição",
     shortcut_group_file: "Arquivo",
     shortcut_group_view: "Visualização",
@@ -90,8 +90,8 @@ const resources = {
     nothing_to_paste:
       "Nothing to paste: copy a table, note, area or view from the diagram.",
     shortcuts_title: "Keyboard shortcuts",
-    shortcuts_button: "Keyboard shortcuts (?)",
-    shortcuts_single_key_group: "Single-key shortcuts",
+    shortcuts_single_key_group: "Quick shortcuts",
+    shortcut_or: "or",
     shortcut_group_edit: "Editing",
     shortcut_group_file: "File",
     shortcut_group_view: "View",

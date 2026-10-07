@@ -2,7 +2,7 @@ import { ObjectType, Tab } from "../data/constants";
 import { openOverlays } from "./useSafeKeyShortcuts";
 
 // F2: renomear o elemento selecionado (tabela, área, nota ou view). Abre a
-// edição do elemento, como o Ctrl+E, e já coloca o cursor no campo do nome
+// edição do elemento, como a tecla E, e já coloca o cursor no campo do nome
 // com o texto selecionado. Enter confirma; Esc volta o nome anterior. Sem
 // nada selecionado, o F2 renomeia o próprio diagrama.
 
@@ -50,7 +50,7 @@ export function renameTarget(selectedElement) {
 // Estado da seleção que abre a edição do elemento: no painel lateral (aba
 // certa, item expandido) ou, sem painel, no popover/painel do próprio
 // elemento. Para áreas e notas, editFromToolbar evita que o popover feche
-// com o clique que o abriu (o mesmo que o Ctrl+E faz).
+// com o clique que o abriu (o mesmo que a tecla E faz).
 export function openForRename(prev, sidebar) {
   const target = RENAMABLE[prev.element];
   if (!target) return prev;

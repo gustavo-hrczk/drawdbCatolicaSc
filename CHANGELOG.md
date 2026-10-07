@@ -19,12 +19,13 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Novidades
 
-- Atalhos de uma tecla com proteção contra digitação acidental: T (tabela), A (área) e N (nota)
-  criam o elemento onde está o mouse; O organiza o diagrama; F ajusta o diagrama à tela; ? abre a
-  lista de atalhos.
-- Janela "Atalhos do teclado" com todos os atalhos e opção de desligar os de uma tecla.
+- Atalhos rápidos (uma tecla) com proteção contra digitação acidental: T (tabela), A (área) e N
+  (nota) criam o elemento onde está o mouse; E abre a edição do elemento selecionado; O organiza o
+  diagrama; F ajusta o diagrama à tela; ? abre a lista de atalhos.
+- Janela "Atalhos do teclado" com todos os atalhos e opção de desligar os atalhos rápidos.
 - Novos atalhos: Esc (desmarcar e fechar mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
-  claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+Alt+E (exportar) e Ctrl+Shift+Z (refazer).
+  claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+E (exportar, par com o Ctrl+I de importar) e
+  Ctrl+Shift+Z (refazer).
 - Menu da grade na barra de ferramentas (mostrar e tamanho) e botão de ímã para alinhar objetos.
 - Desfazer e refazer continuam funcionando depois de recarregar a página ou reabrir o diagrama.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
@@ -102,6 +103,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Atalho Ctrl+Alt+W, que fazia o mesmo que F.
 - Excluir diagrama do menu Arquivo; voltará em outra tela, com mais segurança.
 - Editar → Limpar, que apagava o diagrama inteiro de uma vez.
+- Editar → Editar e o atalho Ctrl+E para editar o elemento selecionado: a edição fica na tecla E,
+  no F2 e nos botões do próprio elemento, e o Ctrl+E passa a exportar.
 - Ajuda → Perguntar no Discord (comunidade do drawDB original) e o atalho Ctrl+H da
   documentação, que é o atalho do histórico do navegador.
 - Configurações → Limpar cache (de diagramas compartilhados por servidor, que esta versão não usa)

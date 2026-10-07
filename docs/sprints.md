@@ -476,6 +476,23 @@ da homologação, analisados um a um e depois em conjunto.
 - Os submenus do Semi UI respondem a `mousedown`, não a `click`: testes automatizados devem
   disparar o evento certo.
 
+**Quarta rodada (07/10/2026):**
+
+- **Atalhos:** Ctrl+E exporta (par com o Ctrl+I); a tecla **E** abre a edição do elemento
+  selecionado (atalho rápido, com a mesma proteção dos outros e desfeito se for o começo de uma
+  palavra); sai o item Editar do menu Editar; sai o Ctrl+Alt+E.
+- **Janela de atalhos:** grupo "Atalhos rápidos"; chave com folga da barra de rolagem; atalhos
+  alternativos (Refazer, zoom) um por linha, com o "ou" no fim da linha de cima, e as teclas de
+  todas as linhas na mesma coluna.
+- **Defeito encontrado e corrigido:** o botão de tema da barra inferior chamava
+  `menu.view.theme`, que tinha saído do menu Ver. Os itens retirados dos menus agora continuam
+  acessíveis pelo código, só fora da lista exibida (`keepHidden` em `menus.jsx`), o que protege
+  também contra usos futuros do upstream.
+- **Consistência:** as dicas dos botões da barra inferior só mostram a tecla (T, A, N, O, ?)
+  com os atalhos rápidos ligados, como no menu; "Redefinir visualização" mostra "Enter" em vez
+  de "Enter/Return".
+- Em análise: padrão visual dos botões de liga/desliga da barra inferior (grade e ímã).
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O
