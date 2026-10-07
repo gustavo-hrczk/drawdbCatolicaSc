@@ -45,9 +45,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Importar um .zip com vários diagramas (como o "Baixar tudo" das Tarefas do Teams, com um pacote
   por aluno) mostra a lista para escolher qual abrir.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
-- F2 renomeia a tabela, área, nota ou view selecionada; sem nada selecionado, renomeia o diagrama.
-  Opção na janela "Atalhos do teclado" para o F2 renomear a coluna, tabela, nota ou área sob o
-  mouse.
+- F2 renomeia a tabela, área, nota ou view selecionada. Opção na janela "Atalhos do teclado" para
+  o F2 renomear a coluna, tabela, nota ou área sob o mouse.
 - Ajuda → Novidades mostra as mudanças de cada versão, e Ajuda → Sobre mostra a versão, a licença
   e o código-fonte.
 - Ajuda → Relatar um problema abre uma issue no repositório do editor, já com um roteiro para o
@@ -55,7 +54,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Melhorias
 
-- Tabela, área, nota e coluna novas já abrem com o nome selecionado, pronto para digitar.
+- Tabela, área, nota e coluna novas já abrem com o nome selecionado, pronto para digitar; pelas
+  teclas T, A, N e C, o que for digitado logo em seguida já entra no nome.
 - Nomes numerados para elementos novos (tabela_1, area_1, nota_1) no lugar de códigos aleatórios.
 - Salvamento automático também enquanto você digita e ao trocar de aba, com aviso ao fechar a
   página se algo ainda não foi salvo.

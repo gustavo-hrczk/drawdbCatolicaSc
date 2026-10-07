@@ -13,7 +13,8 @@ import { readShortcutPrefs, writeShortcutPrefs } from "./shortcuts";
 //    saiu do campo, mas a pessoa continua digitando).
 // 5. Letra no meio de uma palavra (outra tecla logo antes) não dispara.
 // 6. A ação é imediata, mas se outra tecla chegar logo depois (era o começo
-//    de uma palavra), ela é desfeita automaticamente.
+//    de uma palavra), ela é desfeita automaticamente. Exceção: atalhos que
+//    abrem o nome do elemento novo (T, A, N, C); aí o que vem depois é o nome.
 // 7. Não disparam com janelas, painéis laterais ou menus abertos.
 // 8. Criar e mover elementos é bloqueado no modo somente leitura.
 // 9. Podem ser desligados na janela "Atalhos do teclado".
@@ -25,6 +26,21 @@ const USAGE_HINTS = 3;
 
 let lastFieldTypingAt = -Infinity;
 let deleteBlockedAt = -Infinity;
+
+// Atalho que abre o nome do elemento novo: o campo leva alguns milissegundos
+// para aparecer. O que for digitado nesse meio-tempo fica guardado e entra no
+// campo quando ele abrir (takeHeldTyping), sem se perder nem desfazer o atalho.
+const HOLD_MS = 1500;
+let held = null; // { until, text }
+
+const holding = () => held !== null && performance.now() < held.until;
+
+// Texto digitado antes de o campo abrir (e encerra a espera).
+export function takeHeldTyping() {
+  const text = holding() ? held.text : "";
+  held = null;
+  return text;
+}
 
 if (typeof document !== "undefined") {
   document.addEventListener(
@@ -84,9 +100,10 @@ export function allowDelete() {
   return false;
 }
 
-// singleKeys: { tecla: { run, rollback, changes, hint, hintText } }, com a
-// tecla em minúscula (ou "?"). changes: altera o diagrama (bloqueado em
-// somente leitura). hint: "first" (dica nas primeiras vezes) ou "always";
+// singleKeys: { tecla: { run, rollback, opensField, changes, hint,
+// hintText } }, com a tecla em minúscula (ou "?"). opensField: o atalho abre
+// o nome do elemento criado (run devolve false se não criou nada). changes:
+// altera o diagrama (bloqueado em somente leitura). hint: "first" (dica nas primeiras vezes) ou "always";
 // hintText: texto da dica. onEscape e onFind: Esc e Ctrl+F; onFind devolve
 // true se tratou o atalho. Esc também fecha as mensagens flutuantes.
 export default function useSafeKeyShortcuts({
@@ -142,6 +159,20 @@ export default function useSafeKeyShortcuts({
       }
       if (isTypingTarget(e.target)) return;
 
+      // Digitação logo depois de T, A, N ou C, antes de o campo do nome abrir.
+      if (holding() && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key.length === 1) {
+          e.preventDefault();
+          held.text += e.key;
+          return;
+        }
+        if (e.key === "Backspace") {
+          e.preventDefault();
+          held.text = held.text.slice(0, -1);
+          return;
+        }
+      }
+
       const withMod = e.ctrlKey || e.metaKey;
       if (withMod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
         if (!hasOpenOverlay() && config.onFind?.()) e.preventDefault();
@@ -166,7 +197,7 @@ export default function useSafeKeyShortcuts({
       lastKeyAt = now;
       const key = e.key === "?" ? "?" : e.key.toLowerCase();
 
-      // A mesma tecla de novo (T, T) é intencional: cria outro elemento.
+      // A mesma tecla de novo (O, O ou F, F) é intencional: repete a ação.
       const repeatedShortcut =
         lastRun && lastRun.key === key && now - lastRun.at < TYPING_WINDOW_MS;
 
@@ -196,8 +227,12 @@ export default function useSafeKeyShortcuts({
       if (hasOpenOverlay() || (action.changes && config.readOnly)) return;
 
       e.preventDefault();
-      action.run();
-      lastRun = { key, at: now };
+      const created = action.run();
+      if (action.opensField) {
+        if (created !== false) held = { until: now + HOLD_MS, text: "" };
+      } else {
+        lastRun = { key, at: now };
+      }
       showHint(action);
     };
 

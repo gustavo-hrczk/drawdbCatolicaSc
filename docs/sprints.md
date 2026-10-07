@@ -372,7 +372,8 @@ Arquivo, que tinha 15 itens, alguns repetidos e um com defeito.
 - **Abrir** fica com a lista (os recentes primeiro), dois cliques para abrir e o botão "Abrir
   arquivo do computador". Os modelos ficam em Novo.
 - **Salvar como modelo** vira opção de Salvar como.
-- **Renomear** sai do menu: lápis sempre visível ao lado do nome e F2 sem nada selecionado.
+- **Renomear** sai do menu: lápis sempre visível ao lado do nome e F2 sem nada selecionado (o F2
+  sem seleção saiu na sexta rodada).
 - **Excluir diagrama** sai do menu; voltará em outra tela (sugestão: na janela Abrir ou na home
   do Sprint 3, com confirmação). Até lá, só "Limpar armazenamento" apaga, e apaga tudo.
 - **Importar e Exportar** com a mesma ordem: diagrama completo, SQL, imagem (só exportar) e outros
@@ -524,6 +525,22 @@ da homologação, analisados um a um e depois em conjunto.
   atalhos rápidos.
 - Testes: 111 + 2 falhas esperadas. Conferido no build de homologação local, com e sem painel
   lateral.
+
+**Sexta rodada (07/10/2026), pedidos do mantenedor:**
+
+- **F2 não renomeia mais o diagrama** (podia confundir ou renomear o diagrama sem querer). Sem
+  nada renomeável selecionado, o F2 não faz nada e Editar → Renomear fica desabilitado; o
+  diagrama se renomeia pelo lápis ao lado do nome.
+- **Criação sem espera:** T, A, N e C abrem o nome do elemento novo na hora, sem a janela de
+  0,7 s. A espera atrapalhava quem digita rápido: o nome digitado logo depois do T era tratado
+  como digitação fora de campo e a tabela era desfeita. As teclas que chegam antes de o campo
+  aparecer (alguns milissegundos) ficam guardadas e entram no nome (`takeHeldTyping` em
+  `useSafeKeyShortcuts.js`, opção `opensField` dos atalhos).
+- **Efeito na proteção contra digitação acidental:** continuam valendo o bloqueio de letra no
+  meio de palavra ou frase e logo depois de digitar num campo. O que muda: uma palavra começada
+  por T, A, N ou C digitada fora de um campo depois de uma pausa (ex.: "teste") cria o elemento
+  com o resto da palavra no nome ("este"), já aberto para edição, em vez de ser desfeita
+  sozinha. Fica visível na hora e sai com Esc e Delete.
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

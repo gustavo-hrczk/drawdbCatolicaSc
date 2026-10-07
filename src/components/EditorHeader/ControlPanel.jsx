@@ -133,7 +133,6 @@ import {
 import useSafeKeyShortcuts, {
   allowDelete,
   openOverlays,
-  TYPING_WINDOW_MS,
 } from "../../catolica/useSafeKeyShortcuts";
 import {
   notifyElementCreated,
@@ -166,11 +165,10 @@ import {
 import { newIssueUrl, UPSTREAM_DOCS_URL } from "../../catolica/links";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
+  canRename,
   focusColumnName,
-  focusDialogField,
   focusNameField,
   openForRename,
-  renameTarget,
 } from "../../catolica/renameField";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
@@ -246,11 +244,6 @@ export default function ControlPanel({
     relationships,
     sidebar: layout.sidebar,
   };
-  // Quando um atalho rápido (T, A, N, C) criou algo: a edição só abre depois
-  // da janela de proteção contra digitação (senão a palavra digitada sem
-  // querer cairia no nome do elemento novo).
-  const quickCreateAt = useRef(-Infinity);
-
   // Elemento novo criado pelo usuário: abre a edição com o nome selecionado.
   useEffect(
     () =>
@@ -293,8 +286,7 @@ export default function ControlPanel({
             restore: false,
           });
         };
-        const quick = performance.now() - quickCreateAt.current < 300;
-        setTimeout(open, quick ? TYPING_WINDOW_MS + 50 : 0);
+        setTimeout(open, 0);
       }),
     // setSelectedElement é estável; o resto vem de latestRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1036,8 +1028,9 @@ export default function ControlPanel({
       }
     }
   };
-  // F2: abre a edição do elemento selecionado com o campo do nome em foco;
-  // sem nada selecionado, renomeia o diagrama.
+  // F2: abre a edição do elemento selecionado com o campo do nome em foco.
+  // Sem nada selecionado, não faz nada (o diagrama se renomeia pelo lápis ao
+  // lado do nome, para o F2 não mexer no diagrama por engano).
   const rename = () => {
     if (layout.readOnly) return;
     if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
@@ -1070,11 +1063,7 @@ export default function ControlPanel({
       focusNameField(hovered.type, hovered.id, layout.sidebar);
       return;
     }
-    const target = renameTarget(selectedElement);
-    if (target === "diagram") {
-      setModal(MODAL.RENAME);
-      focusDialogField();
-    } else if (target === "element") {
+    if (canRename(selectedElement)) {
       setSelectedElement((prev) => openForRename(prev, layout.sidebar));
       focusNameField(
         selectedElement.element,
@@ -1991,7 +1980,7 @@ export default function ControlPanel({
       rename_selected: {
         function: rename,
         shortcut: "F2",
-        disabled: layout.readOnly || !renameTarget(selectedElement),
+        disabled: layout.readOnly || !canRename(selectedElement),
       },
       cut: {
         function: cut,
@@ -2427,7 +2416,6 @@ export default function ControlPanel({
     notifyElementCreated({ type: "field", tableId: table.id, fieldId: id });
     return id;
   };
-  const columnByShortcut = useRef(null);
 
   // Atalhos de uma tecla, Esc e Ctrl+F, com proteção contra acionamento
   // acidental (ver src/catolica/useSafeKeyShortcuts.js).
@@ -2439,8 +2427,6 @@ export default function ControlPanel({
     undo();
     setRedoStack((prev) => prev.slice(0, -1));
   };
-  const isAdd = (element) => (entry) =>
-    entry.action === Action.ADD && entry.element === element;
   const transformBeforeShortcut = useRef(null);
   const selectionBeforeShortcut = useRef(null);
   // Dica dos botões com a tecla do atalho rápido, só quando eles estão ligados.
@@ -2468,48 +2454,33 @@ export default function ControlPanel({
     enabled: shortcutPrefs.singleKey,
     readOnly: layout.readOnly,
     singleKeys: {
+      // T, A, N e C abrem o nome do elemento novo na hora (opensField): o que
+      // for digitado em seguida vai para o nome.
       t: {
-        run: () => {
-          quickCreateAt.current = performance.now();
-          addTable(undefined, true, tableAtPointer());
-        },
-        rollback: () => undoIfLast(isAdd(ObjectType.TABLE)),
+        run: () => addTable(undefined, true, tableAtPointer()),
+        opensField: true,
         hintText: t("shortcut_hint_table"),
         changes: true,
         hint: "first",
       },
       a: {
-        run: () => {
-          quickCreateAt.current = performance.now();
-          addArea(undefined, true, pointerInDiagram());
-        },
-        rollback: () => undoIfLast(isAdd(ObjectType.AREA)),
+        run: () => addArea(undefined, true, pointerInDiagram()),
+        opensField: true,
         hintText: t("shortcut_hint_area"),
         changes: true,
         hint: "first",
       },
       n: {
-        run: () => {
-          quickCreateAt.current = performance.now();
-          addNote(undefined, true, pointerInDiagram());
-        },
-        rollback: () => undoIfLast(isAdd(ObjectType.NOTE)),
+        run: () => addNote(undefined, true, pointerInDiagram()),
+        opensField: true,
         hintText: t("shortcut_hint_note"),
         changes: true,
         hint: "first",
       },
       c: {
-        run: () => {
-          quickCreateAt.current = performance.now();
-          columnByShortcut.current = addColumnToSelected();
-        },
-        // Só desfaz a coluna que a própria tecla criou.
-        rollback: () =>
-          undoIfLast(
-            (entry) =>
-              entry.component === "field_add" &&
-              entry.fid === columnByShortcut.current,
-          ),
+        // Sem tabela selecionada não cria nada (e não abre campo).
+        run: () => addColumnToSelected() !== null,
+        opensField: true,
         changes: true,
       },
       e: {

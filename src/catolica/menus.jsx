@@ -8,7 +8,7 @@ import { DateTime } from "luxon";
 // - Novo e Nova janela abrem a escolha de modelo (nesta janela / em outra);
 // - Abrir recente mostra os 5 diagramas editados por último (sem o aberto);
 // - "Salvar como modelo" virou opção de Salvar como;
-// - Renomear fica no lápis ao lado do nome e no F2;
+// - Renomear fica no lápis ao lado do nome;
 // - Excluir diagrama sai do menu (voltará em outra tela);
 // - Importar e Exportar reúnem os antigos "Importar", "Importar de SQL",
 //   "Exportar SQL" e "Exportar como".

@@ -1,10 +1,10 @@
 import { ObjectType, Tab } from "../data/constants";
-import { openOverlays } from "./useSafeKeyShortcuts";
+import { openOverlays, takeHeldTyping } from "./useSafeKeyShortcuts";
 
 // F2: renomear o elemento selecionado (tabela, área, nota ou view). Abre a
 // edição do elemento, como a tecla E, e já coloca o cursor no campo do nome
 // com o texto selecionado. Enter confirma; Esc volta o nome anterior. Sem
-// nada selecionado, o F2 renomeia o próprio diagrama.
+// nada selecionado, o F2 não faz nada (o diagrama se renomeia pelo lápis).
 //
 // Elemento recém-criado usa o mesmo campo, mas com restore: false: o Esc só
 // sai do campo e mantém o que foi digitado.
@@ -40,14 +40,6 @@ const RENAMABLE = {
 
 export function canRename(selectedElement) {
   return Boolean(RENAMABLE[selectedElement?.element]);
-}
-
-// O que o F2 renomeia: "element", "diagram" (nada selecionado) ou null
-// (seleção que não tem nome editável aqui, como um relacionamento).
-export function renameTarget(selectedElement) {
-  if (canRename(selectedElement)) return "element";
-  const element = selectedElement?.element ?? ObjectType.NONE;
-  return element === ObjectType.NONE ? "diagram" : null;
 }
 
 // Estado da seleção que abre a edição do elemento: no painel lateral (aba
@@ -93,6 +85,10 @@ function startRename(input, { restore = true } = {}) {
   input.scrollIntoView({ block: "nearest" });
   input.focus({ preventScroll: true });
   input.select();
+  // Letras digitadas logo depois do atalho (T, A, N, C), antes de o campo
+  // aparecer: substituem o nome padrão selecionado.
+  const typed = takeHeldTyping();
+  if (typed) setInputValue(input, typed);
 
   const onKeyDown = (e) => {
     if (e.key === "Enter") {
