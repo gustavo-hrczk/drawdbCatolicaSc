@@ -146,8 +146,16 @@ import SaveAsDialog from "../../catolica/SaveAsDialog";
 import {
   catolicaEditMenu,
   catolicaFileMenu,
+  catolicaHelpMenu,
+  catolicaSettingsMenu,
   catolicaViewMenu,
 } from "../../catolica/menus";
+import {
+  AboutDialog,
+  ChangelogDialog,
+  EDITOR_VERSION,
+} from "../../catolica/InfoDialogs";
+import { newIssueUrl, UPSTREAM_DOCS_URL } from "../../catolica/links";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
   focusDialogField,
@@ -1344,6 +1352,8 @@ export default function ControlPanel({
   };
 
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [shortcutPrefs, setShortcutPrefs] = useState(readShortcutPrefs);
   const changeShortcutPrefs = (prefs) => {
     setShortcutPrefs(prefs);
@@ -2170,7 +2180,30 @@ export default function ControlPanel({
     },
   };
 
-  menu.file = catolicaFileMenu(menu.file, {
+  // Menus do fork (ver src/catolica/menus.jsx), montados a partir dos itens
+  // do upstream acima.
+  const upstreamMenu = { ...menu };
+  const confirmErase = (erase) =>
+    SemiModal.confirm({
+      title: t("browser_data_erase_title"),
+      content: t("browser_data_erase_body"),
+      okText: t("browser_data_erase_confirm"),
+      cancelText: t("cancel"),
+      okButtonProps: { type: "danger", theme: "solid" },
+      onOk: erase,
+    });
+  const reportProblem = () => {
+    const body = t("report_issue_body", {
+      version: EDITOR_VERSION ?? t("about_version_dev"),
+      environment:
+        import.meta.env.VITE_APP_ENV === "homolog"
+          ? `(${t("about_test_environment")})`
+          : "",
+      browser: navigator.userAgent,
+    });
+    window.open(newIssueUrl(body), "_blank");
+  };
+  menu.file = catolicaFileMenu(upstreamMenu.file, {
     newHere: () => setNewMode("here"),
     newWindow: () => setNewMode("window"),
     importFile: fileImport,
@@ -2182,10 +2215,24 @@ export default function ControlPanel({
     t,
     language: i18n.language,
   });
-  menu.edit = catolicaEditMenu(menu.edit, {
+  menu.edit = catolicaEditMenu(upstreamMenu.edit, {
     singleKeyShortcuts: shortcutPrefs.singleKey,
+    history: upstreamMenu.settings.show_timeline,
   });
-  menu.view = catolicaViewMenu(menu.view);
+  menu.view = catolicaViewMenu(upstreamMenu.view, { t });
+  menu.settings = catolicaSettingsMenu(upstreamMenu.settings, {
+    strictMode: upstreamMenu.view.strict_mode,
+    t,
+    confirmErase,
+  });
+  menu.help = catolicaHelpMenu({
+    showShortcuts: () => setShowShortcuts(true),
+    singleKeyShortcuts: shortcutPrefs.singleKey,
+    openDocs: () => window.open(UPSTREAM_DOCS_URL, "_blank"),
+    showChangelog: () => setShowChangelog(true),
+    reportProblem,
+    showAbout: () => setShowAbout(true),
+  });
 
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
   useHotkeys("mod+alt+e", () => setShowExportDialog(true), EDITOR_HOTKEY);
@@ -2226,7 +2273,6 @@ export default function ControlPanel({
   useHotkeys("mod+shift+s", saveDiagramAs, EDITOR_HOTKEY);
   useHotkeys("mod+alt+c", copyAsImage, EDITOR_HOTKEY);
   useHotkeys("enter", resetView, EDITOR_HOTKEY);
-  useHotkeys("mod+h", () => window.open(socials.docs, "_blank"), EDITOR_HOTKEY);
   useHotkeys("alt+e", toggleDBMLEditor, EDITOR_HOTKEY);
   useHotkeys("left", panLeft, EDITOR_HOTKEY);
   useHotkeys("right", panRight, EDITOR_HOTKEY);
@@ -2374,6 +2420,11 @@ export default function ControlPanel({
         onClose={() => setShowImportDialog(false)}
         currentDiagramId={diagramId}
       />
+      <ChangelogDialog
+        visible={showChangelog}
+        onClose={() => setShowChangelog(false)}
+      />
+      <AboutDialog visible={showAbout} onClose={() => setShowAbout(false)} />
       <NewDialog
         mode={newMode}
         onClose={() => setNewMode(null)}

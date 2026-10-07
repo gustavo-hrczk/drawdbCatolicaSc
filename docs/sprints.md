@@ -16,7 +16,8 @@ for inevitável (ver `CLAUDE.md`).
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
-| 1F | Menu Arquivo enxuto | concluído na `homolog` |
+| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | próximo (aprovado) |
+| 1F | Menus enxutos e janelas padronizadas | concluído na `homolog` |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
 | 4 | Compartilhar e recursos sem servidor | pendente |
@@ -455,6 +456,26 @@ da homologação, analisados um a um e depois em conjunto.
 - Em análise com o mantenedor: reorganização do restante do menu Ver, revisão de Configurações e
   Ajuda e a nova Linha do tempo (proposta de juntar ao Sprint 1E).
 
+**Terceira rodada (07/10/2026), decisões do mantenedor:**
+
+- **Ver** com 4 itens: "Mostrar no diagrama" (submenu: detalhes das colunas, comentários, tipos de
+  dados, cardinalidade e rótulos dos relacionamentos, cada um com o estado ligado/desligado),
+  Visualização DBML, Modo de apresentação e Redefinir visualização. Saem os que estão na barra
+  inferior (barra de menu, barra lateral, problemas, tela cheia, grade e ímã) e as coordenadas de
+  depuração; o Modo estrito vai para Configurações.
+- **Configurações:** Salvar automaticamente, Modo estrito, Banco de dados padrão, Tipos
+  personalizados, Idioma e "Dados do navegador" (exportar todos os diagramas; apagar todos, com
+  confirmação explícita). "Mostrar linha do tempo" vira Editar → Histórico de alterações; sai
+  "Limpar cache".
+- **Ajuda:** Atalhos do teclado, Documentação do drawDB (em inglês), Novidades (lê o
+  `CHANGELOG.md`, `src/catolica/changelog.js`), Relatar um problema (issue no GitHub com roteiro
+  e dados do navegador já preenchidos; a página antiga dependia de servidor) e Sobre (versão,
+  licença AGPL, código-fonte e créditos). Saem o Discord e o atalho Ctrl+H. Endereços do
+  repositório em `src/catolica/links.js`.
+- **Linha do tempo:** reescrita no Sprint 1E (abaixo).
+- Os submenus do Semi UI respondem a `mousedown`, não a `click`: testes automatizados devem
+  disparar o evento certo.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O
@@ -580,6 +601,15 @@ upstream):
   visualizar, restaurar sem perder o atual, baixar, renomear, excluir). Guarda: 20 automáticas
   recentes + 1 por dia por 30 dias; manuais sem limite. Banco `drawDB-catolica`. Ordem: depois do
   1C.
+  - **Nova Linha do tempo (decisão de 07/10/2026)**, na aba Alterações, aberta por Editar →
+    Histórico de alterações. Problemas da atual: só lê a pilha de desfazer, mostra marcações
+    técnicas ("[name]", "[collapse fields]"), registra ações que não alteram o diagrama (recolher
+    campos), repete "Adicionar tabela" sem o nome, não tem horário, não é clicável e some com o
+    que foi desfeito. Proposta, com base no painel Histórico do Photoshop (clicar num passo volta
+    a ele) e no histórico de versões do Figma (pontos automáticos agrupados, versões com nome,
+    restaurar guardando antes o estado atual): frases com o nome do objeto ("Tabela clientes
+    criada"), ícone por tipo de ação, horário relativo, agrupamento de ações iguais seguidas,
+    sem ações de visualização, passos desfeitos esmaecidos e clique para voltar até o ponto.
 - **Histórico no ZIP (1C + 1E):** é viável. O pacote do 1C reserva a pasta `historico/`; o 1E
   passa a gravar `historico/alteracoes.json` (+ versão legível `alteracoes.txt`) e
   `historico/versoes/<data>_<nome>.json` (formato JSON v1). Opção na exportação "Incluir histórico"

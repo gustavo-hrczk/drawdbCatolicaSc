@@ -140,11 +140,15 @@ const overrides = {
     fit_window_reset: "Ajustar diagrama à tela",
     snap_to_grid: "Alinhar objetos à grade",
     template_saved: "Modelo salvo! Ele aparece em Arquivo → Novo.",
+    timeline: "Histórico de alterações",
+    no_activity: "Nenhuma alteração neste diagrama ainda.",
   },
   en: {
     fit_window_reset: "Fit diagram to screen",
     snap_to_grid: "Snap objects to grid",
     template_saved: "Template saved! It is shown in File → New.",
+    timeline: "Change history",
+    no_activity: "No changes in this diagram yet.",
   },
 };
 
@@ -434,6 +438,78 @@ const fileTexts = {
     rename_selected: "Rename",
   },
 };
+
+// Menus Editar, Ver, Configurações e Ajuda (Sprint 1F).
+const menuTexts = {
+  "pt-BR": {
+    change_history: "Histórico de alterações",
+    view_on_diagram: "Mostrar no diagrama",
+    browser_data: "Dados do navegador",
+    browser_data_export: "Exportar todos os diagramas",
+    browser_data_erase: "Apagar todos os diagramas deste navegador",
+    browser_data_erase_title: "Apagar todos os diagramas?",
+    browser_data_erase_body:
+      "Todos os diagramas e modelos salvos neste navegador serão apagados, e isso não pode ser desfeito. Para guardar uma cópia antes, use Dados do navegador → Exportar todos os diagramas.",
+    browser_data_erase_confirm: "Apagar tudo",
+    help_shortcuts: "Atalhos do teclado",
+    help_docs: "Documentação do drawDB (em inglês)",
+    help_changelog: "Novidades",
+    help_report: "Relatar um problema",
+    help_about: "Sobre",
+    changelog_title: "Novidades",
+    changelog_unreleased: "Próxima versão (em testes)",
+    changelog_version: "Versão {{version}} · {{date}}",
+    changelog_empty: "Nenhuma novidade registrada.",
+    about_title: "Sobre",
+    about_description:
+      "Editor de diagramas de banco de dados baseado no drawDB, um projeto de código aberto. Esta é uma versão modificada, distribuída sob a mesma licença.",
+    about_version: "Versão",
+    about_version_dev: "Em desenvolvimento",
+    about_test_environment: "Ambiente de testes",
+    about_license: "Licença",
+    about_source: "Código-fonte",
+    about_original: "Projeto original",
+    about_original_credits: "drawDB, de drawdb-io e colaboradores",
+    report_issue_body:
+      "**O que aconteceu?**\n\n\n**Como reproduzir (passo a passo):**\n1. \n\n**O que era esperado?**\n\n\n---\nVersão: {{version}} {{environment}}\nNavegador: {{browser}}",
+  },
+  en: {
+    change_history: "Change history",
+    view_on_diagram: "Show on diagram",
+    browser_data: "Browser data",
+    browser_data_export: "Export all diagrams",
+    browser_data_erase: "Delete all diagrams in this browser",
+    browser_data_erase_title: "Delete all diagrams?",
+    browser_data_erase_body:
+      "All diagrams and templates saved in this browser will be deleted, and this cannot be undone. To keep a copy first, use Browser data → Export all diagrams.",
+    browser_data_erase_confirm: "Delete everything",
+    help_shortcuts: "Keyboard shortcuts",
+    help_docs: "drawDB documentation",
+    help_changelog: "What's new",
+    help_report: "Report a problem",
+    help_about: "About",
+    changelog_title: "What's new",
+    changelog_unreleased: "Next version (in testing)",
+    changelog_version: "Version {{version}} · {{date}}",
+    changelog_empty: "No changes recorded.",
+    about_title: "About",
+    about_description:
+      "Database diagram editor based on drawDB, an open source project. This is a modified version, distributed under the same license.",
+    about_version: "Version",
+    about_version_dev: "In development",
+    about_test_environment: "Test environment",
+    about_license: "License",
+    about_source: "Source code",
+    about_original: "Original project",
+    about_original_credits: "drawDB, by drawdb-io and contributors",
+    report_issue_body:
+      "**What happened?**\n\n\n**How to reproduce (step by step):**\n1. \n\n**What was expected?**\n\n\n---\nVersion: {{version}} {{environment}}\nBrowser: {{browser}}",
+  },
+};
+
+for (const [lng, translation] of Object.entries(menuTexts)) {
+  i18n.addResourceBundle(lng, "translation", translation, true, false);
+}
 
 for (const [lng, translation] of Object.entries(fileTexts)) {
   i18n.addResourceBundle(lng, "translation", translation, true, false);

@@ -113,9 +113,10 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
 - Exportação e importação de entrega (Sprint 1C): núcleo testado em `src/catolica/files/` e
   janelas `src/catolica/ExportDialog.jsx` e `ImportDialog.jsx`. O SQL exportado tem de ser
   idêntico ao dos exportadores do upstream (há teste para isso); metadados do fork só no `.json`.
-- Menus (Sprint 1F): `src/catolica/menus.js` escolhe e reorganiza os itens do upstream (Arquivo,
-  Editar e Ver), que continuam definidos em `ControlPanel.jsx`. Para mudar um menu, mexa no
-  `menus.js`.
+- Menus (Sprint 1F): `src/catolica/menus.jsx` monta os cinco menus a partir dos itens do upstream,
+  que continuam definidos em `ControlPanel.jsx`. Para mudar um menu, mexa no `menus.jsx`.
+  Endereços do repositório (issues, licença, código-fonte) ficam em `src/catolica/links.js`:
+  se o repositório mudar de dono ou de nome, troque lá. Ajuda → Novidades lê o `CHANGELOG.md`.
 - Janelas e textos do fork (Sprint 1F): rodapé padrão em `src/catolica/dialogParts.jsx` (extras à
   esquerda, "Cancelar" + ação principal à direita). Descrições de opções dizem o que a opção é ou
   contém, sem recomendar usos nem citar outros produtos; mensagens de erro dizem como resolver.

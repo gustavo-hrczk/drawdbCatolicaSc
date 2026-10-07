@@ -41,6 +41,10 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   por aluno) mostra a lista para escolher qual abrir.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
 - F2 renomeia a tabela, área, nota ou view selecionada; sem nada selecionado, renomeia o diagrama.
+- Ajuda → Novidades mostra as mudanças de cada versão, e Ajuda → Sobre mostra a versão, a licença
+  e o código-fonte.
+- Ajuda → Relatar um problema abre uma issue no repositório do editor, já com um roteiro para o
+  relato.
 
 ### Melhorias
 
@@ -69,8 +73,11 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Diagrama aberto a partir de um .sql ou .dbml vem organizado e enquadrado na tela.
 - Janelas do menu Arquivo com o mesmo padrão de botões e textos que descrevem cada opção sem
   indicar usos.
-- Menus Editar e Ver sem os itens que já estão na barra inferior (tema e zoom); Organizar
-  automaticamente mostra o atalho O.
+- Menus mais enxutos: Ver mostra só o que muda a exibição do diagrama (com o submenu "Mostrar no
+  diagrama") e deixa para a barra inferior o que já está lá; Configurações reúne as preferências e
+  os dados do navegador; o histórico de alterações fica em Editar; Organizar automaticamente
+  mostra o atalho O.
+- Apagar todos os diagramas do navegador pede confirmação explícita.
 - Diagramas novos se chamam "Diagrama sem título".
 - Organizar automaticamente: desfazer também volta o zoom anterior.
 - Delete logo depois de digitar em um campo pede confirmação.
@@ -85,6 +92,7 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Alterações muito rápidas ou troca de diagrama durante o salvamento podiam gravar o conteúdo
   errado.
 - Exportar JPEG e PDF podia sair com fundo preto.
+- Relatar um erro não funcionava (dependia de um servidor que esta versão não tem).
 - Nova janela abria o mesmo diagrama da janela atual, com aviso de conflito entre abas.
 - "Ver o código" de um diagrama vazio abria uma tela de carregamento sem fim.
 
@@ -94,6 +102,10 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Atalho Ctrl+Alt+W, que fazia o mesmo que F.
 - Excluir diagrama do menu Arquivo; voltará em outra tela, com mais segurança.
 - Editar → Limpar, que apagava o diagrama inteiro de uma vez.
+- Ajuda → Perguntar no Discord (comunidade do drawDB original) e o atalho Ctrl+H da
+  documentação, que é o atalho do histórico do navegador.
+- Configurações → Limpar cache (de diagramas compartilhados por servidor, que esta versão não usa)
+  e Ver → Mostrar coordenadas de depuração.
 - Importar para dentro do diagrama aberto (o DBML substituía o diagrama atual e apagava o
   histórico de desfazer).
 - Exportar o diagrama completo como .sql + .json ou só como .json: o diagrama completo sai sempre
