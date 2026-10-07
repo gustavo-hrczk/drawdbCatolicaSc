@@ -22,3 +22,17 @@ export function onEditorReset(listener) {
   target.addEventListener("editor-reset", listener);
   return () => target.removeEventListener("editor-reset", listener);
 }
+
+// Sinal emitido quando o usuário cria um elemento novo (não ao colar, duplicar
+// ou desfazer): { type: ObjectType, id } para tabela, área e nota, ou
+// { type: "field", tableId, fieldId } para coluna. O editor abre a edição
+// com o nome já selecionado, pronto para digitar.
+export function notifyElementCreated(detail) {
+  target.dispatchEvent(new CustomEvent("element-created", { detail }));
+}
+
+export function onElementCreated(listener) {
+  const handler = (e) => listener(e.detail);
+  target.addEventListener("element-created", handler);
+  return () => target.removeEventListener("element-created", handler);
+}

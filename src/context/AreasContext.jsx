@@ -2,6 +2,8 @@ import { Toast } from "@douyinfe/semi-ui";
 import { createContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Action, ObjectType, defaultBlue } from "../data/constants";
+import { defaultAreaName } from "../catolica/defaultNames";
+import { notifyElementCreated } from "../catolica/editorEvents";
 import { useSelect, useTransform, useUndoRedo, useCollab } from "../hooks";
 import { cascadePosition } from "../utils/rect";
 
@@ -31,7 +33,7 @@ export default function AreasContextProvider({ children }) {
       const { x, y } = center ?? transform.pan;
       created = {
         id: areas.length,
-        name: `area_${areas.length}`,
+        name: defaultAreaName(areas),
         ...cascadePosition({ x: x - width / 2, y: y - height / 2 }, areas),
         width,
         height,
@@ -39,6 +41,7 @@ export default function AreasContextProvider({ children }) {
         locked: false,
       };
       setAreas((prev) => [...prev, { ...created, id: prev.length }]);
+      notifyElementCreated({ type: ObjectType.AREA, id: areas.length });
     }
     if (addToHistory) {
       setUndoStack((prev) => [

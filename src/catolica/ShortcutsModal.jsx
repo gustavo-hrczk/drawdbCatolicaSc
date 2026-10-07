@@ -126,14 +126,35 @@ export default function ShortcutsModal({
                 </GroupHeader>
                 {(!singleKey || prefs.singleKey) &&
                   items.map((item) => (
-                    <tr key={item.id} className="border-t" style={borderStyle}>
-                      <td className="py-1 pr-3 align-middle">
-                        {t(item.label)}
-                      </td>
-                      <td className="py-1 align-middle">
-                        <Keys combos={item.keys} />
-                      </td>
-                    </tr>
+                    <Fragment key={item.id}>
+                      <tr className="border-t" style={borderStyle}>
+                        <td className="py-1 pr-3 align-middle">
+                          {t(item.label)}
+                        </td>
+                        <td className="py-1 align-middle">
+                          <Keys combos={item.keys} />
+                        </td>
+                      </tr>
+                      {item.option && (
+                        <tr>
+                          <td colSpan={2} className="pb-1 ps-3">
+                            <label className="flex items-center justify-between gap-3 text-xs opacity-80">
+                              <span>{t(item.option.label)}</span>
+                              <Switch
+                                size="small"
+                                checked={Boolean(prefs[item.option.pref])}
+                                onChange={(checked) =>
+                                  onChangePrefs({
+                                    ...prefs,
+                                    [item.option.pref]: checked,
+                                  })
+                                }
+                              />
+                            </label>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
               </Fragment>
             ))}

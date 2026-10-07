@@ -8,6 +8,8 @@ import {
 import { useUndoRedo, useTransform, useSelect, useCollab } from "../hooks";
 import { Toast } from "@douyinfe/semi-ui";
 import { cascadePosition } from "../utils/rect";
+import { defaultNoteTitle } from "../catolica/defaultNames";
+import { notifyElementCreated } from "../catolica/editorEvents";
 import { useTranslation } from "react-i18next";
 
 export const NotesContext = createContext(null);
@@ -40,7 +42,7 @@ export default function NotesContextProvider({ children }) {
             : { x: transform.pan.x, y: transform.pan.y - height / 2 },
           notes,
         ),
-        title: `note_${notes.length}`,
+        title: defaultNoteTitle(notes),
         content: "",
         locked: false,
         color: defaultNoteTheme,
@@ -48,6 +50,7 @@ export default function NotesContextProvider({ children }) {
         width: noteWidth,
       };
       setNotes((prev) => [...prev, { ...created, id: prev.length }]);
+      notifyElementCreated({ type: ObjectType.NOTE, id: notes.length });
     }
     if (addToHistory) {
       setUndoStack((prev) => [

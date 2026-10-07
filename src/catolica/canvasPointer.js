@@ -12,6 +12,11 @@ if (typeof window !== "undefined") {
   );
 }
 
+// Última posição do mouse na tela ({ x, y } em pixels), ou null.
+export function lastPointerClient() {
+  return lastPointer;
+}
+
 // Converte a posição do mouse para coordenadas do diagrama usando o viewBox
 // do <svg> do canvas. Devolve null se o mouse não estiver sobre o desenho
 // (aí o elemento nasce no centro da tela, como antes).

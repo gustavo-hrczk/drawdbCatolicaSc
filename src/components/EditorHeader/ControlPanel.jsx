@@ -133,7 +133,15 @@ import {
 import useSafeKeyShortcuts, {
   allowDelete,
   openOverlays,
+  TYPING_WINDOW_MS,
 } from "../../catolica/useSafeKeyShortcuts";
+import {
+  notifyElementCreated,
+  onElementCreated,
+} from "../../catolica/editorEvents";
+import { elementUnderPointer } from "../../catolica/canvasHit";
+import { escapeStep } from "../../catolica/escapeCascade";
+import { flushSync } from "react-dom";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
 import GridDropdown, { SnapToGridButton } from "../../catolica/GridDropdown";
@@ -158,6 +166,7 @@ import {
 import { newIssueUrl, UPSTREAM_DOCS_URL } from "../../catolica/links";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
+  focusColumnName,
   focusDialogField,
   focusNameField,
   openForRename,
@@ -228,6 +237,69 @@ export default function ControlPanel({
   const isTemplate = useMatch("/editor/templates/:id");
   const navigate = useNavigateWithParams();
   const extensions = useExtensions();
+  // Estado mais recente, para ouvintes registrados uma vez (elemento criado).
+  const latestRef = useRef({});
+  latestRef.current = {
+    tables,
+    areas,
+    notes,
+    relationships,
+    sidebar: layout.sidebar,
+  };
+  // Quando um atalho rápido (T, A, N, C) criou algo: a edição só abre depois
+  // da janela de proteção contra digitação (senão a palavra digitada sem
+  // querer cairia no nome do elemento novo).
+  const quickCreateAt = useRef(-Infinity);
+
+  // Elemento novo criado pelo usuário: abre a edição com o nome selecionado.
+  useEffect(
+    () =>
+      onElementCreated((created) => {
+        const exists = () => {
+          const { tables, areas, notes } = latestRef.current;
+          if (created.type === "field") {
+            return tables.some(
+              (table) =>
+                table.id === created.tableId &&
+                table.fields.some((field) => field.id === created.fieldId),
+            );
+          }
+          if (created.type === ObjectType.TABLE) {
+            return tables.some((table) => table.id === created.id);
+          }
+          const list = created.type === ObjectType.AREA ? areas : notes;
+          return list.some((item) => item.id === created.id);
+        };
+        const open = () => {
+          // Desfeito pela proteção contra digitação: não abre nada.
+          if (!exists()) return;
+          if (created.type === "field") {
+            focusColumnName(
+              created.tableId,
+              created.fieldId,
+              () => latestRef.current.tables,
+              { restore: false },
+            );
+            return;
+          }
+          const { sidebar } = latestRef.current;
+          setSelectedElement((prev) =>
+            openForRename(
+              { ...prev, element: created.type, id: created.id },
+              sidebar,
+            ),
+          );
+          focusNameField(created.type, created.id, sidebar, {
+            restore: false,
+          });
+        };
+        const quick = performance.now() - quickCreateAt.current < 300;
+        setTimeout(open, quick ? TYPING_WINDOW_MS + 50 : 0);
+      }),
+    // setSelectedElement é estável; o resto vem de latestRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const swapDbmlSnapshot = (entry) => {
     const current = { tables, relationships, enums };
@@ -969,6 +1041,35 @@ export default function ControlPanel({
   const rename = () => {
     if (layout.readOnly) return;
     if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
+    // Opção "F2 renomeia o item sob o mouse": coluna, tabela, nota ou área
+    // sob o mouse vêm antes da seleção.
+    const hovered =
+      shortcutPrefs.f2Hover &&
+      elementUnderPointer({ tables, relationships, notes, areas });
+    if (hovered?.type === "field") {
+      setSelectedElement((prev) =>
+        openForRename(
+          { ...prev, element: ObjectType.TABLE, id: hovered.tableId },
+          layout.sidebar,
+        ),
+      );
+      focusColumnName(
+        hovered.tableId,
+        hovered.fieldId,
+        () => latestRef.current.tables,
+      );
+      return;
+    }
+    if (hovered) {
+      setSelectedElement((prev) =>
+        openForRename(
+          { ...prev, element: hovered.type, id: hovered.id },
+          layout.sidebar,
+        ),
+      );
+      focusNameField(hovered.type, hovered.id, layout.sidebar);
+      return;
+    }
     const target = renameTarget(selectedElement);
     if (target === "diagram") {
       setModal(MODAL.RENAME);
@@ -1356,8 +1457,11 @@ export default function ControlPanel({
   const [showAbout, setShowAbout] = useState(false);
   const [shortcutPrefs, setShortcutPrefs] = useState(readShortcutPrefs);
   const changeShortcutPrefs = (prefs) => {
-    setShortcutPrefs(prefs);
-    writeShortcutPrefs(prefs);
+    // O contador de dicas é gravado direto pelo useSafeKeyShortcuts; o valor
+    // deste estado pode estar desatualizado e zeraria as dicas.
+    const next = { ...prefs, hintsShown: readShortcutPrefs().hintsShown };
+    setShortcutPrefs(next);
+    writeShortcutPrefs(next);
   };
 
   // Sair e Novo (nesta aba) só deixam o diagrama depois que o save termina.
@@ -2279,6 +2383,52 @@ export default function ControlPanel({
   useHotkeys("right", panRight, EDITOR_HOTKEY);
   useHotkeys("up", panUp, EDITOR_HOTKEY);
   useHotkeys("down", panDown, EDITOR_HOTKEY);
+  // Tecla C: coluna nova (sem nome) no fim da tabela selecionada, com a
+  // edição aberta. Igual ao botão "Adicionar coluna" do painel (TableInfo).
+  // Devolve o id da coluna criada (ou null, sem tabela selecionada).
+  const addColumnToSelected = () => {
+    if (selectedElement.element !== ObjectType.TABLE) return null;
+    const table = tables.find((item) => item.id === selectedElement.id);
+    if (!table) return null;
+    setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+    const id = nanoid();
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.TABLE,
+        component: "field_add",
+        tid: table.id,
+        fid: id,
+        message: t("edit_table", {
+          tableName: table.name,
+          extra: "[add field]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+    updateTable(table.id, {
+      fields: [
+        ...table.fields,
+        {
+          id,
+          name: "",
+          type: "",
+          default: "",
+          check: "",
+          primary: false,
+          unique: false,
+          notNull: false,
+          increment: false,
+          comment: "",
+        },
+      ],
+    });
+    notifyElementCreated({ type: "field", tableId: table.id, fieldId: id });
+    return id;
+  };
+  const columnByShortcut = useRef(null);
+
   // Atalhos de uma tecla, Esc e Ctrl+F, com proteção contra acionamento
   // acidental (ver src/catolica/useSafeKeyShortcuts.js).
   // Desfaz a última ação se ela for a que o atalho acabou de fazer (usado
@@ -2319,25 +2469,48 @@ export default function ControlPanel({
     readOnly: layout.readOnly,
     singleKeys: {
       t: {
-        run: () => addTable(undefined, true, tableAtPointer()),
+        run: () => {
+          quickCreateAt.current = performance.now();
+          addTable(undefined, true, tableAtPointer());
+        },
         rollback: () => undoIfLast(isAdd(ObjectType.TABLE)),
         hintText: t("shortcut_hint_table"),
         changes: true,
         hint: "first",
       },
       a: {
-        run: () => addArea(undefined, true, pointerInDiagram()),
+        run: () => {
+          quickCreateAt.current = performance.now();
+          addArea(undefined, true, pointerInDiagram());
+        },
         rollback: () => undoIfLast(isAdd(ObjectType.AREA)),
         hintText: t("shortcut_hint_area"),
         changes: true,
         hint: "first",
       },
       n: {
-        run: () => addNote(undefined, true, pointerInDiagram()),
+        run: () => {
+          quickCreateAt.current = performance.now();
+          addNote(undefined, true, pointerInDiagram());
+        },
         rollback: () => undoIfLast(isAdd(ObjectType.NOTE)),
         hintText: t("shortcut_hint_note"),
         changes: true,
         hint: "first",
+      },
+      c: {
+        run: () => {
+          quickCreateAt.current = performance.now();
+          columnByShortcut.current = addColumnToSelected();
+        },
+        // Só desfaz a coluna que a própria tecla criou.
+        rollback: () =>
+          undoIfLast(
+            (entry) =>
+              entry.component === "field_add" &&
+              entry.fid === columnByShortcut.current,
+          ),
+        changes: true,
       },
       e: {
         run: () => {
@@ -2378,13 +2551,51 @@ export default function ControlPanel({
         rollback: () => setShowShortcuts(false),
       },
     },
-    onEscape: () =>
-      setSelectedElement((prev) => ({
-        ...prev,
-        element: ObjectType.NONE,
-        id: -1,
-        open: false,
-      })),
+    // Esc em cascata (o 1º nível, sair do campo, fica no hook): fecha a
+    // edição do elemento e, no Esc seguinte, desmarca. Janelas e menus
+    // abertos fecham antes, pelo próprio Semi UI.
+    onEscape: () => {
+      if (
+        openOverlays().some((el) =>
+          el.matches(".semi-modal-wrap, .semi-dropdown-wrapper"),
+        )
+      ) {
+        return;
+      }
+      const step = escapeStep(selectedElement, layout.sidebar);
+      if (step?.collapse) {
+        // A lista do painel só recolhe com uma chave que não corresponde a
+        // nenhum item (é o estado que o clique no cabeçalho do item gera).
+        // Depois, a seleção volta como estava, sem a edição aberta.
+        flushSync(() =>
+          setSelectedElement((prev) => ({
+            ...prev,
+            element: step.collapse,
+            id: undefined,
+            open: true,
+          })),
+        );
+        setSelectedElement({
+          ...selectedElement,
+          open: false,
+          editFromToolbar: false,
+        });
+      } else if (step?.close) {
+        setSelectedElement((prev) => ({
+          ...prev,
+          open: false,
+          editFromToolbar: false,
+        }));
+      } else if (step?.deselect) {
+        setSelectedElement((prev) => ({
+          ...prev,
+          element: ObjectType.NONE,
+          id: -1,
+          open: false,
+          editFromToolbar: false,
+        }));
+      }
+    },
     onFind: focusTableSearch,
   });
 

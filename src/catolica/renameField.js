@@ -5,6 +5,9 @@ import { openOverlays } from "./useSafeKeyShortcuts";
 // edição do elemento, como a tecla E, e já coloca o cursor no campo do nome
 // com o texto selecionado. Enter confirma; Esc volta o nome anterior. Sem
 // nada selecionado, o F2 renomeia o próprio diagrama.
+//
+// Elemento recém-criado usa o mesmo campo, mas com restore: false: o Esc só
+// sai do campo e mantém o que foi digitado.
 
 const WAIT_MS = 1500;
 const RETRY_MS = 50;
@@ -85,7 +88,7 @@ const setInputValue = (input, value) => {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
-function startRename(input) {
+function startRename(input, { restore = true } = {}) {
   const original = input.value;
   input.scrollIntoView({ block: "nearest" });
   input.focus({ preventScroll: true });
@@ -95,7 +98,7 @@ function startRename(input) {
     if (e.key === "Enter") {
       e.preventDefault();
       input.blur();
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && restore) {
       e.preventDefault();
       e.stopPropagation();
       if (input.value !== original) setInputValue(input, original);
@@ -125,8 +128,28 @@ function whenFieldReady(find, run) {
   setTimeout(attempt, 0);
 }
 
-export function focusNameField(element, id, sidebar) {
-  whenFieldReady(() => findNameInput(element, id, sidebar), startRename);
+export function focusNameField(element, id, sidebar, options) {
+  whenFieldReady(
+    () => findNameInput(element, id, sidebar),
+    (input) => startRename(input, options),
+  );
+}
+
+// Nome de uma coluna (no painel ou na janela de edição da tabela, que já
+// precisa estar aberta). getTables devolve as tabelas atuais.
+export function focusColumnName(tableId, fieldId, getTables, options) {
+  whenFieldReady(
+    () => {
+      const table = getTables().find((t) => t.id === tableId);
+      const index = table?.fields.findIndex((f) => f.id === fieldId) ?? -1;
+      if (index < 0) return null;
+      const node = document.getElementById(
+        `scroll_table_${tableId}_input_${index}`,
+      );
+      return node?.matches("input") ? node : node?.querySelector("input");
+    },
+    (input) => startRename(input, options),
+  );
 }
 
 // Campo de texto da janela aberta: cursor no campo e texto selecionado. Com

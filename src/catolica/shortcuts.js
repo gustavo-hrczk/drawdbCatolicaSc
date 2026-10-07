@@ -27,6 +27,7 @@ export const SHORTCUT_GROUPS = [
         keys: [["N"]],
       },
       { id: "edit", label: "shortcut_edit_selected", keys: [["E"]] },
+      { id: "add_column", label: "shortcut_add_column", keys: [["C"]] },
       { id: "auto_arrange", label: "auto_arrange", keys: [["O"]] },
       { id: "fit", label: "shortcut_fit_diagram", keys: [["F"]] },
       { id: "shortcuts", label: "shortcut_list", keys: [["?"]] },
@@ -65,8 +66,14 @@ export const SHORTCUT_GROUPS = [
         label: "delete",
         keys: [["Delete"]],
       },
-      { id: "rename", label: "rename_selected", keys: [["F2"]] },
-      { id: "deselect", label: "shortcut_deselect", keys: [["Esc"]] },
+      {
+        id: "rename",
+        label: "rename_selected",
+        keys: [["F2"]],
+        // Opção ligada/desligada mostrada logo abaixo do atalho.
+        option: { pref: "f2Hover", label: "shortcut_f2_hover" },
+      },
+      { id: "escape", label: "shortcut_escape", keys: [["Esc"]] },
       {
         id: "search",
         label: "shortcut_search_table",
@@ -119,11 +126,18 @@ export const SHORTCUT_GROUPS = [
 // Preferência por navegador: atalhos de uma tecla ligados ou desligados.
 const PREFS_KEY = `${import.meta.env.VITE_DB_NAME || "drawDB"}-catolica:shortcuts`;
 
+// singleKey: atalhos rápidos ligados; f2Hover: F2 renomeia o item sob o
+// mouse (desligado por padrão: no Windows, F2 renomeia o que está selecionado).
+const DEFAULT_PREFS = { singleKey: true, f2Hover: false };
+
 export function readShortcutPrefs() {
   try {
-    return { singleKey: true, ...JSON.parse(localStorage.getItem(PREFS_KEY)) };
+    return {
+      ...DEFAULT_PREFS,
+      ...JSON.parse(localStorage.getItem(PREFS_KEY)),
+    };
   } catch {
-    return { singleKey: true };
+    return { ...DEFAULT_PREFS };
   }
 }
 

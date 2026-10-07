@@ -1,5 +1,7 @@
 import { createContext, useCallback, useState } from "react";
 import { Action, DB, ObjectType, defaultBlue } from "../data/constants";
+import { defaultTableName } from "../catolica/defaultNames";
+import { notifyElementCreated } from "../catolica/editorEvents";
 import { useTransform, useUndoRedo, useSelect, useCollab } from "../hooks";
 import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
@@ -42,7 +44,7 @@ export default function DiagramContextProvider({ children }) {
     const id = nanoid();
     const newTable = {
       id,
-      name: `table_${id}`,
+      name: defaultTableName(tables),
       ...cascadePosition(position ?? transform.pan, tables),
       locked: false,
       fields: [
@@ -74,6 +76,7 @@ export default function DiagramContextProvider({ children }) {
       });
     } else {
       setTables((prev) => [...prev, newTable]);
+      notifyElementCreated({ type: ObjectType.TABLE, id });
     }
     if (addToHistory) {
       setUndoStack((prev) => [

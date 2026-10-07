@@ -121,6 +121,10 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   esquerda, "Cancelar" + ação principal à direita). Descrições de opções dizem o que a opção é ou
   contém, sem recomendar usos nem citar outros produtos; mensagens de erro dizem como resolver.
   Termos: sempre "diagrama" e "nova janela".
+- Edição pelo teclado (Sprint 1F): criar tabela, área, nota ou coluna pelo usuário emite
+  `notifyElementCreated` (`src/catolica/editorEvents.js`), e o editor abre o nome selecionado.
+  Ao sincronizar com o upstream, confira se surgiram novos caminhos de criação. O Esc em cascata
+  fica em `src/catolica/escapeCascade.js`.
 
 ## Versionamento (público)
 

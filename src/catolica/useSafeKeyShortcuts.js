@@ -17,7 +17,7 @@ import { readShortcutPrefs, writeShortcutPrefs } from "./shortcuts";
 // 7. Não disparam com janelas, painéis laterais ou menus abertos.
 // 8. Criar e mover elementos é bloqueado no modo somente leitura.
 // 9. Podem ser desligados na janela "Atalhos do teclado".
-const TYPING_WINDOW_MS = 700;
+export const TYPING_WINDOW_MS = 700;
 const AFTER_FIELD_MS = 1500;
 const DELETE_CONFIRM_MS = 3000;
 const TYPING_WARNING_INTERVAL_MS = 10000;
@@ -130,6 +130,16 @@ export default function useSafeKeyShortcuts({
       const config = configRef.current;
       if (e.defaultPrevented || e.isComposing) return;
       if (e.key === "Process" || e.key === "Dead") return;
+      // Esc em cascata, 1º nível: num campo do editor, sai do campo e mantém
+      // o texto (as mudanças já valem e o Ctrl+Z desfaz). Janelas tratam o
+      // próprio Esc; mensagens flutuantes fecham antes.
+      if (e.key === "Escape" && isTypingTarget(e.target)) {
+        if (!closedToastsOn.has(e) && !e.target.closest(".semi-modal-wrap")) {
+          e.preventDefault();
+          e.target.blur();
+        }
+        return;
+      }
       if (isTypingTarget(e.target)) return;
 
       const withMod = e.ctrlKey || e.metaKey;
@@ -137,8 +147,10 @@ export default function useSafeKeyShortcuts({
         if (!hasOpenOverlay() && config.onFind?.()) e.preventDefault();
         return;
       }
+      // Demais níveis do Esc (fechar a edição, desmarcar): quem decide é o
+      // onEscape, que também confere janelas e menus abertos.
       if (e.key === "Escape") {
-        if (!closedToastsOn.has(e) && !hasOpenOverlay()) config.onEscape?.();
+        if (!closedToastsOn.has(e)) config.onEscape?.();
         return;
       }
       if (withMod || e.altKey || e.key.length !== 1) return;

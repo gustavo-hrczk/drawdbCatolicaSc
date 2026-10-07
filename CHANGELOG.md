@@ -20,10 +20,12 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 ### Novidades
 
 - Atalhos rápidos (uma tecla) com proteção contra digitação acidental: T (tabela), A (área) e N
-  (nota) criam o elemento onde está o mouse; E abre a edição do elemento selecionado; O organiza o
-  diagrama; F ajusta o diagrama à tela; ? abre a lista de atalhos.
+  (nota) criam o elemento onde está o mouse; E abre a edição do elemento selecionado; C adiciona
+  uma coluna à tabela selecionada; O organiza o diagrama; F ajusta o diagrama à tela; ? abre a
+  lista de atalhos.
 - Janela "Atalhos do teclado" com todos os atalhos e opção de desligar os atalhos rápidos.
-- Novos atalhos: Esc (desmarcar e fechar mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
+- Novos atalhos: Esc (em etapas: sai do campo, fecha a edição e desmarca; também fecha
+  mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
   claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+E (exportar, par com o Ctrl+I de importar) e
   Ctrl+Shift+Z (refazer).
 - Botões de grade e de ímã (alinhar objetos à grade) na barra de ferramentas, com o mesmo visual
@@ -44,6 +46,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   por aluno) mostra a lista para escolher qual abrir.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
 - F2 renomeia a tabela, área, nota ou view selecionada; sem nada selecionado, renomeia o diagrama.
+  Opção na janela "Atalhos do teclado" para o F2 renomear a coluna, tabela, nota ou área sob o
+  mouse.
 - Ajuda → Novidades mostra as mudanças de cada versão, e Ajuda → Sobre mostra a versão, a licença
   e o código-fonte.
 - Ajuda → Relatar um problema abre uma issue no repositório do editor, já com um roteiro para o
@@ -51,6 +55,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Melhorias
 
+- Tabela, área, nota e coluna novas já abrem com o nome selecionado, pronto para digitar.
+- Nomes numerados para elementos novos (tabela_1, area_1, nota_1) no lugar de códigos aleatórios.
 - Salvamento automático também enquanto você digita e ao trocar de aba, com aviso ao fechar a
   página se algo ainda não foi salvo.
 - Aviso quando o salvamento automático está desligado, com botão para religar.

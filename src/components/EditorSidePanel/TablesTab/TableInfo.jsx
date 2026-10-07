@@ -23,6 +23,7 @@ import UniqueConstraintDetails from "./UniqueConstraintDetails";
 import { useTranslation } from "react-i18next";
 import { SortableList } from "../../SortableList/SortableList";
 import { nanoid } from "nanoid";
+import { notifyElementCreated } from "../../../catolica/editorEvents";
 
 export default function TableInfo({ data }) {
   const { tables, database } = useDiagram();
@@ -420,6 +421,11 @@ export default function TableInfo({ data }) {
                     comment: "",
                   },
                 ],
+              });
+              notifyElementCreated({
+                type: "field",
+                tableId: data.id,
+                fieldId: id,
               });
             }}
           >

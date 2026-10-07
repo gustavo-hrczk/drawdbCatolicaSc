@@ -499,6 +499,32 @@ da homologação, analisados um a um e depois em conjunto.
   grade: ligado (Ctrl+Shift+G)") e o estado é anunciado a leitores de tela (`aria-pressed`).
   Conferido nos temas claro e escuro.
 
+**Quinta rodada (07/10/2026), fluxo de edição pelo teclado:**
+
+- **Esc em cascata** (`src/catolica/escapeCascade.js`): 1) num campo, sai do campo e mantém o
+  texto (no F2, volta o nome anterior); 2) fecha a edição do elemento (recolhe o item no painel
+  lateral ou fecha o painel/popover) e mantém a seleção; 3) desmarca. Janelas, menus e mensagens
+  flutuantes fecham antes. **Defeito do upstream contornado:** o Semi UI ignora `activeKey=""`,
+  então os itens do painel lateral nunca recolhiam por estado (`open: false`). O Esc recolhe com
+  uma chave que não corresponde a nenhum item (o mesmo estado que o clique no cabeçalho gera) e
+  depois restaura a seleção. Corrigir no upstream (`[]` em vez de `""`) mudaria o clique no
+  desenho, que hoje mantém o item aberto; fica como contribuição a discutir.
+- **Nome já selecionado ao criar** tabela, área, nota (botões ou T, A, N) e coluna ("Adicionar
+  coluna" ou C): evento `element-created` (`editorEvents.js`), emitido só na criação pelo usuário
+  (não ao colar, duplicar ou desfazer). Pelos atalhos rápidos, a edição abre depois da janela de
+  proteção contra digitação (0,7 s); se o atalho for desfeito por ser começo de palavra, nada
+  abre. No campo aberto assim, Enter confirma e Esc sai mantendo o texto.
+- **Nomes padrão** `tabela_1`, `area_1`, `nota_1` (no idioma do editor, primeiro número livre),
+  em `src/catolica/defaultNames.js`, com testes.
+- **Tecla C:** coluna nova no fim da tabela selecionada, com o mesmo registro de desfazer do botão
+  "Adicionar coluna"; o desfazer automático só remove a coluna criada pela própria tecla.
+- **F2 pelo mouse** (opção na janela de atalhos, desligada por padrão): renomeia a coluna, tabela,
+  nota ou área sob o mouse (`src/catolica/canvasHit.js`); fora de qualquer item, vale a seleção.
+- **Defeito corrigido:** mudar uma opção na janela de atalhos zerava o contador das dicas dos
+  atalhos rápidos.
+- Testes: 111 + 2 falhas esperadas. Conferido no build de homologação local, com e sem painel
+  lateral.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O
