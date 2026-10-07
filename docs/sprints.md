@@ -441,6 +441,20 @@ da homologação, analisados um a um e depois em conjunto.
     como igual.
 - Testes: 107 (13 novos para os casos acima). Conferido no build de homologação local.
 
+**Segunda rodada (07/10/2026):**
+
+- Pacote .zip descrito em lista (Schema SQL, Diagrama completo, Imagem do diagrama, Instruções);
+  o arquivo de instruções passa a se chamar `README.txt`.
+- Janela Exportar alinhada: título, "Nome do diagrama", seções e opções na mesma margem.
+- Atalho **Ctrl+Alt+E** para Exportar. O Ctrl+Shift+E (padrão de Figma, GIMP e Inkscape) foi
+  descartado porque abre a busca na barra lateral do Edge e as extensões do Opera; Ctrl+Alt+E
+  não é atalho de nenhum desses navegadores e segue a família Ctrl+Alt do editor (C, D, G).
+- Editar: sai "Limpar"; "Renomear" sem texto entre parênteses; "Organizar automaticamente" mostra
+  o atalho O (quando os atalhos de uma tecla estão ligados).
+- Ver: saem Tema, Aumentar zoom e Diminuir zoom, que estão na barra inferior.
+- Em análise com o mantenedor: reorganização do restante do menu Ver, revisão de Configurações e
+  Ajuda e a nova Linha do tempo (proposta de juntar ao Sprint 1E).
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O

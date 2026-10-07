@@ -143,7 +143,11 @@ import ImportDialog from "../../catolica/ImportDialog";
 import NewDialog from "../../catolica/NewDialog";
 import OpenDialog from "../../catolica/OpenDialog";
 import SaveAsDialog from "../../catolica/SaveAsDialog";
-import { catolicaFileMenu } from "../../catolica/fileMenu";
+import {
+  catolicaEditMenu,
+  catolicaFileMenu,
+  catolicaViewMenu,
+} from "../../catolica/menus";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
   focusDialogField,
@@ -2178,8 +2182,13 @@ export default function ControlPanel({
     t,
     language: i18n.language,
   });
+  menu.edit = catolicaEditMenu(menu.edit, {
+    singleKeyShortcuts: shortcutPrefs.singleKey,
+  });
+  menu.view = catolicaViewMenu(menu.view);
 
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
+  useHotkeys("mod+alt+e", () => setShowExportDialog(true), EDITOR_HOTKEY);
   useHotkeys("mod+z", undo, EDITOR_HOTKEY);
   useHotkeys("mod+y", redo, EDITOR_HOTKEY);
   useHotkeys("mod+shift+z", redo, EDITOR_HOTKEY);

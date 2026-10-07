@@ -40,7 +40,7 @@ import { buildPackage, packageReadme } from "./files/zipPackage";
 // Janela "Exportar" (Arquivo > Exportar). A ordem das seções é a mesma da
 // janela Importar: SQL, diagrama completo, imagem e outros formatos. O SQL é
 // exatamente o dos exportadores do upstream; o diagrama completo é sempre o
-// pacote .zip (SQL, .json, imagem e LEIA-ME).
+// pacote .zip (SQL, .json, imagem e README).
 //
 // As descrições dizem o que cada arquivo é ou contém, sem indicar usos.
 
@@ -62,6 +62,9 @@ const CODE_EXTENSION = {
   mermaid: "md",
   markdown: "md",
 };
+
+// Arquivos do pacote, na ordem em que aparecem na descrição.
+const ZIP_FILES = ["sql", "json", "png", "readme"];
 
 const fileNameFor = (base, option) =>
   ({
@@ -300,7 +303,9 @@ export default function ExportDialog({
       </div>
 
       <div className="grid grid-cols-[210px_1fr] gap-4 sm:grid-cols-1">
-        <div role="radiogroup" className="flex flex-col gap-3">
+        {/* -ml-2: o texto das opções alinha com "Nome do diagrama"; só o
+            destaque da opção marcada avança na margem. */}
+        <div role="radiogroup" className="-ml-2 flex flex-col gap-3">
           {GROUPS.map((group) => (
             <div key={group.id}>
               <SectionTitle>{t(`export_group_${group.id}`)}</SectionTitle>
@@ -338,6 +343,13 @@ export default function ExportDialog({
             </div>
             <div className="text-sm opacity-80">
               {t(`export_option_${option}_hint`)}
+              {option === "zip" && (
+                <ul className="mt-1 list-disc ps-5">
+                  {ZIP_FILES.map((file) => (
+                    <li key={file}>{t(`export_zip_file_${file}`)}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 

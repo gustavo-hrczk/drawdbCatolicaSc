@@ -81,6 +81,7 @@ export const SHORTCUT_GROUPS = [
       { id: "save", label: "save", keys: [["Ctrl", "S"]] },
       { id: "save_as", label: "save_as", keys: [["Ctrl", "Shift", "S"]] },
       { id: "import", label: "import", keys: [["Ctrl", "I"]] },
+      { id: "export", label: "export", keys: [["Ctrl", "Alt", "E"]] },
     ],
   },
   {

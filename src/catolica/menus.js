@@ -1,10 +1,10 @@
 import { DateTime } from "luxon";
 
-// Menu Arquivo do fork: Novo, Nova janela, Abrir, Abrir recente, Salvar,
-// Salvar como, Importar, Exportar e Sair, com os rótulos do upstream.
+// Menus do fork. Os itens do upstream continuam definidos em ControlPanel.jsx
+// (menos conflito ao sincronizar); estas funções só escolhem e reorganizam.
 //
-// Os itens do upstream continuam definidos em ControlPanel.jsx (menos
-// conflito ao sincronizar); esta função só escolhe e reorganiza:
+// Arquivo: Novo, Nova janela, Abrir, Abrir recente, Salvar, Salvar como,
+// Importar, Exportar e Sair, com os rótulos do upstream:
 // - Novo e Nova janela abrem a escolha de modelo (nesta janela / em outra);
 // - Abrir recente mostra os 5 diagramas editados por último (sem o aberto);
 // - "Salvar como modelo" virou opção de Salvar como;
@@ -54,7 +54,29 @@ export function catolicaFileMenu(upstream, actions) {
     save: upstream.save,
     save_as: upstream.save_as,
     import: { function: actions.importFile, shortcut: "Ctrl+I" },
-    export: { function: actions.exportFile },
+    export: { function: actions.exportFile, shortcut: "Ctrl+Alt+E" },
     exit: upstream.exit,
   };
+}
+
+const without = (menu, keys) =>
+  Object.fromEntries(
+    Object.entries(menu).filter(([key]) => !keys.includes(key)),
+  );
+
+// Editar: sai "Limpar" (apagava o diagrama inteiro de uma vez) e
+// "Organizar automaticamente" mostra o atalho O quando os atalhos de uma
+// tecla estão ligados.
+export function catolicaEditMenu(upstream, { singleKeyShortcuts }) {
+  const menu = without(upstream, ["clear"]);
+  if (singleKeyShortcuts) {
+    menu.auto_arrange = { ...menu.auto_arrange, shortcut: "O" };
+  }
+  return menu;
+}
+
+// Ver: saem Tema, Aumentar zoom e Diminuir zoom, que estão na barra de
+// ferramentas inferior.
+export function catolicaViewMenu(upstream) {
+  return without(upstream, ["theme", "zoom_in", "zoom_out"]);
 }

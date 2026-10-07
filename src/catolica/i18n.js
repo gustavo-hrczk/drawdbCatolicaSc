@@ -179,8 +179,11 @@ const fileTexts = {
     export_option_sql_hint:
       "Script SQL com a estrutura do banco de dados do diagrama.",
     export_option_zip: "Pacote .zip",
-    export_option_zip_hint:
-      "Contém o SQL (.sql), o diagrama completo (.json), uma imagem (.png) e instruções (LEIA-ME.txt).",
+    export_option_zip_hint: "Exporta um pacote .zip com os seguintes arquivos:",
+    export_zip_file_sql: "Schema SQL (.sql)",
+    export_zip_file_json: "Diagrama completo (.json)",
+    export_zip_file_png: "Imagem do diagrama (.png)",
+    export_zip_file_readme: "Instruções (README.txt)",
     export_option_png: "PNG",
     export_option_png_hint: "Imagem do diagrama em alta resolução.",
     export_option_jpeg: "JPEG",
@@ -292,7 +295,7 @@ const fileTexts = {
     import_error_dbml_syntax_no_position: "O DBML tem erros de sintaxe.",
     default_database: "Banco de dados padrão",
     default_database_current: "padrão",
-    rename_selected: "Renomear (elemento selecionado ou diagrama)",
+    rename_selected: "Renomear",
   },
   en: {
     untitled_diagram: "Untitled diagram",
@@ -317,8 +320,11 @@ const fileTexts = {
     export_option_sql_hint:
       "SQL script with the database structure of the diagram.",
     export_option_zip: ".zip package",
-    export_option_zip_hint:
-      "Contains the SQL (.sql), the full diagram (.json), an image (.png) and instructions (LEIA-ME.txt).",
+    export_option_zip_hint: "Exports a .zip package with the following files:",
+    export_zip_file_sql: "SQL schema (.sql)",
+    export_zip_file_json: "Full diagram (.json)",
+    export_zip_file_png: "Diagram image (.png)",
+    export_zip_file_readme: "Instructions (README.txt)",
     export_option_png: "PNG",
     export_option_png_hint: "High resolution image of the diagram.",
     export_option_jpeg: "JPEG",
@@ -425,7 +431,7 @@ const fileTexts = {
     import_error_dbml_syntax_no_position: "The DBML has syntax errors.",
     default_database: "Default database",
     default_database_current: "default",
-    rename_selected: "Rename (selected element or diagram)",
+    rename_selected: "Rename",
   },
 };
 

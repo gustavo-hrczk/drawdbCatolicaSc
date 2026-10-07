@@ -446,16 +446,16 @@ describe("importação: casos reais de entrega (Sprint 1F)", () => {
     return zip.generateAsync({ type: "uint8array" });
   };
 
-  it("arquivos extraídos do .zip, todos selecionados: ignora imagem e LEIA-ME", async () => {
+  it("arquivos extraídos do .zip, todos selecionados: ignora imagem e README", async () => {
     const { sql, json } = await makeExport(template2);
     const plan = await planImport([
       { name: "Blog.sql", bytes: bytes(sql) },
       { name: "Blog.json", bytes: bytes(json) },
       { name: "Blog.png", bytes: bytes("png") },
-      { name: "LEIA-ME.txt", bytes: bytes("leia") },
+      { name: "README.txt", bytes: bytes("leia") },
     ]);
     expect(plan).toMatchObject({ ok: true, kind: "pair", sqlCheck: "match" });
-    expect(plan.ignored).toEqual(["Blog.png", "LEIA-ME.txt"]);
+    expect(plan.ignored).toEqual(["Blog.png", "README.txt"]);
   });
 
   it("só arquivos que não são de diagrama: formato não aceito", async () => {

@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 
-// Pacote de entrega (.zip): nome.sql + nome.json + nome.png + LEIA-ME.txt.
+// Pacote de entrega (.zip): nome.sql + nome.json + nome.png + README.txt.
 // Extraído, vira exatamente o caso "SQL + JSON".
 
 export const LIMITS = {
@@ -55,7 +55,7 @@ export function buildPackage(
   zip.file(`${baseName}.sql`, sql);
   zip.file(`${baseName}.json`, json);
   if (png) zip.file(`${baseName}.png`, png);
-  if (readme) zip.file("LEIA-ME.txt", readme);
+  if (readme) zip.file("README.txt", readme);
   return zip.generateAsync({
     type,
     compression: "DEFLATE",

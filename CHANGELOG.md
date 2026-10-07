@@ -24,7 +24,7 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   lista de atalhos.
 - Janela "Atalhos do teclado" com todos os atalhos e opção de desligar os de uma tecla.
 - Novos atalhos: Esc (desmarcar e fechar mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
-  claro/escuro), Ctrl+Alt+G (alinhar à grade) e Ctrl+Shift+Z (refazer).
+  claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+Alt+E (exportar) e Ctrl+Shift+Z (refazer).
 - Menu da grade na barra de ferramentas (mostrar e tamanho) e botão de ímã para alinhar objetos.
 - Desfazer e refazer continuam funcionando depois de recarregar a página ou reabrir o diagrama.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
@@ -69,6 +69,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Diagrama aberto a partir de um .sql ou .dbml vem organizado e enquadrado na tela.
 - Janelas do menu Arquivo com o mesmo padrão de botões e textos que descrevem cada opção sem
   indicar usos.
+- Menus Editar e Ver sem os itens que já estão na barra inferior (tema e zoom); Organizar
+  automaticamente mostra o atalho O.
 - Diagramas novos se chamam "Diagrama sem título".
 - Organizar automaticamente: desfazer também volta o zoom anterior.
 - Delete logo depois de digitar em um campo pede confirmação.
@@ -91,6 +93,7 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Versões (dependia de um servidor que esta versão não tem).
 - Atalho Ctrl+Alt+W, que fazia o mesmo que F.
 - Excluir diagrama do menu Arquivo; voltará em outra tela, com mais segurança.
+- Editar → Limpar, que apagava o diagrama inteiro de uma vez.
 - Importar para dentro do diagrama aberto (o DBML substituía o diagrama atual e apagava o
   histórico de desfazer).
 - Exportar o diagrama completo como .sql + .json ou só como .json: o diagrama completo sai sempre
