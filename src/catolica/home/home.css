@@ -1,0 +1,49 @@
+/* Tela inicial (HomePage.jsx). Cores pelos tokens do Semi UI, que seguem a
+   paleta (vinho ou original) e o modo claro/escuro. */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap");
+
+.home-title {
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.home-nav-link {
+  font-weight: 600;
+  color: var(--semi-color-text-0);
+  transition: color 0.2s ease;
+}
+
+.home-nav-link:hover,
+.home-nav-link:focus-visible {
+  color: var(--semi-color-primary);
+}
+
+/* Faixa de apresentação: fundo suave na cor principal e um detalhe na cor de
+   destaque (dourado no tema vinho). */
+.home-hero {
+  background: linear-gradient(
+      135deg,
+      var(--semi-color-primary-light-default) 0%,
+      transparent 70%
+    ),
+    var(--semi-color-bg-1);
+  border: 1px solid var(--semi-color-border);
+  border-top: 4px solid var(--semi-color-primary);
+}
+
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--semi-color-text-1);
+  background: var(--semi-color-fill-0);
+}
+
+.home-badge i {
+  color: var(--drawdb-accent, var(--semi-color-primary));
+}

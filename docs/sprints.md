@@ -18,8 +18,8 @@ for inevitável (ver `CLAUDE.md`).
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
 | 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | concluído na `homolog` (fases A, B e C) |
 | 1F | Menus enxutos e janelas padronizadas | concluído na `homolog` |
-| 2 | Home em português, sem seção de depoimentos | pendente |
-| 3 | Acesso rápido na home | pendente |
+| 2 | Home em português, sem seção de depoimentos | concluído na `homolog` (tela inicial nova, 08/10/2026) |
+| 3 | Acesso rápido na home | concluído na `homolog` (junto com o 2) |
 | 4 | Compartilhar e recursos sem servidor | pendente |
 | 5 | Persistência II: durabilidade e verificação | pendente |
 | 6 | Persistência III: arquivo no computador como fonte | pendente |
@@ -675,6 +675,34 @@ lápis e em "Diagrama sem título" (Novo).
   `--color-sky-600`), o realce de relacionamento e as alças das colunas seguem a paleta.
 - Núcleo: `palette` nas configurações padrão e o atributo no `body` (`SettingsContext.jsx`).
   As cores das tabelas (dado do diagrama) não mudam.
+
+## Tela inicial (Sprints 2 e 3, 08/10/2026)
+
+Feita a partir do mockup do mantenedor (apresentação no topo, diagramas à esquerda, novidades à
+direita), em `src/catolica/home/`, na rota `/` (o `LandingPage.jsx` do upstream fica sem uso).
+
+- **Cabeçalho:** logo "drawDB" com "versão modificada · vX" (ou "em testes") abaixo, links Editor,
+  Novidades, Documentação e Código-fonte, e botão de tema claro/escuro. Saem Features, X, Discord
+  e patrocínio.
+- **Apresentação:** "Desenhe, gere o SQL e entregue.", texto curto, selos (Sem cadastro, Gratuito,
+  Rápido e fácil) e os botões Novo diagrama (mesma janela de modelos do editor) e Importar (a
+  mesma janela do editor). Títulos em Poppins (fonte do site de referência).
+- **Seus diagramas:** busca (sem diferenciar acentos), Todos/Favoritos, ordenação (editados
+  recentemente ou nome) e, por diagrama, estrela de favorito, banco, número de tabelas e "editado
+  há…". Menu: Abrir, Abrir em nova janela, Renomear (no próprio lugar), Duplicar (nome único),
+  Exportar .zip (sem imagem, que depende do desenho na tela; com o histórico), .json ou .sql, e
+  Excluir (confirmação e mensagem com "Desfazer", que regrava o diagrama; histórico e versões só
+  são limpos depois). Favoritos no banco do fork (`favorites`). Aviso fixo: os diagramas ficam
+  neste navegador.
+- **Novidades:** lidas do `CHANGELOG.md`; a versão mais recente (ou "Próxima versão (em testes)")
+  aberta, as anteriores recolhidas e "Ver todas as novidades".
+- Responsiva (uma coluna em telas estreitas, sem rolagem lateral) e nos dois modos de cor.
+- "Diagramas" e o logo, no topo do editor, levam à tela inicial depois de salvar (o mesmo caminho
+  de Arquivo → Sair, `goHome` no `ControlPanel.jsx`).
+- **Defeito encontrado e corrigido:** os menus "⋯" (aqui e nas versões) não fechavam ao escolher
+  uma ação; faltava `clickToHide`.
+- Conferido no build de homologação local: favoritar, duplicar, renomear, excluir e desfazer,
+  menus, modo escuro, largura de celular e o link "Diagramas".
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

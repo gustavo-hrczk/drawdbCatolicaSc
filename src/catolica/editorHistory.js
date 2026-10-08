@@ -13,6 +13,12 @@ catolicaDb.version(2).stores({
   history: "diagramId",
   versions: "++id, diagramId",
 });
+// Favoritos da tela inicial (src/catolica/home/).
+catolicaDb.version(3).stores({
+  history: "diagramId",
+  versions: "++id, diagramId",
+  favorites: "diagramId",
+});
 
 // 500 passos: é também o registro do painel "Histórico de alterações".
 const MAX_STEPS = 500;

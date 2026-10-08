@@ -1604,6 +1604,17 @@ export default function ControlPanel({
     save();
   };
 
+  // Tela inicial (Arquivo > Sair, logo e "Diagramas"): sai só depois que o
+  // save terminar (ver efeito de leaveTarget).
+  const goHome = () => {
+    if (layout.readOnly) {
+      navigate("/");
+      return;
+    }
+    setLeaveTarget("/");
+    save();
+  };
+
   // Código mostrado na janela de código do upstream (Exportar > Ver código).
   const showExportCode = ({ data, extension, filename }) => {
     setExportData({ data, extension, filename });
@@ -2044,15 +2055,7 @@ export default function ControlPanel({
         function: () => {},
       },
       exit: {
-        function: () => {
-          if (layout.readOnly) {
-            navigate("/");
-            return;
-          }
-          // Sai só depois que o save terminar (ver efeito de leaveTarget).
-          setLeaveTarget("/");
-          save();
-        },
+        function: goHome,
       },
     },
     edit: {
@@ -3031,7 +3034,13 @@ export default function ControlPanel({
         style={isRtl(i18n.language) ? { direction: "rtl" } : {}}
       >
         <div className="flex justify-start items-center">
-          <Link to="/">
+          <Link
+            to="/"
+            onClick={(e) => {
+              e.preventDefault();
+              goHome();
+            }}
+          >
             <img
               width={54}
               src={icon}
@@ -3065,7 +3074,21 @@ export default function ControlPanel({
                 }}
                 onClick={!layout.readOnly && (() => setModal(MODAL.RENAME))}
               >
-                <span>{isTemplate ? t("templates") : t("diagrams")}</span>
+                {/* Fork: "Diagramas" leva à tela inicial, salvando antes. */}
+                <span
+                  role="link"
+                  tabIndex={0}
+                  className="cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goHome();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") goHome();
+                  }}
+                >
+                  {isTemplate ? t("templates") : t("diagrams")}
+                </span>
                 <span className="select-none text-zinc-400 dark:text-zinc-500 mx-1">
                   /
                 </span>

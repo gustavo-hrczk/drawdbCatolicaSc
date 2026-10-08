@@ -199,6 +199,7 @@ function VersionRow({ version, readOnly, onAction }) {
       </button>
       <Dropdown
         trigger="click"
+        clickToHide
         position="bottomRight"
         render={
           <Dropdown.Menu>

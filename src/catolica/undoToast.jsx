@@ -49,3 +49,28 @@ export function toastWithUndo(text) {
   });
   return id;
 }
+
+// Mensagem com um botão de ação qualquer (ex.: "Diagrama excluído ·
+// Desfazer" na tela inicial, onde não há pilha de desfazer).
+export function toastWithAction(text, label, onClick) {
+  const id = Toast.success({
+    duration: DURATION_S,
+    content: (
+      <span className="inline-flex items-center gap-3">
+        <span>{text}</span>
+        <button
+          type="button"
+          className="font-semibold underline-offset-2 hover:underline"
+          style={{ color: "var(--semi-color-primary)" }}
+          onClick={() => {
+            Toast.close(id);
+            onClick();
+          }}
+        >
+          {label}
+        </button>
+      </span>
+    ),
+  });
+  return id;
+}

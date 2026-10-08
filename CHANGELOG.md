@@ -19,6 +19,9 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Novidades
 
+- Tela inicial em português: apresentação, os diagramas deste navegador (busca, favoritos,
+  ordenação, abrir, renomear, duplicar, exportar e excluir com "Desfazer") e as novidades de cada
+  versão. "Diagramas", no topo do editor, leva a ela.
 - Atalhos rápidos (uma tecla) com proteção contra digitação acidental: T (tabela), A (área) e N
   (nota) criam o elemento onde está o mouse; E abre a edição do elemento selecionado; C adiciona
   uma coluna à tabela selecionada; O organiza o diagrama; F ajusta o diagrama à tela; ? abre a
