@@ -46,6 +46,7 @@ import {
 import { getRectFromEndpoints, isInsideRect } from "../../utils/rect";
 import { State, noteWidth } from "../../data/constants";
 import { nanoid } from "nanoid";
+import { notifyElementCreated } from "../../catolica/editorEvents";
 
 export default function Canvas() {
   const { t } = useTranslation();
@@ -65,6 +66,8 @@ export default function Canvas() {
   const { notes, updateNote } = useNotes();
   const { layout } = useLayout();
   const { settings } = useSettings();
+  // Tamanho da grade configurável (menu de grade da barra de ferramentas).
+  const gridStep = settings.gridSize ?? gridSize;
   const { setUndoStack, setRedoStack } = useUndoRedo();
   const { transform, setTransform } = useTransform();
   const {
@@ -332,8 +335,8 @@ export default function Canvas() {
   const coordinatesAfterSnappingToGrid = ({ x, y }) => {
     if (settings.snapToGrid) {
       return {
-        x: Math.round(x / gridSize) * gridSize,
-        y: Math.round(y / gridSize) * gridSize,
+        x: Math.round(x / gridStep) * gridStep,
+        y: Math.round(y / gridStep) * gridStep,
       };
     }
     return { x, y };
@@ -710,6 +713,10 @@ export default function Canvas() {
     delete newRelationship.endX;
     delete newRelationship.endY;
     addRelationship(newRelationship);
+    notifyElementCreated({
+      type: ObjectType.RELATIONSHIP,
+      id: newRelationship.id,
+    });
   };
 
   useEventListener(
@@ -787,8 +794,8 @@ export default function Canvas() {
                   id="pattern-grid"
                   x={-gridCircleRadius}
                   y={-gridCircleRadius}
-                  width={gridSize}
-                  height={gridSize}
+                  width={gridStep}
+                  height={gridStep}
                   patternUnits="userSpaceOnUse"
                   patternContentUnits="userSpaceOnUse"
                 >

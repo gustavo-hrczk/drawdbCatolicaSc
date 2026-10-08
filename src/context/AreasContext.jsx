@@ -1,9 +1,11 @@
-import { Toast } from "@douyinfe/semi-ui";
 import { createContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Action, ObjectType, defaultBlue } from "../data/constants";
+import { defaultAreaName } from "../catolica/defaultNames";
+import { notifyElementCreated } from "../catolica/editorEvents";
 import { useSelect, useTransform, useUndoRedo, useCollab } from "../hooks";
 import { cascadePosition } from "../utils/rect";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const AreasContext = createContext(null);
 
@@ -16,7 +18,8 @@ export default function AreasContextProvider({ children }) {
   const { emitDelta, isApplyingRemoteRef } = useCollab();
   const shouldEmit = () => !isApplyingRemoteRef?.current;
 
-  const addArea = (data, addToHistory = true) => {
+  // center (opcional): centro da área nova, por exemplo o ponteiro do mouse.
+  const addArea = (data, addToHistory = true, center = null) => {
     let created = data;
     if (data) {
       setAreas((prev) => {
@@ -27,19 +30,18 @@ export default function AreasContextProvider({ children }) {
     } else {
       const width = 200;
       const height = 200;
+      const { x, y } = center ?? transform.pan;
       created = {
         id: areas.length,
-        name: `area_${areas.length}`,
-        ...cascadePosition(
-          { x: transform.pan.x - width / 2, y: transform.pan.y - height / 2 },
-          areas,
-        ),
+        name: defaultAreaName(areas),
+        ...cascadePosition({ x: x - width / 2, y: y - height / 2 }, areas),
         width,
         height,
         color: defaultBlue,
         locked: false,
       };
       setAreas((prev) => [...prev, { ...created, id: prev.length }]);
+      notifyElementCreated({ type: ObjectType.AREA, id: areas.length });
     }
     if (addToHistory) {
       setUndoStack((prev) => [
@@ -64,7 +66,7 @@ export default function AreasContextProvider({ children }) {
 
   const deleteArea = (id, addToHistory = true) => {
     if (addToHistory) {
-      Toast.success(t("area_deleted"));
+      toastWithUndo(t("area_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {

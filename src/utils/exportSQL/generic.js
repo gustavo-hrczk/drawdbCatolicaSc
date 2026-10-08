@@ -92,6 +92,27 @@ export function getTypeString(
     if (field.type === "DATETIME") {
       return `timestamp`;
     }
+    // Generic types that PostgreSQL lacks or that take no size there
+    // (e.g. TEXT with the default size would become the invalid "text(65535)").
+    const size = String(field.size ?? "").trim();
+    switch (field.type) {
+      case "TEXT":
+      case "CLOB":
+      case "NCLOB":
+        return "text";
+      case "BLOB":
+        return "bytea";
+      case "DOUBLE":
+        return "double precision";
+      case "NUMBER":
+        return size ? `numeric(${size})` : "numeric";
+      case "VARCHAR2":
+        return size ? `varchar(${size})` : "varchar";
+      case "BINARY":
+      case "VARBINARY":
+        if (!size) return "bytea";
+        break;
+    }
     if (dbToTypes[currentDb][field.type].isSized && field.size) {
       const type =
         field.type === "BINARY"

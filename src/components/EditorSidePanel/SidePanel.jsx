@@ -49,14 +49,14 @@ export default function SidePanel({ width, resize, setResize }) {
         component: <TablesTab />,
       },
       {
-        tab: `${t("views")} (${viewsCount})`,
-        itemKey: Tab.VIEWS,
-        component: <ViewsTab />,
-      },
-      {
         tab: `${t("relationships")} (${relationshipsCount})`,
         itemKey: Tab.RELATIONSHIPS,
         component: <RelationshipsTab />,
+      },
+      {
+        tab: `${t("views")} (${viewsCount})`,
+        itemKey: Tab.VIEWS,
+        component: <ViewsTab />,
       },
       {
         tab: `${t("subject_areas")} (${areasCount})`,

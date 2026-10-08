@@ -1,9 +1,9 @@
 import { createContext, useEffect, useRef, useState } from "react";
 import { Action, ObjectType } from "../data/constants";
 import { useUndoRedo, useCollab } from "../hooks";
-import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const TypesContext = createContext(null);
 
@@ -75,7 +75,7 @@ export default function TypesContextProvider({ children }) {
       const deletedTypeIndex = types.findIndex((e, i) =>
         typeof id === "number" ? i === id : e.id === id,
       );
-      Toast.success(t("type_deleted"));
+      toastWithUndo(t("type_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {

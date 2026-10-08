@@ -56,8 +56,7 @@ Dois commits sobre `e4e696f` (último commit do upstream no momento do fork):
    - Aplicado em `window.open`/`href` absolutos de `ControlPanel.jsx` (Novo, Relatar bug, link
      de cópia salva), `Modal.jsx` e `Templates.jsx` (abrir modelo) e `Share.jsx` (link de
      compartilhamento).
-   - **Status:** enviado ao usuário como patch. Confirmar com `git log` se já foi aplicado e
-     enviado ao GitHub.
+   - **Status:** aplicado e enviado ao GitHub (`cc8a7fd`, presente em `origin/main`).
 
 ### Convenção importante
 
@@ -76,12 +75,78 @@ grep -rnE "window\.open\(\"/|href: \`/|origin \+ \"/" src
 npm install
 npm run dev                                        # desenvolvimento (base /)
 npm run lint                                       # precisa passar: o CI roda lint
+npm test                                           # testes (Vitest); rodam no deploy da homologação
 BASE_PATH=/drawdbCatolicaSc/ npm run build         # simula o build de produção
 BASE_PATH=/drawdbCatolicaSc/ npx vite preview      # abrir http://localhost:4173/drawdbCatolicaSc/
 ```
 
 Sempre teste fluxos que abrem nova aba usando o build com `BASE_PATH`, porque `npm run dev`
 roda na raiz e esconde erros de caminho base.
+
+No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` vira
+`C:/Program Files/Git/drawdbCatolicaSc/` e o build sai com caminhos quebrados. No `cmd`, use
+`set BASE_PATH=/drawdbCatolicaSc/` antes do `npm run build`.
+
+## Homologação (ambiente de testes)
+
+- Os sprints são desenvolvidos na branch **`homolog`**. A `main` recebe a `homolog` por PR quando
+  o mantenedor decide publicar uma versão (ponto estável e validado), seguindo
+  [`docs/versionamento.md`](docs/versionamento.md).
+- Todo push na `homolog` dispara **Deploy homologação** (`.github/workflows/deploy-homolog.yml`),
+  que publica a `main` em `/drawdbCatolicaSc/` e a `homolog` em `/drawdbCatolicaSc/teste/`.
+- A homologação usa o banco local `drawDB-teste` (`VITE_DB_NAME`) e mostra o selo
+  "Ambiente de testes" (`VITE_APP_ENV=homolog`, `src/catolica/HomologBadge.jsx`). O
+  `localStorage` (configurações, tipos personalizados) continua compartilhado com a produção.
+- Os links profundos dos dois ambientes passam por `.github/pages/404.html`, que carrega o
+  `index.html` certo mantendo a URL.
+- Um push na `main` publica só a produção e remove `/teste/`. Para restaurar, rode
+  Deploy homologação manualmente (Actions → Run workflow).
+- Requisito no GitHub: Settings → Environments → `github-pages` → Deployment branches deve
+  incluir `homolog`.
+- Código institucional novo fica em `src/catolica/`. Componentes do fork entram nos `<Slot>` do
+  upstream via `src/catolica/extensions.jsx` (o `ExtensionsContext.Provider` está no
+  `src/main.jsx`). Nunca definir ali chaves de nuvem (`cloudSave`, `cloudLoad`...), que mudam o
+  comportamento de salvamento. Textos próprios ficam em `src/catolica/i18n.js`.
+- Persistência (Sprint 1B): o save local em `Workspace.jsx` confere a revisão (`lastModified`)
+  dentro de uma transação, roda um save por vez e grava o histórico de desfazer no banco
+  `drawDB-catolica`. Ao mexer no save, preserve essas garantias (ver `docs/sprints.md`).
+- Exportação e importação de entrega (Sprint 1C): núcleo testado em `src/catolica/files/` e
+  janelas `src/catolica/ExportDialog.jsx` e `ImportDialog.jsx`. O SQL exportado tem de ser
+  idêntico ao dos exportadores do upstream (há teste para isso); metadados do fork só no `.json`.
+- Menus (Sprint 1F): `src/catolica/menus.jsx` monta os cinco menus a partir dos itens do upstream,
+  que continuam definidos em `ControlPanel.jsx`. Para mudar um menu, mexa no `menus.jsx`.
+  Endereços do repositório (issues, licença, código-fonte) ficam em `src/catolica/links.js`:
+  se o repositório mudar de dono ou de nome, troque lá. Ajuda → Novidades lê o `CHANGELOG.md`.
+- Janelas e textos do fork (Sprint 1F): rodapé padrão em `src/catolica/dialogParts.jsx` (extras à
+  esquerda, "Cancelar" + ação principal à direita). Descrições de opções dizem o que a opção é ou
+  contém, sem recomendar usos nem citar outros produtos; mensagens de erro dizem como resolver.
+  Termos: sempre "diagrama" e "nova janela".
+- Edição pelo teclado (Sprint 1F): criar tabela, área, nota ou coluna pelo usuário emite
+  `notifyElementCreated` (`src/catolica/editorEvents.js`), e o editor abre o nome selecionado.
+  Ao sincronizar com o upstream, confira se surgiram novos caminhos de criação. O Esc em cascata
+  fica em `src/catolica/escapeCascade.js`.
+- Histórico (Sprint 1E): `src/catolica/history/`. Cada passo novo da pilha de desfazer ganha `at`
+  (horário) e `desc` (frase da linha do tempo) logo depois da ação; o painel fica no encaixe
+  `right-panel`. Ao sincronizar com o upstream, ações novas com entrada de desfazer precisam de
+  frase em `describeChange.js` (sem ela, a linha do tempo mostra a mensagem do upstream).
+  Versões: `versions.js` (banco do fork), `VersionKeeper.jsx` (automáticas) e restauração por
+  entrada de desfazer com `snapshot` (tratada no `undo`/`redo` do `ControlPanel.jsx`).
+  No pacote .zip, a pasta `historico/` (`files/historyPackage.js`) é lida à parte dos diagramas.
+- Tela inicial (rota `/`): `src/catolica/home/` (o `LandingPage.jsx` do upstream fica sem uso).
+  Tema "Vinho" (padrão) em `src/catolica/theme/vinho.css`, ligado por `body[data-palette]`
+  (`palette` nas configurações); o tema original fica em Configurações → Tema (o claro/escuro se chama "Modo escuro").
+- Diagramas criados automaticamente (importar, cópia de versão, "Salvar como") passam por
+  `uniqueDiagramName` (`src/catolica/uniqueName.js`): nome repetido vira "Nome (cópia)".
+
+## Versionamento (público)
+
+- [`CHANGELOG.md`](CHANGELOG.md) é a fonte única das versões. **Toda mudança visível ao usuário
+  entra na seção `[Não lançado]` no mesmo commit**, em texto curto e sem termos técnicos; mudanças
+  só internas não entram. A futura tela inicial vai ler esse arquivo, então mantenha o formato
+  descrito no comentário do topo.
+- Versões seguem SemVer, com tag `vX.Y.Z` na `main` e GitHub Release. A primeira será a 1.0.0.
+  O `version` do `package.json` fica o do upstream. Passo a passo em
+  [`docs/versionamento.md`](docs/versionamento.md).
 
 ## Deploy
 
@@ -103,6 +168,9 @@ roda na raiz e esconde erros de caminho base.
 ## Arquitetura (resumo para orientação)
 
 - React 18 + Vite, UI com Semi UI (`@douyinfe/semi-ui`), Tailwind. Cerca de 52 mil linhas.
+  No `tailwind.config.js` do upstream, `sm`, `md` e `lg` são de **largura máxima** (`sm:` vale
+  para telas de até 639px): escreva o layout de computador sem prefixo e ajuste o de telas
+  pequenas com `sm:`.
 - Persistência local no navegador (IndexedDB via Dexie, `src/data/db.js`). Não há conta nem
   nuvem: limpar dados do navegador apaga os diagramas.
 - i18n com i18next. `src/i18n/locales/pt-br.js` está completo (366 chaves, mesmas do `en.js`).
@@ -115,8 +183,8 @@ roda na raiz e esconde erros de caminho base.
 ## Limitações conhecidas
 
 - **Compartilhar** (gist/link) depende do servidor `drawdb-server`, que não está configurado.
-  Nesta versão, o recurso falha. Opções: esconder o botão ou implementar compartilhamento sem
-  servidor (diagrama comprimido na URL).
+  Sem servidor, o botão dá lugar a "Histórico de versões" (Sprint 1E). Compartilhar sem servidor
+  (diagrama comprimido na URL) está no Sprint 7.
 - Recursos do drawDB Pro (nuvem, colaboração, IA, sync com GitHub) não existem no código aberto.
 - Respostas 402 do backend levam a `/checkout`, rota que não existe neste fork. Sem backend,
   isso não deve ocorrer, mas vale tratar se um backend for adicionado.
@@ -142,8 +210,10 @@ roda na raiz e esconde erros de caminho base.
   depender de uma conta pessoal.
 - Avaliar enquadramento como projeto de extensão ou de disciplina.
 
-## Próximo passo imediato
+## Plano de execução
 
-O mantenedor vai testar o site em uso real e trazer a lista do que precisa melhorar. Ao
-receber a lista: transformar cada item em issue, priorizar contra o roteiro acima e começar
-pelas mudanças sem servidor e de baixo risco.
+O roteiro acima foi detalhado em micro sprints em [`docs/sprints.md`](docs/sprints.md), feitos
+um de cada vez. Consulte e atualize o status lá. A primeira lista de pedidos do mantenedor
+(home em PT-BR, remover depoimentos, acesso rápido na home, botão Compartilhar, persistência)
+já está distribuída nos sprints. Layout, exibição e usabilidade geral ficam para depois das
+revisões em sala (Sprint 8).

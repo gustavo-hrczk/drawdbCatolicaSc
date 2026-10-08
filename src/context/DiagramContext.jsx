@@ -1,11 +1,13 @@
 import { createContext, useCallback, useState } from "react";
 import { Action, DB, ObjectType, defaultBlue } from "../data/constants";
+import { defaultTableName } from "../catolica/defaultNames";
+import { notifyElementCreated } from "../catolica/editorEvents";
 import { useTransform, useUndoRedo, useSelect, useCollab } from "../hooks";
-import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
 import { getRelationshipFields } from "../utils/utils";
 import { cascadePosition } from "../utils/rect";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const DiagramContext = createContext(null);
 
@@ -36,12 +38,14 @@ export default function DiagramContextProvider({ children }) {
     [emitDelta, isApplyingRemoteRef],
   );
 
-  const addTable = (data, addToHistory = true) => {
+  // position (opcional): canto superior esquerdo da tabela nova, por exemplo
+  // sob o ponteiro do mouse; sem ela, a tabela nasce no centro da tela.
+  const addTable = (data, addToHistory = true, position = null) => {
     const id = nanoid();
     const newTable = {
       id,
-      name: `table_${id}`,
-      ...cascadePosition(transform.pan, tables),
+      name: defaultTableName(tables),
+      ...cascadePosition(position ?? transform.pan, tables),
       locked: false,
       fields: [
         {
@@ -72,6 +76,7 @@ export default function DiagramContextProvider({ children }) {
       });
     } else {
       setTables((prev) => [...prev, newTable]);
+      notifyElementCreated({ type: ObjectType.TABLE, id });
     }
     if (addToHistory) {
       setUndoStack((prev) => [
@@ -120,7 +125,7 @@ export default function DiagramContextProvider({ children }) {
         },
       ]);
       setRedoStack([]);
-      Toast.success(t("table_deleted"));
+      toastWithUndo(t("table_deleted"));
     }
     setRelationships((prevR) =>
       prevR.filter((e) => !(e.startTableId === id || e.endTableId === id)),

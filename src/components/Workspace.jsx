@@ -30,7 +30,7 @@ import {
   useNavigateWithParams,
 } from "../hooks";
 import FloatingControls from "./FloatingControls";
-import { Button, Modal, Tag } from "@douyinfe/semi-ui";
+import { Button, Modal, Tag, Toast } from "@douyinfe/semi-ui";
 import { IconAlertTriangle } from "@douyinfe/semi-icons";
 import { useTranslation } from "react-i18next";
 import { databases } from "../data/databases";
@@ -42,6 +42,22 @@ import {
   readDismissedBanners,
   addDismissedBanner,
 } from "../utils/dismissedBanners";
+import {
+  compareWithSaved,
+  loadHistory,
+  pruneOrphanHistory,
+  revisionOf,
+  saveHistory,
+  SaveConflictError,
+} from "../catolica/editorHistory";
+import {
+  notifyDiagramLoaded,
+  notifyEditorReset,
+} from "../catolica/editorEvents";
+import ConflictModal from "../catolica/ConflictModal";
+import { tabTitle } from "../catolica/tabTitle";
+import { untitledTitle } from "../catolica/i18n";
+import { preferredDatabase } from "../catolica/databasePreference";
 
 export const IdContext = createContext({
   gistId: "",
@@ -56,7 +72,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   const [gistId, setGistId] = useState("");
   const [version, setVersion] = useState("");
   const [loadedFromGistId, setLoadedFromGistId] = useState("");
-  const [title, setTitle] = useState("Untitled Diagram");
+  const [title, setTitle] = useState(untitledTitle);
   const [resize, setResize] = useState(false);
   const [toolbarContainer, setToolbarContainer] = useState(null);
   const [width, setWidth] = useState(SIDEPANEL_MIN_WIDTH);
@@ -70,6 +86,24 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     useState(readDismissedBanners);
   const pendingNewIdRef = useRef(null);
   const loadedIdRef = useRef(null);
+  const notFoundToastRef = useRef(null);
+  // Revisão (lastModified) da versão salva que esta aba conhece, atrelada ao
+  // diagrama carregado. Se o banco tiver outra ao salvar, outra aba gravou no
+  // meio: é um conflito.
+  const baseRef = useRef({ diagramId: null, revision: null });
+  // Diagrama que este editor acabou de criar no primeiro save: o endereço
+  // muda para /editor/diagrams/<id>, mas o load não deve recarregá-lo do
+  // banco (apagaria o que foi editado enquanto o save rodava, como o nome da
+  // primeira tabela).
+  const createdIdRef = useRef(null);
+  const conflictRef = useRef(false);
+  const forceSaveRef = useRef(false);
+  // Um save local por vez; se outro for pedido no meio, roda em seguida com
+  // os dados mais recentes (saveRef aponta para o save da última renderização).
+  const savingRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const saveRef = useRef(null);
+  const [conflict, setConflict] = useState(null);
   const { layout, setLayout } = useLayout();
   const { settings } = useSettings();
   const { types, setTypes } = useTypes();
@@ -140,6 +174,39 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     ],
   );
 
+  const buildLocalFields = useCallback(
+    () => ({
+      database: database,
+      name: title,
+      lastModified: new Date(),
+      tables: tables,
+      references: relationships,
+      notes: notes,
+      areas: areas,
+      views: views,
+      gistId: gistId ?? "",
+      pan: transform.pan,
+      zoom: transform.zoom,
+      loadedFromGistId: loadedFromGistId,
+      ...(databases[database].hasEnums && { enums: enums }),
+      ...(databases[database].hasTypes && { types: types }),
+    }),
+    [
+      database,
+      title,
+      tables,
+      relationships,
+      notes,
+      areas,
+      views,
+      gistId,
+      transform,
+      loadedFromGistId,
+      enums,
+      types,
+    ],
+  );
+
   const save = useCallback(async () => {
     if (searchParams.has("shareId")) {
       searchParams.delete("shareId");
@@ -172,82 +239,131 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       return;
     }
 
-    if (isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram)) {
-      const diagramId = uuidv4();
-      await db.diagrams
-        .add({
-          diagramId,
-          database: database,
-          name: title,
-          gistId: gistId ?? "",
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          navigate(`/editor/diagrams/${diagramId}`, { replace: true });
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
-    } else {
-      await db.diagrams
-        .where("diagramId")
-        .equals(loadedDiagramId)
-        .modify({
-          database: database,
-          name: title,
-          lastModified: new Date(),
-          tables: tables,
-          references: relationships,
-          notes: notes,
-          areas: areas,
-          views: views,
-          gistId: gistId ?? "",
-          pan: transform.pan,
-          zoom: transform.zoom,
-          loadedFromGistId: loadedFromGistId,
-          ...(databases[database].hasEnums && { enums: enums }),
-          ...(databases[database].hasTypes && { types: types }),
-        })
-        .then(() => {
-          setSaveState(State.SAVED);
-          setLastSaved(new Date().toLocaleString());
-        });
+    // Conflito pendente: não grava nada até o usuário decidir.
+    if (conflictRef.current) {
+      setSaveState(State.ERROR);
+      return;
     }
+
+    const isNew = isTemplate || (!loadedDiagramId && !isTemplate && !isDiagram);
+    const savedId = isNew ? uuidv4() : loadedDiagramId;
+
+    // A URL já aponta para outro diagrama, mas o load dele ainda não terminou:
+    // o conteúdo em memória é do diagrama anterior. O load dispara o save de
+    // novo quando aplicar o diagrama certo.
+    if (!isNew && baseRef.current.diagramId !== savedId) return;
+
+    if (savingRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+    savingRef.current = true;
+
+    const fields = buildLocalFields();
+    let revision = revisionOf(fields.lastModified);
+    let failed = false;
+    try {
+      if (isNew) {
+        await db.diagrams.add({
+          diagramId: savedId,
+          createdAt: new Date(),
+          ...fields,
+        });
+      } else {
+        // Ler e gravar na mesma transação: outra aba não consegue gravar
+        // entre a verificação da revisão e a escrita.
+        await db.transaction("rw", db.diagrams, async () => {
+          const current = await db.diagrams
+            .where("diagramId")
+            .equals(savedId)
+            .first();
+          // O diagrama da URL não existe neste navegador (link de outro PC,
+          // dados apagados): cria o registro em vez de "salvar" em nada.
+          if (!current) {
+            await db.diagrams.add({
+              diagramId: savedId,
+              createdAt: new Date(),
+              ...fields,
+            });
+            return;
+          }
+          // Conteúdo igual ao gravado: não gera revisão nova, para não criar
+          // conflito falso com outra aba que tenha o mesmo diagrama aberto.
+          const change = compareWithSaved(current, fields);
+          if (change !== "content") {
+            if (change === "view") {
+              await db.diagrams
+                .where("diagramId")
+                .equals(savedId)
+                .modify({ pan: fields.pan, zoom: fields.zoom });
+            }
+            revision = revisionOf(current.lastModified);
+            return;
+          }
+          const known = baseRef.current.revision;
+          if (
+            !forceSaveRef.current &&
+            known != null &&
+            revisionOf(current.lastModified) !== known
+          ) {
+            throw new SaveConflictError(current.lastModified);
+          }
+          await db.diagrams.where("diagramId").equals(savedId).modify(fields);
+        });
+      }
+      forceSaveRef.current = false;
+      baseRef.current = { diagramId: savedId, revision };
+      await saveHistory(savedId, revision, undoStack, redoStack);
+    } catch (err) {
+      failed = true;
+      if (err instanceof SaveConflictError) {
+        conflictRef.current = true;
+        setConflict({ savedAt: err.savedAt });
+      } else {
+        console.error("local save failed:", err);
+      }
+      setSaveState(State.ERROR);
+    } finally {
+      savingRef.current = false;
+    }
+    if (failed) return;
+
+    if (pendingSaveRef.current) {
+      pendingSaveRef.current = false;
+      if (isNew) {
+        // Fica em "Salvando": o load do diagrama recém-criado dispara o save
+        // pendente já com o id novo (chamar agora criaria outro diagrama).
+        createdIdRef.current = savedId;
+        navigate(`/editor/diagrams/${savedId}`, { replace: true });
+      } else {
+        saveRef.current?.();
+      }
+      return;
+    }
+    if (isNew) {
+      createdIdRef.current = savedId;
+      navigate(`/editor/diagrams/${savedId}`, { replace: true });
+    }
+    setSaveState(State.SAVED);
+    setLastSaved(new Date().toLocaleString());
   }, [
+    buildLocalFields,
+    undoStack,
+    redoStack,
     cloudOnly,
     diagramSource,
     buildCloudPayload,
     extensions,
     searchParams,
     setSearchParams,
-    tables,
-    relationships,
-    notes,
-    areas,
-    views,
-    types,
-    title,
-    transform,
     setSaveState,
     setLastSaved,
-    database,
-    enums,
-    gistId,
-    loadedFromGistId,
     isDiagram,
     isTemplate,
     loadedDiagramId,
     navigate,
   ]);
+  saveRef.current = save;
 
   const moveToCloud = useCallback(async () => {
     if (typeof extensions.cloudSave !== "function" || !loadedDiagramId) return;
@@ -267,13 +383,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       console.warn("move to cloud failed:", err);
       setSaveState(State.ERROR);
     }
-  }, [
-    extensions,
-    loadedDiagramId,
-    buildCloudPayload,
-    setSaveState,
-    cloudLoad,
-  ]);
+  }, [extensions, loadedDiagramId, buildCloudPayload, setSaveState, cloudLoad]);
 
   const dismissMoveToCloud = () => {
     if (!loadedDiagramId) return;
@@ -285,6 +395,18 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   const load = useCallback(async () => {
     const previousLoadedId = loadedIdRef.current;
     loadedIdRef.current = loadedDiagramId ?? null;
+
+    // Recém-criado por este editor: o conteúdo em memória é o mais novo. Não
+    // recarrega; só salva de novo, já com o id novo (grava o que mudou durante
+    // o primeiro save, ou nada, se não mudou). Chama o save direto: o estado
+    // pode já estar em "Salvando" (save pendente), e repetir o estado não
+    // dispararia nada.
+    if (loadedDiagramId && loadedDiagramId === createdIdRef.current) {
+      createdIdRef.current = null;
+      setDiagramSource("local");
+      saveRef.current?.();
+      return;
+    }
 
     const fetchDiagram = async (id) => {
       const localDiagram = await db.diagrams
@@ -326,11 +448,16 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       setUndoStack([]);
       setRedoStack([]);
       setTransform({ zoom: 1, pan: { x: 0, y: 0 } });
-      setTitle("Untitled diagram");
+      setTitle(untitledTitle());
       setGistId("");
       setLoadedFromGistId("");
       setLayout((prev) => ({ ...prev, readOnly: false }));
       setDiagramSource(null);
+      // Diagrama novo nesta mesma aba (Arquivo > Novo): pede o banco de novo
+      // e o indicador de salvamento recomeça em "Sem alterações".
+      setSelectedDb("");
+      setSaveState(State.NONE);
+      notifyEditorReset();
     };
 
     const loadLatestDiagram = async () => {
@@ -345,14 +472,47 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         if (selectedDb === "") setShowSelectDbModal(true);
         return;
       }
-      setDiagramSource("local");
-      applyDiagramState(diagram);
+      // Só redireciona; o load da nova URL aplica o diagrama. Aplicar aqui,
+      // com a URL ainda em /editor, fazia o auto-save criar uma cópia dele.
       navigate(`/editor/diagrams/${diagram.diagramId}`, { replace: true });
     };
 
     const loadDiagram = async (id) => {
       const { diagram, source } = await fetchDiagram(id);
-      if (!diagram) return;
+      if (!diagram) {
+        // load roda de novo a cada clique no seletor de banco (depende de
+        // selectedDb); só limpa e avisa no primeiro carregamento deste id.
+        if (previousLoadedId !== loadedIdRef.current) {
+          resetEditorState();
+          notFoundToastRef.current = Toast.warning({
+            content: (
+              <div>
+                <div className="font-semibold">
+                  {i18n.t("diagram_not_found_title")}
+                </div>
+                <div>{i18n.t("diagram_not_found_body")}</div>
+              </div>
+            ),
+            duration: 8,
+          });
+        }
+        baseRef.current = { diagramId: id, revision: null };
+        if (selectedDb === "") setShowSelectDbModal(true);
+        return;
+      }
+
+      // Busca o histórico antes de aplicar o diagrama, para que estado e
+      // pilhas de desfazer/refazer mudem juntos.
+      const revision = revisionOf(diagram.lastModified);
+      const history =
+        source === "local" ? await loadHistory(id, revision) : null;
+      baseRef.current = {
+        diagramId: id,
+        revision: source === "local" ? revision : null,
+      };
+      conflictRef.current = false;
+      setConflict(null);
+      notifyDiagramLoaded();
 
       setDiagramSource(source);
       if (source === "local") {
@@ -361,8 +521,8 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         setLayout((prev) => ({ ...prev, readOnly: !diagram.canWrite }));
       }
       applyDiagramState(diagram);
-      setUndoStack([]);
-      setRedoStack([]);
+      setUndoStack(history?.undo ?? []);
+      setRedoStack(history?.redo ?? []);
     };
 
     const loadTemplate = async (id) => {
@@ -469,7 +629,65 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     isTemplate,
     loadedDiagramId,
     cloudOnly,
+    i18n,
   ]);
+
+  const resolveConflict = async (choice) => {
+    if (choice === "copy") {
+      // Mantém as duas versões: a do banco fica como está e o conteúdo desta
+      // aba vira um diagrama novo.
+      const newId = uuidv4();
+      const fields = buildLocalFields();
+      try {
+        await db.diagrams.add({
+          ...fields,
+          diagramId: newId,
+          createdAt: fields.lastModified,
+          name: i18n.t("conflict_copy_name", {
+            title,
+            date: fields.lastModified.toLocaleString(),
+          }),
+          gistId: "",
+          loadedFromGistId: "",
+        });
+        await saveHistory(
+          newId,
+          revisionOf(fields.lastModified),
+          undoStack,
+          redoStack,
+        );
+      } catch (err) {
+        console.error(err);
+        Toast.error(i18n.t("oops_smth_went_wrong"));
+        return;
+      }
+      // A partir daqui esta aba é dona da cópia; nenhum save volta a tocar no
+      // diagrama original.
+      baseRef.current = {
+        diagramId: newId,
+        revision: revisionOf(fields.lastModified),
+      };
+      conflictRef.current = false;
+      setConflict(null);
+      setSaveState(State.SAVED);
+      navigate(`/editor/diagrams/${newId}`);
+      return;
+    }
+
+    conflictRef.current = false;
+    setConflict(null);
+    if (choice === "overwrite") {
+      forceSaveRef.current = true;
+      setSaveState(State.SAVING);
+    } else {
+      await load();
+      setSaveState(State.NONE);
+    }
+  };
+
+  useEffect(() => {
+    pruneOrphanHistory(db);
+  }, []);
 
   const returnToCurrentDiagram = async () => {
     await load();
@@ -515,10 +733,13 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   }, [saveState, layout, save]);
 
   useEffect(() => {
-    document.title = "Editor | drawDB";
-
     load();
   }, [load]);
+
+  // Nome do diagrama na aba do navegador (antes era sempre "Editor | drawDB").
+  useEffect(() => {
+    document.title = tabTitle(title);
+  }, [title]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden theme">
@@ -581,9 +802,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
               <div className="pointer-events-none absolute inset-x-0 top-3 z-50 flex justify-center">
                 <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-blue-300 bg-blue-50 px-5 py-1.5 shadow-md dark:border-sky-900/50 dark:bg-sky-900/30">
                   <i className="bi bi-hdd" />
-                  <span className="text-sm">
-                    {t("move_to_cloud_prompt")}
-                  </span>
+                  <span className="text-sm">{t("move_to_cloud_prompt")}</span>
                   <Button
                     size="small"
                     theme="solid"
@@ -621,22 +840,30 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         okText={t("confirm")}
         visible={showSelectDbModal}
         onOk={() => {
-          if (selectedDb === "") return;
-          setDatabase(selectedDb);
+          // Sem escolha explícita, vale o banco padrão (Configurações).
+          const choice = selectedDb || preferredDatabase(settings);
+          setSelectedDb(choice);
+          setDatabase(choice);
           setShowSelectDbModal(false);
         }}
-        okButtonProps={{ disabled: selectedDb === "" }}
       >
         <div className="grid grid-cols-3 gap-4 place-content-center">
           {Object.values(databases).map((x) => (
             <div
               key={x.name}
-              onClick={() => setSelectedDb(x.label)}
+              onClick={() => {
+                setSelectedDb(x.label);
+                // A escolha do banco responde ao aviso de diagrama inexistente.
+                if (notFoundToastRef.current) {
+                  Toast.close(notFoundToastRef.current);
+                  notFoundToastRef.current = null;
+                }
+              }}
               className={`space-y-3 p-3 rounded-md border-2 select-none ${
                 settings.mode === "dark"
                   ? "bg-zinc-700 hover:bg-zinc-600"
                   : "bg-zinc-100 hover:bg-zinc-200"
-              } ${selectedDb === x.label ? "border-zinc-400" : "border-transparent"}`}
+              } ${(selectedDb || preferredDatabase(settings)) === x.label ? "border-zinc-400" : "border-transparent"}`}
             >
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{x.name}</div>
@@ -682,6 +909,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       >
         {t("restore_warning")}
       </Modal>
+      <ConflictModal conflict={conflict} onResolve={resolveConflict} />
     </div>
   );
 }

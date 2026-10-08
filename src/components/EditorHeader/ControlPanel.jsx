@@ -1,5 +1,5 @@
 import { appUrl } from "../../utils/appUrl";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Slot, useExtensions } from "../../context/ExtensionsContext";
 import { createPortal } from "react-dom";
@@ -21,14 +21,19 @@ import {
   Dropdown,
   InputNumber,
   Tooltip,
-  Spin,
   Tag,
   Toast,
   Popconfirm,
   Typography,
   Modal as SemiModal,
 } from "@douyinfe/semi-ui";
-import { toPng, toJpeg, toSvg } from "html-to-image";
+import {
+  copyDiagramImage,
+  diagramDataUrl,
+  diagramSvg,
+  EmptyDiagramError,
+  svgToDataUrl,
+} from "../../catolica/canvasImage";
 import {
   jsonToMySQL,
   jsonToPostgreSQL,
@@ -47,8 +52,9 @@ import {
   DB,
   IMPORT_FROM,
   noteWidth,
-  pngExportPixelRatio,
   keyboardPanStep,
+  tableWidth,
+  gridSize,
 } from "../../data/constants";
 import jsPDF from "jspdf";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -77,7 +83,6 @@ import {
   useNavigateWithParams,
 } from "../../hooks";
 import { enterFullscreen, exitFullscreen } from "../../utils/fullscreen";
-import { dataURItoBlob } from "../../utils/utils";
 import {
   IconAddArea,
   IconAddNote,
@@ -112,6 +117,69 @@ import { deleteFromCache, STORAGE_KEY } from "../../utils/cache";
 import { DateTime } from "luxon";
 import ConfigureCustomTypes from "./ConfigureCustomTypes";
 import { useDiagramList } from "./Modal/Open/hooks/useDiagramList";
+import {
+  hasTextSelection,
+  isTypingTarget,
+  lastCopied,
+  rememberCopied,
+} from "../../catolica/clipboard";
+import SaveStatus from "../../catolica/SaveStatus";
+import { hasGistBackend } from "../../catolica/features";
+import ShortcutsModal from "../../catolica/ShortcutsModal";
+import {
+  readShortcutPrefs,
+  writeShortcutPrefs,
+} from "../../catolica/shortcuts";
+import useSafeKeyShortcuts, {
+  allowDelete,
+  openOverlays,
+} from "../../catolica/useSafeKeyShortcuts";
+import {
+  notifyElementCreated,
+  onElementCreated,
+} from "../../catolica/editorEvents";
+import { elementUnderPointer } from "../../catolica/canvasHit";
+import { escapeStep } from "../../catolica/escapeCascade";
+import {
+  useHistoryJump,
+  useHistoryStamps,
+} from "../../catolica/history/useEditorHistory";
+import { openHistoryPanel } from "../../catolica/history/panelState";
+import { snapshotOf } from "../../catolica/history/versionRules";
+import { addVersion } from "../../catolica/history/versions";
+import { onUndoOf, onVersionRestore } from "../../catolica/editorEvents";
+import { toastWithUndo } from "../../catolica/undoToast";
+import PaletteButton from "../../catolica/theme/PaletteButton";
+import { flushSync } from "react-dom";
+import { focusTableSearch } from "../../catolica/tableSearch";
+import { pointerInDiagram } from "../../catolica/canvasPointer";
+import GridDropdown, { SnapToGridButton } from "../../catolica/GridDropdown";
+import { isDefaultTitle, untitledTitle } from "../../catolica/i18n";
+import ExportDialog from "../../catolica/ExportDialog";
+import ImportDialog from "../../catolica/ImportDialog";
+import NewDialog from "../../catolica/NewDialog";
+import OpenDialog from "../../catolica/OpenDialog";
+import SaveAsDialog from "../../catolica/SaveAsDialog";
+import {
+  catolicaEditMenu,
+  catolicaFileMenu,
+  catolicaHelpMenu,
+  catolicaSettingsMenu,
+  catolicaViewMenu,
+} from "../../catolica/menus";
+import {
+  AboutDialog,
+  ChangelogDialog,
+  EDITOR_VERSION,
+} from "../../catolica/InfoDialogs";
+import { newIssueUrl, UPSTREAM_DOCS_URL } from "../../catolica/links";
+import { preferredDatabase } from "../../catolica/databasePreference";
+import {
+  canRename,
+  focusColumnName,
+  focusNameField,
+  openForRename,
+} from "../../catolica/renameField";
 import { mergeDiagrams, sortDiagrams } from "./Modal/Open/diagram";
 
 const EDITOR_HOTKEY = {
@@ -122,7 +190,6 @@ const EDITOR_HOTKEY = {
 export default function ControlPanel({
   title,
   setTitle,
-  lastSaved,
   setLastSaved,
   toolbarContainer,
 }) {
@@ -178,6 +245,68 @@ export default function ControlPanel({
   const isTemplate = useMatch("/editor/templates/:id");
   const navigate = useNavigateWithParams();
   const extensions = useExtensions();
+  // Estado mais recente, para ouvintes registrados uma vez (elemento criado).
+  const latestRef = useRef({});
+  latestRef.current = {
+    tables,
+    areas,
+    notes,
+    relationships,
+    sidebar: layout.sidebar,
+  };
+  // Elemento novo criado pelo usuário: abre a edição com o nome selecionado.
+  useEffect(
+    () =>
+      onElementCreated((created) => {
+        const exists = () => {
+          const { tables, areas, notes } = latestRef.current;
+          if (created.type === "field") {
+            return tables.some(
+              (table) =>
+                table.id === created.tableId &&
+                table.fields.some((field) => field.id === created.fieldId),
+            );
+          }
+          if (created.type === ObjectType.TABLE) {
+            return tables.some((table) => table.id === created.id);
+          }
+          if (created.type === ObjectType.RELATIONSHIP) {
+            return latestRef.current.relationships.some(
+              (r) => r.id === created.id,
+            );
+          }
+          const list = created.type === ObjectType.AREA ? areas : notes;
+          return list.some((item) => item.id === created.id);
+        };
+        const open = () => {
+          // Desfeito pela proteção contra digitação: não abre nada.
+          if (!exists()) return;
+          if (created.type === "field") {
+            focusColumnName(
+              created.tableId,
+              created.fieldId,
+              () => latestRef.current.tables,
+              { restore: false },
+            );
+            return;
+          }
+          const { sidebar } = latestRef.current;
+          setSelectedElement((prev) =>
+            openForRename(
+              { ...prev, element: created.type, id: created.id },
+              sidebar,
+            ),
+          );
+          focusNameField(created.type, created.id, sidebar, {
+            restore: false,
+          });
+        };
+        setTimeout(open, 0);
+      }),
+    // setSelectedElement é estável; o resto vem de latestRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const swapDbmlSnapshot = (entry) => {
     const current = { tables, relationships, enums };
@@ -194,10 +323,85 @@ export default function ControlPanel({
     return { ...entry, data: { snapshot: current } };
   };
 
+  // Linha do tempo (Sprint 1E): horário e frase de cada passo, e voltar a um
+  // ponto pelo painel do histórico.
+  useHistoryStamps(undoStack, redoStack, {
+    tables,
+    relationships,
+    notes,
+    areas,
+    types,
+    enums,
+    views,
+  });
+
+  // Versão restaurada (Sprint 1E): o passo guarda o diagrama inteiro de
+  // antes, e desfazer/refazer troca um pelo outro.
+  const currentSnapshot = () =>
+    snapshotOf({
+      database,
+      tables,
+      relationships,
+      notes,
+      areas,
+      types,
+      enums,
+      views,
+    });
+  const applySnapshot = (snapshot) => {
+    setSelectedElement((prev) => ({
+      ...prev,
+      element: ObjectType.NONE,
+      id: -1,
+      open: false,
+    }));
+    setTables(snapshot.tables);
+    setRelationships(snapshot.relationships);
+    setNotes(snapshot.notes);
+    setAreas(snapshot.areas);
+    setTypes(snapshot.types);
+    setEnums(snapshot.enums);
+    setViews(snapshot.views);
+  };
+  const swapSnapshot = (entry) => {
+    const current = currentSnapshot();
+    applySnapshot(entry.snapshot);
+    return { ...entry, snapshot: current };
+  };
+  const restoreVersion = ({ snapshot, label }) => {
+    if (layout.readOnly) return;
+    const current = currentSnapshot();
+    // O diagrama de agora fica guardado como versão antes de ser trocado.
+    addVersion(diagramId, current, { reason: "before_restore" });
+    applySnapshot(snapshot);
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.NONE,
+        snapshot: current,
+        restoredVersion: label,
+        message: t("history_version_restored", { name: label }),
+      },
+    ]);
+    setRedoStack([]);
+  };
+  const restoreRef = useRef(restoreVersion);
+  restoreRef.current = restoreVersion;
+  useEffect(
+    () => onVersionRestore((version) => restoreRef.current(version)),
+    [],
+  );
+
   const undo = () => {
     if (undoStack.length === 0) return;
     const a = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.filter((_, i) => i !== prev.length - 1));
+
+    if (a.snapshot) {
+      setRedoStack((prev) => [...prev, swapSnapshot(a)]);
+      return;
+    }
 
     if (a.bulk) {
       if (a.element === ObjectType.RELATIONSHIP && a.action === Action.ADD) {
@@ -216,6 +420,15 @@ export default function ControlPanel({
         } else if (element.type === ObjectType.VIEW) {
           updateView(element.id, element.undo);
         }
+      }
+      if (a.view) {
+        // Volta o enquadramento e guarda o atual para o refazer.
+        setRedoStack((prev) => [
+          ...prev,
+          { ...a, view: { ...a.view, after: transform } },
+        ]);
+        setTransform(a.view.before);
+        return;
       }
       setRedoStack((prev) => [...prev, a]);
       return;
@@ -418,6 +631,11 @@ export default function ControlPanel({
     const a = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.filter((e, i) => i !== prev.length - 1));
 
+    if (a.snapshot) {
+      setUndoStack((prev) => [...prev, swapSnapshot(a)]);
+      return;
+    }
+
     if (a.bulk) {
       if (a.element === ObjectType.RELATIONSHIP && a.action === Action.ADD) {
         setRelationships((prev) => [...prev, ...(a.relationships || [])]);
@@ -435,6 +653,7 @@ export default function ControlPanel({
           updateView(element.id, element.redo);
         }
       }
+      if (a.view?.after) setTransform(a.view.after);
       setUndoStack((prev) => [...prev, a]);
       return;
     }
@@ -631,8 +850,28 @@ export default function ControlPanel({
       setUndoStack((prev) => [...prev, a]);
     }
   };
+  useHistoryJump({
+    undoStack,
+    redoStack,
+    undo,
+    redo,
+    enabled: !layout.readOnly,
+  });
+  // Botão "Desfazer" das mensagens: só se a ação ainda for o último passo.
+  const undoOfRef = useRef(null);
+  undoOfRef.current = (matches) => {
+    const last = undoStack[undoStack.length - 1];
+    if (!layout.readOnly && last && matches(last)) undo();
+  };
+  useEffect(() => onUndoOf((matches) => undoOfRef.current(matches)), []);
 
-  const fileImport = () => setModal(MODAL.IMPORT);
+  // Janelas do menu Arquivo do fork (ver src/catolica/fileMenu.js).
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showSaveAsDialog, setShowSaveAsDialog] = useState(false);
+  const [newMode, setNewMode] = useState(null); // null, "here" ou "window"
+  const fileImport = () => setShowImportDialog(true);
   const viewGrid = () =>
     setSettings((prev) => ({ ...prev, showGrid: !prev.showGrid }));
   const snapToGrid = () =>
@@ -662,20 +901,38 @@ export default function ControlPanel({
       showFieldSummary: !prev.showFieldSummary,
     }));
   };
+  // Imagens do diagrama: recortadas no conteúdo, em tamanho real
+  // (src/catolica/canvasImage.js).
+  const imageError = (err) => {
+    if (err instanceof EmptyDiagramError) {
+      Toast.info(t("image_empty_diagram"));
+    } else {
+      console.error(err);
+      Toast.error(t("oops_smth_went_wrong"));
+    }
+  };
   const copyAsImage = () => {
-    toPng(document.getElementById("canvas"), {
-      pixelRatio: pngExportPixelRatio,
-    }).then(function (dataUrl) {
-      const blob = dataURItoBlob(dataUrl);
-      navigator.clipboard
-        .write([new ClipboardItem({ "image/png": blob })])
-        .then(() => {
-          Toast.success(t("copied_to_clipboard"));
-        })
-        .catch(() => {
-          Toast.error(t("oops_smth_went_wrong"));
-        });
-    });
+    copyDiagramImage()
+      .then((status) => {
+        if (status === "ok") Toast.success(t("copied_to_clipboard"));
+        if (status === "empty") Toast.info(t("image_empty_diagram"));
+      })
+      .catch(imageError);
+  };
+  const exportDiagramImage = (extension, options) => {
+    const image =
+      extension === "svg"
+        ? Promise.resolve().then(() => svgToDataUrl(diagramSvg().markup))
+        : diagramDataUrl(options).then((result) => result.dataUrl);
+    openExportModal(MODAL.IMG);
+    image
+      .then((dataUrl) =>
+        setExportData((prev) => ({ ...prev, data: dataUrl, extension })),
+      )
+      .catch((err) => {
+        setModal(MODAL.NONE);
+        imageError(err);
+      });
   };
   const resetView = () =>
     setTransform((prev) => ({ ...prev, zoom: 1, pan: { x: 0, y: 0 } }));
@@ -779,11 +1036,16 @@ export default function ControlPanel({
         bulk: true,
         message: t("auto_arrange"),
         elements,
+        // Enquadramento de antes, para o desfazer voltar também o zoom.
+        view: { before: transform },
       },
     ]);
     setRedoStack([]);
     fitToView(arrangedTables);
+    // Move tudo de uma vez: a mensagem traz o "Desfazer".
+    arrangeToast.current = toastWithUndo(t("arranged_done"));
   };
+  const arrangeToast = useRef(null);
   const autoConnectFKs = () => {
     if (layout.readOnly) return;
     setShowAutoConnectModal(true);
@@ -878,6 +1140,50 @@ export default function ControlPanel({
       }
     }
   };
+  // F2: abre a edição do elemento selecionado com o campo do nome em foco.
+  // Sem nada selecionado, não faz nada (o diagrama se renomeia pelo lápis ao
+  // lado do nome, para o F2 não mexer no diagrama por engano).
+  const rename = () => {
+    if (layout.readOnly) return;
+    if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
+    // Opção "F2 renomeia o item sob o mouse": coluna, tabela, nota ou área
+    // sob o mouse vêm antes da seleção.
+    const hovered =
+      shortcutPrefs.f2Hover &&
+      elementUnderPointer({ tables, relationships, notes, areas });
+    if (hovered?.type === "field") {
+      setSelectedElement((prev) =>
+        openForRename(
+          { ...prev, element: ObjectType.TABLE, id: hovered.tableId },
+          layout.sidebar,
+        ),
+      );
+      focusColumnName(
+        hovered.tableId,
+        hovered.fieldId,
+        () => latestRef.current.tables,
+      );
+      return;
+    }
+    if (hovered) {
+      setSelectedElement((prev) =>
+        openForRename(
+          { ...prev, element: hovered.type, id: hovered.id },
+          layout.sidebar,
+        ),
+      );
+      focusNameField(hovered.type, hovered.id, layout.sidebar);
+      return;
+    }
+    if (canRename(selectedElement)) {
+      setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+      focusNameField(
+        selectedElement.element,
+        selectedElement.id,
+        layout.sidebar,
+      );
+    }
+  };
   const del = () => {
     if (layout.readOnly) {
       return;
@@ -894,6 +1200,10 @@ export default function ControlPanel({
         break;
       case ObjectType.VIEW:
         deleteView(selectedElement.id);
+        break;
+      case ObjectType.RELATIONSHIP:
+        deleteRelationship(selectedElement.id);
+        toastWithUndo(t("relationship_deleted"));
         break;
       default:
         break;
@@ -955,89 +1265,101 @@ export default function ControlPanel({
         break;
     }
   };
-  const copy = () => {
+  const selectionAsText = () => {
+    let element = null;
     switch (selectedElement.element) {
       case ObjectType.TABLE:
-        navigator.clipboard
-          .writeText(
-            JSON.stringify(tables.find((t) => t.id === selectedElement.id)),
-          )
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = tables.find((t) => t.id === selectedElement.id);
         break;
       case ObjectType.NOTE:
-        navigator.clipboard
-          .writeText(JSON.stringify({ ...notes[selectedElement.id] }))
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = notes[selectedElement.id] && { ...notes[selectedElement.id] };
         break;
       case ObjectType.AREA:
-        navigator.clipboard
-          .writeText(JSON.stringify({ ...areas[selectedElement.id] }))
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = areas[selectedElement.id] && { ...areas[selectedElement.id] };
         break;
       case ObjectType.VIEW:
-        navigator.clipboard
-          .writeText(
-            JSON.stringify(views.find((v) => v.id === selectedElement.id)),
-          )
-          .catch(() => Toast.error(t("oops_smth_went_wrong")));
+        element = views.find((v) => v.id === selectedElement.id);
         break;
       default:
         break;
     }
+    return element ? JSON.stringify(element) : null;
   };
-  const paste = () => {
+  const copy = () => {
+    const text = selectionAsText();
+    if (!text) return;
+    // A cópia reserva garante o colar mesmo se o navegador bloquear a área
+    // de transferência do sistema.
+    rememberCopied(text);
+    navigator.clipboard?.writeText(text).catch(() => {});
+  };
+  // Devolve true se o texto era um elemento do diagrama e foi colado.
+  const pasteText = (text) => {
+    let obj = null;
+    try {
+      obj = JSON.parse(text);
+    } catch (error) {
+      return false;
+    }
+    if (!obj || typeof obj !== "object") return false;
+    const v = new Validator();
+    if (v.validate(obj, viewSchema).valid) {
+      addView({
+        view: {
+          ...obj,
+          x: obj.x + 20,
+          y: obj.y + 20,
+          id: nanoid(),
+          columns: (obj.columns ?? []).map((c) => ({ ...c, id: nanoid() })),
+          joins: (obj.joins ?? []).map((j) => ({ ...j, id: nanoid() })),
+          conditions: (obj.conditions ?? []).map((c) => ({
+            ...c,
+            id: nanoid(),
+          })),
+        },
+        index: views.length,
+      });
+    } else if (v.validate(obj, tableSchema).valid) {
+      addTable({
+        table: {
+          ...obj,
+          x: obj.x + 20,
+          y: obj.y + 20,
+          id: nanoid(),
+        },
+      });
+    } else if (v.validate(obj, areaSchema).valid) {
+      addArea({
+        ...obj,
+        x: obj.x + 20,
+        y: obj.y + 20,
+        id: areas.length,
+      });
+    } else if (v.validate(obj, noteSchema).valid) {
+      addNote({
+        ...obj,
+        x: obj.x + 20,
+        y: obj.y + 20,
+        id: notes.length,
+      });
+    } else {
+      return false;
+    }
+    return true;
+  };
+  // Menu Editar → Colar. Ctrl+V usa o evento nativo "paste" (ver efeito abaixo),
+  // que não depende de permissão do navegador.
+  const paste = async () => {
     if (layout.readOnly) {
       return;
     }
-    navigator.clipboard.readText().then((text) => {
-      let obj = null;
-      try {
-        obj = JSON.parse(text);
-      } catch (error) {
-        return;
-      }
-      const v = new Validator();
-      if (v.validate(obj, viewSchema).valid) {
-        addView({
-          view: {
-            ...obj,
-            x: obj.x + 20,
-            y: obj.y + 20,
-            id: nanoid(),
-            columns: (obj.columns ?? []).map((c) => ({ ...c, id: nanoid() })),
-            joins: (obj.joins ?? []).map((j) => ({ ...j, id: nanoid() })),
-            conditions: (obj.conditions ?? []).map((c) => ({
-              ...c,
-              id: nanoid(),
-            })),
-          },
-          index: views.length,
-        });
-      } else if (v.validate(obj, tableSchema).valid) {
-        addTable({
-          table: {
-            ...obj,
-            x: obj.x + 20,
-            y: obj.y + 20,
-            id: nanoid(),
-          },
-        });
-      } else if (v.validate(obj, areaSchema).valid) {
-        addArea({
-          ...obj,
-          x: obj.x + 20,
-          y: obj.y + 20,
-          id: areas.length,
-        });
-      } else if (v.validate(obj, noteSchema).valid) {
-        addNote({
-          ...obj,
-          x: obj.x + 20,
-          y: obj.y + 20,
-          id: notes.length,
-        });
-      }
-    });
+    let text = null;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      text = lastCopied();
+    }
+    if (!pasteText(text)) Toast.info(t("nothing_to_paste"));
   };
   const cut = () => {
     if (layout.readOnly) {
@@ -1046,6 +1368,45 @@ export default function ControlPanel({
     copy();
     del();
   };
+
+  // Ctrl+C / Ctrl+X / Ctrl+V pelos eventos nativos da área de transferência:
+  // funcionam no Chrome, Edge, Opera e Firefox sem pedir permissão. As refs
+  // evitam registrar os ouvintes de novo a cada renderização.
+  const clipboardRef = useRef({});
+  clipboardRef.current = {
+    selectionAsText,
+    pasteText,
+    del,
+    readOnly: layout.readOnly,
+  };
+  useEffect(() => {
+    const onCopyOrCut = (e) => {
+      if (isTypingTarget(e.target) || hasTextSelection()) return;
+      const { selectionAsText, del, readOnly } = clipboardRef.current;
+      const text = selectionAsText();
+      if (!text) return;
+      e.preventDefault();
+      e.clipboardData?.setData("text/plain", text);
+      rememberCopied(text);
+      if (e.type === "cut" && !readOnly) del();
+    };
+    const onPaste = (e) => {
+      if (isTypingTarget(e.target)) return;
+      const { pasteText, readOnly } = clipboardRef.current;
+      if (readOnly) return;
+      e.preventDefault();
+      const text = e.clipboardData?.getData("text/plain") || lastCopied();
+      if (!pasteText(text)) Toast.info(t("nothing_to_paste"));
+    };
+    document.addEventListener("copy", onCopyOrCut);
+    document.addEventListener("cut", onCopyOrCut);
+    document.addEventListener("paste", onPaste);
+    return () => {
+      document.removeEventListener("copy", onCopyOrCut);
+      document.removeEventListener("cut", onCopyOrCut);
+      document.removeEventListener("paste", onPaste);
+    };
+  }, [t]);
   const toggleDBMLEditor = () => {
     setLayout((prev) => ({ ...prev, dbmlEditor: !prev.dbmlEditor }));
   };
@@ -1108,8 +1469,24 @@ export default function ControlPanel({
     return recent;
   }, [cloud, local]);
 
-  const open = () => setModal(MODAL.OPEN);
-  const saveDiagramAs = () => setModal(MODAL.SAVEAS);
+  const open = () => setShowOpenDialog(true);
+  const saveDiagramAs = () => setShowSaveAsDialog(true);
+  const saveAsTemplate = async (templateTitle) => {
+    await db.templates.add({
+      title: templateTitle,
+      tables: tables,
+      database: database,
+      relationships: relationships,
+      notes: notes,
+      subjectAreas: areas,
+      views: views,
+      custom: 1,
+      templateId: uuidv4(),
+      ...(databases[database].hasEnums && { enums: enums }),
+      ...(databases[database].hasTypes && { types: types }),
+    });
+    Toast.success(t("template_saved"));
+  };
 
   const saveAsCopy = async (newTitle) => {
     const newId = uuidv4();
@@ -1119,6 +1496,7 @@ export default function ControlPanel({
       name: newTitle,
       gistId: "",
       loadedFromGistId: "",
+      createdAt: new Date(),
       lastModified: new Date(),
       tables,
       references: relationships,
@@ -1163,7 +1541,9 @@ export default function ControlPanel({
           {t("saved_as_copy")}{" "}
           <Typography.Text
             link={{
-              href: appUrl(`/editor/diagrams/${newId}${window.location.search}`),
+              href: appUrl(
+                `/editor/diagrams/${newId}${window.location.search}`,
+              ),
               target: "_blank",
               rel: "noopener noreferrer",
             }}
@@ -1175,6 +1555,71 @@ export default function ControlPanel({
         </span>
       ),
     });
+  };
+
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [shortcutPrefs, setShortcutPrefs] = useState(readShortcutPrefs);
+  const changeShortcutPrefs = (prefs) => {
+    setShortcutPrefs(prefs);
+    writeShortcutPrefs(prefs);
+  };
+
+  // Sair e Novo (nesta aba) só deixam o diagrama depois que o save termina.
+  const [leaveTarget, setLeaveTarget] = useState(null);
+  useEffect(() => {
+    if (!leaveTarget) return;
+    if (saveState === State.SAVED || saveState === State.NONE) {
+      setLeaveTarget(null);
+      navigate(leaveTarget);
+    } else if (saveState === State.ERROR) {
+      setLeaveTarget(null);
+      Toast.error(t("failed_to_save"));
+    }
+  }, [leaveTarget, saveState, navigate, t]);
+
+  const diagramIsEmpty = () =>
+    tables.length === 0 &&
+    areas.length === 0 &&
+    notes.length === 0 &&
+    views.length === 0 &&
+    types.length === 0;
+
+  // Novo (nesta janela ou em nova janela). Nesta, salva o diagrama atual
+  // antes, com o nome escolhido se ele ainda tinha o nome padrão.
+  const createNew = (templateId, newTitle) => {
+    const path = `/editor/templates/${templateId}`;
+    const mode = newMode;
+    setNewMode(null);
+    if (mode === "window") {
+      window.open(appUrl(path + window.location.search), "_blank");
+      return;
+    }
+    if (layout.readOnly || diagramIsEmpty()) {
+      navigate(path);
+      return;
+    }
+    if (newTitle) setTitle(newTitle);
+    setLeaveTarget(path);
+    save();
+  };
+
+  // Tela inicial (Arquivo > Sair, logo e "Diagramas"): sai só depois que o
+  // save terminar (ver efeito de leaveTarget).
+  const goHome = () => {
+    if (layout.readOnly) {
+      navigate("/");
+      return;
+    }
+    setLeaveTarget("/");
+    save();
+  };
+
+  // Código mostrado na janela de código do upstream (Exportar > Ver código).
+  const showExportCode = ({ data, extension, filename }) => {
+    setExportData({ data, extension, filename });
+    setModal(MODAL.CODE);
   };
 
   const fullscreen = useFullscreen();
@@ -1236,25 +1681,7 @@ export default function ControlPanel({
         disabled: layout.readOnly,
       },
       save_as_template: {
-        function: async () => {
-          await db.templates
-            .add({
-              title: title,
-              tables: tables,
-              database: database,
-              relationships: relationships,
-              notes: notes,
-              subjectAreas: areas,
-              views: views,
-              custom: 1,
-              templateId: uuidv4(),
-              ...(databases[database].hasEnums && { enums: enums }),
-              ...(databases[database].hasTypes && { types: types }),
-            })
-            .then(() => {
-              Toast.success(t("template_saved"));
-            });
-        },
+        function: () => saveAsTemplate(title),
       },
       rename: {
         function: () => {
@@ -1274,7 +1701,7 @@ export default function ControlPanel({
             } else {
               await db.diagrams.where("diagramId").equals(diagramId).delete();
             }
-            setTitle("Untitled diagram");
+            setTitle(untitledTitle());
             setTables([]);
             setRelationships([]);
             setAreas([]);
@@ -1508,49 +1935,20 @@ export default function ControlPanel({
         children: [
           {
             name: "PNG",
-            function: () => {
-              toPng(document.getElementById("canvas"), {
-                pixelRatio: pngExportPixelRatio,
-              }).then(function (dataUrl) {
-                setExportData((prev) => ({
-                  ...prev,
-                  data: dataUrl,
-                  extension: "png",
-                }));
-              });
-              openExportModal(MODAL.IMG);
-            },
+            function: () => exportDiagramImage("png", { scale: 2 }),
           },
           {
             name: "JPEG",
-            function: () => {
-              toJpeg(document.getElementById("canvas"), { quality: 0.95 }).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "jpeg",
-                  }));
-                },
-              );
-              openExportModal(MODAL.IMG);
-            },
+            function: () =>
+              exportDiagramImage("jpeg", {
+                type: "image/jpeg",
+                quality: 0.95,
+                scale: 2,
+              }),
           },
           {
             name: "SVG",
-            function: () => {
-              const filter = (node) => node.tagName !== "i";
-              toSvg(document.getElementById("canvas"), { filter: filter }).then(
-                function (dataUrl) {
-                  setExportData((prev) => ({
-                    ...prev,
-                    data: dataUrl,
-                    extension: "svg",
-                  }));
-                },
-              );
-              openExportModal(MODAL.IMG);
-            },
+            function: () => exportDiagramImage("svg"),
           },
           {
             name: "JSON",
@@ -1598,23 +1996,19 @@ export default function ControlPanel({
           {
             name: "PDF",
             function: () => {
-              const canvas = document.getElementById("canvas");
               const filename = `${title}_${new Date().toISOString()}`;
-              toJpeg(canvas).then(function (dataUrl) {
-                const doc = new jsPDF("l", "px", [
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                ]);
-                doc.addImage(
-                  dataUrl,
-                  "jpeg",
-                  0,
-                  0,
-                  canvas.offsetWidth,
-                  canvas.offsetHeight,
-                );
-                doc.save(`${filename}.pdf`);
-              });
+              diagramDataUrl({ type: "image/jpeg", quality: 0.95, scale: 2 })
+                .then(({ dataUrl, svgWidth, svgHeight }) => {
+                  // Página do tamanho do conteúdo do diagrama.
+                  const doc = new jsPDF(
+                    svgWidth >= svgHeight ? "l" : "p",
+                    "px",
+                    [svgWidth, svgHeight],
+                  );
+                  doc.addImage(dataUrl, "jpeg", 0, 0, svgWidth, svgHeight);
+                  doc.save(`${filename}.pdf`);
+                })
+                .catch(imageError);
             },
           },
           {
@@ -1662,10 +2056,7 @@ export default function ControlPanel({
         function: () => {},
       },
       exit: {
-        function: () => {
-          save();
-          if (saveState === State.SAVED) navigate("/");
-        },
+        function: goHome,
       },
     },
     edit: {
@@ -1701,6 +2092,11 @@ export default function ControlPanel({
         function: edit,
         shortcut: "Ctrl+E",
         disabled: layout.readOnly,
+      },
+      rename_selected: {
+        function: rename,
+        shortcut: "F2",
+        disabled: layout.readOnly || !canRename(selectedElement),
       },
       cut: {
         function: cut,
@@ -1933,6 +2329,18 @@ export default function ControlPanel({
         function: () => setModal(MODAL.CONFIG_CUSTOM_TYPES),
         disabled: layout.readOnly,
       },
+      default_database: {
+        children: Object.entries(databases).map(([key, info]) => ({
+          name: info.name,
+          label:
+            key === preferredDatabase(settings)
+              ? t("default_database_current")
+              : undefined,
+          function: () =>
+            setSettings((prev) => ({ ...prev, defaultDatabase: key })),
+        })),
+        function: () => {},
+      },
       language: {
         function: () => setModal(MODAL.LANGUAGE),
       },
@@ -1970,7 +2378,7 @@ export default function ControlPanel({
         shortcut: "Ctrl+H",
       },
       shortcuts: {
-        function: () => window.open(`${socials.docs}/shortcuts`, "_blank"),
+        function: () => setShowShortcuts(true),
       },
       ask_on_discord: {
         function: () => window.open(socials.discord, "_blank"),
@@ -1981,18 +2389,106 @@ export default function ControlPanel({
     },
   };
 
+  // Menus do fork (ver src/catolica/menus.jsx), montados a partir dos itens
+  // do upstream acima.
+  const upstreamMenu = { ...menu };
+  const confirmErase = (erase) =>
+    SemiModal.confirm({
+      title: t("browser_data_erase_title"),
+      content: t("browser_data_erase_body"),
+      okText: t("browser_data_erase_confirm"),
+      cancelText: t("cancel"),
+      okButtonProps: { type: "danger", theme: "solid" },
+      onOk: erase,
+    });
+  const reportProblem = () => {
+    const body = t("report_issue_body", {
+      version: EDITOR_VERSION ?? t("about_version_dev"),
+      environment:
+        import.meta.env.VITE_APP_ENV === "homolog"
+          ? `(${t("about_test_environment")})`
+          : "",
+      browser: navigator.userAgent,
+    });
+    window.open(newIssueUrl(body), "_blank");
+  };
+  menu.file = catolicaFileMenu(upstreamMenu.file, {
+    newHere: () => setNewMode("here"),
+    newWindow: () => setNewMode("window"),
+    importFile: fileImport,
+    exportFile: () => setShowExportDialog(true),
+    recent: recentlyOpenedDiagrams,
+    currentId: diagramId,
+    openDiagram: (id) => navigate(`/editor/diagrams/${id}`),
+    openAll: open,
+    t,
+    language: i18n.language,
+  });
+  menu.edit = catolicaEditMenu(upstreamMenu.edit, {
+    singleKeyShortcuts: shortcutPrefs.singleKey,
+    // Abre o painel do histórico (Sprint 1E) no lugar da linha do tempo do
+    // upstream.
+    history: {
+      ...upstreamMenu.settings.show_timeline,
+      function: () => openHistoryPanel("changes"),
+    },
+  });
+  menu.view = catolicaViewMenu(upstreamMenu.view, { t });
+  menu.settings = catolicaSettingsMenu(upstreamMenu.settings, {
+    strictMode: upstreamMenu.view.strict_mode,
+    t,
+    confirmErase,
+    palette: settings.palette ?? "vinho",
+    setPalette: (palette) => setSettings((prev) => ({ ...prev, palette })),
+    darkMode: settings.mode === "dark",
+    toggleDarkMode: () =>
+      setSettings((prev) => ({
+        ...prev,
+        mode: prev.mode === "dark" ? "light" : "dark",
+      })),
+  });
+  menu.help = catolicaHelpMenu(upstreamMenu.help, {
+    showShortcuts: () => setShowShortcuts(true),
+    singleKeyShortcuts: shortcutPrefs.singleKey,
+    openDocs: () => window.open(UPSTREAM_DOCS_URL, "_blank"),
+    showChangelog: () => setShowChangelog(true),
+    reportProblem,
+    showAbout: () => setShowAbout(true),
+  });
+
   useHotkeys("mod+i", fileImport, EDITOR_HOTKEY);
   useHotkeys("mod+z", undo, EDITOR_HOTKEY);
   useHotkeys("mod+y", redo, EDITOR_HOTKEY);
+  useHotkeys("mod+shift+z", redo, EDITOR_HOTKEY);
   useHotkeys("mod+s", save, EDITOR_HOTKEY);
   useHotkeys("mod+o", open, EDITOR_HOTKEY);
-  useHotkeys("mod+e", edit, EDITOR_HOTKEY);
+  // Ctrl+E exporta (par com o Ctrl+I de importar); editar o elemento
+  // selecionado ficou na tecla E (atalhos rápidos, abaixo).
+  useHotkeys("mod+e", () => setShowExportDialog(true), EDITOR_HOTKEY);
+  // F2 não digita texto: funciona também com o cursor num campo (por exemplo,
+  // no texto de uma nota recém-clicada).
+  useHotkeys("f2", rename, { ...EDITOR_HOTKEY, enableOnFormTags: true });
   useHotkeys("mod+d", duplicate, EDITOR_HOTKEY);
-  useHotkeys("mod+c", copy, EDITOR_HOTKEY);
-  useHotkeys("mod+v", paste, EDITOR_HOTKEY);
-  useHotkeys("mod+x", cut, EDITOR_HOTKEY);
-  useHotkeys("delete", del, EDITOR_HOTKEY);
+  useHotkeys(
+    "delete",
+    () => {
+      // Delete logo após digitar num campo costuma ser engano: avisa antes.
+      if (allowDelete()) del();
+      else Toast.info(t("shortcut_delete_blocked"));
+    },
+    EDITOR_HOTKEY,
+  );
   useHotkeys("mod+shift+g", viewGrid, EDITOR_HOTKEY);
+  useHotkeys("mod+alt+g", snapToGrid, EDITOR_HOTKEY);
+  useHotkeys(
+    "mod+alt+d",
+    () =>
+      setSettings((prev) => ({
+        ...prev,
+        mode: prev.mode === "dark" ? "light" : "dark",
+      })),
+    EDITOR_HOTKEY,
+  );
   useHotkeys("mod+up", zoomIn, EDITOR_HOTKEY);
   useHotkeys("mod+down", zoomOut, EDITOR_HOTKEY);
   useHotkeys("mod+shift+m", viewStrictMode, EDITOR_HOTKEY);
@@ -2000,13 +2496,202 @@ export default function ControlPanel({
   useHotkeys("mod+shift+s", saveDiagramAs, EDITOR_HOTKEY);
   useHotkeys("mod+alt+c", copyAsImage, EDITOR_HOTKEY);
   useHotkeys("enter", resetView, EDITOR_HOTKEY);
-  useHotkeys("mod+h", () => window.open(socials.docs, "_blank"), EDITOR_HOTKEY);
-  useHotkeys("mod+alt+w", fitWindow, EDITOR_HOTKEY);
   useHotkeys("alt+e", toggleDBMLEditor, EDITOR_HOTKEY);
   useHotkeys("left", panLeft, EDITOR_HOTKEY);
   useHotkeys("right", panRight, EDITOR_HOTKEY);
   useHotkeys("up", panUp, EDITOR_HOTKEY);
   useHotkeys("down", panDown, EDITOR_HOTKEY);
+  // Tecla C: coluna nova (sem nome) no fim da tabela selecionada, com a
+  // edição aberta. Igual ao botão "Adicionar coluna" do painel (TableInfo).
+  // Devolve o id da coluna criada (ou null, sem tabela selecionada).
+  const addColumnToSelected = () => {
+    if (selectedElement.element !== ObjectType.TABLE) return null;
+    const table = tables.find((item) => item.id === selectedElement.id);
+    if (!table) return null;
+    setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+    const id = nanoid();
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.TABLE,
+        component: "field_add",
+        tid: table.id,
+        fid: id,
+        message: t("edit_table", {
+          tableName: table.name,
+          extra: "[add field]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+    updateTable(table.id, {
+      fields: [
+        ...table.fields,
+        {
+          id,
+          name: "",
+          type: "",
+          default: "",
+          check: "",
+          primary: false,
+          unique: false,
+          notNull: false,
+          increment: false,
+          comment: "",
+        },
+      ],
+    });
+    notifyElementCreated({ type: "field", tableId: table.id, fieldId: id });
+    return id;
+  };
+
+  // Atalhos de uma tecla, Esc e Ctrl+F, com proteção contra acionamento
+  // acidental (ver src/catolica/useSafeKeyShortcuts.js).
+  // Desfaz a última ação se ela for a que o atalho acabou de fazer (usado
+  // quando o atalho era, na verdade, o começo de uma palavra digitada).
+  const undoIfLast = (matches) => {
+    const last = undoStack[undoStack.length - 1];
+    if (!last || !matches(last)) return;
+    undo();
+    setRedoStack((prev) => prev.slice(0, -1));
+  };
+  const transformBeforeShortcut = useRef(null);
+  const selectionBeforeShortcut = useRef(null);
+  // Dica dos botões com a tecla do atalho rápido, só quando eles estão ligados.
+  const withQuickKey = (label, key) =>
+    shortcutPrefs.singleKey ? `${label} (${key})` : label;
+  const rememberTransform = () => {
+    transformBeforeShortcut.current = transform;
+  };
+  const restoreTransform = () => {
+    if (transformBeforeShortcut.current) {
+      setTransform(transformBeforeShortcut.current);
+    }
+  };
+  // Posição do mouse no diagrama (ou null, e o elemento nasce no centro).
+  const tableAtPointer = () => {
+    const pointer = pointerInDiagram();
+    if (!pointer) return null;
+    const step = settings.gridSize ?? gridSize;
+    const snap = (v) => (settings.snapToGrid ? Math.round(v / step) * step : v);
+    return { x: snap(pointer.x - tableWidth / 2), y: snap(pointer.y - 20) };
+  };
+
+  useSafeKeyShortcuts({
+    t,
+    enabled: shortcutPrefs.singleKey,
+    readOnly: layout.readOnly,
+    singleKeys: {
+      // T, A, N e C abrem o nome do elemento novo na hora (opensField): o que
+      // for digitado em seguida vai para o nome.
+      t: {
+        run: () => addTable(undefined, true, tableAtPointer()),
+        opensField: true,
+        changes: true,
+      },
+      a: {
+        run: () => addArea(undefined, true, pointerInDiagram()),
+        opensField: true,
+        changes: true,
+      },
+      n: {
+        run: () => addNote(undefined, true, pointerInDiagram()),
+        opensField: true,
+        changes: true,
+      },
+      c: {
+        // Sem tabela selecionada não cria nada (e não abre campo).
+        run: () => addColumnToSelected() !== null,
+        opensField: true,
+        changes: true,
+      },
+      e: {
+        run: () => {
+          selectionBeforeShortcut.current = selectedElement;
+          edit();
+        },
+        rollback: () => {
+          if (selectionBeforeShortcut.current) {
+            setSelectedElement(selectionBeforeShortcut.current);
+          }
+        },
+        changes: true,
+      },
+      o: {
+        run: () => {
+          rememberTransform();
+          autoArrangeTables();
+        },
+        rollback: () => {
+          undoIfLast(
+            (entry) => entry.bulk && entry.message === t("auto_arrange"),
+          );
+          restoreTransform();
+          // Era o começo de uma palavra: a mensagem não vale mais.
+          if (arrangeToast.current) Toast.close(arrangeToast.current);
+        },
+        changes: true,
+      },
+      f: {
+        run: () => {
+          rememberTransform();
+          fitWindow();
+        },
+        rollback: restoreTransform,
+      },
+      "?": {
+        run: () => setShowShortcuts(true),
+        rollback: () => setShowShortcuts(false),
+      },
+    },
+    // Esc em cascata (o 1º nível, sair do campo, fica no hook): fecha a
+    // edição do elemento e, no Esc seguinte, desmarca. Janelas e menus
+    // abertos fecham antes, pelo próprio Semi UI.
+    onEscape: () => {
+      if (
+        openOverlays().some((el) =>
+          el.matches(".semi-modal-wrap, .semi-dropdown-wrapper"),
+        )
+      ) {
+        return;
+      }
+      const step = escapeStep(selectedElement, layout.sidebar);
+      if (step?.collapse) {
+        // A lista do painel só recolhe com uma chave que não corresponde a
+        // nenhum item (é o estado que o clique no cabeçalho do item gera).
+        // Depois, a seleção volta como estava, sem a edição aberta.
+        flushSync(() =>
+          setSelectedElement((prev) => ({
+            ...prev,
+            element: step.collapse,
+            id: undefined,
+            open: true,
+          })),
+        );
+        setSelectedElement({
+          ...selectedElement,
+          open: false,
+          editFromToolbar: false,
+        });
+      } else if (step?.close) {
+        setSelectedElement((prev) => ({
+          ...prev,
+          open: false,
+          editFromToolbar: false,
+        }));
+      } else if (step?.deselect) {
+        setSelectedElement((prev) => ({
+          ...prev,
+          element: ObjectType.NONE,
+          id: -1,
+          open: false,
+          editFromToolbar: false,
+        }));
+      }
+    },
+    onFind: focusTableSearch,
+  });
 
   return (
     <>
@@ -2019,7 +2704,9 @@ export default function ControlPanel({
             {header()}
             <div className="flex items-center gap-2 me-7">
               <Slot name="header-actions-start" />
-              {!isTemplate && (
+              {/* Sem servidor de compartilhamento, o fork mostra "Histórico
+                  de versões" no lugar (src/catolica/history/HistoryButton.jsx). */}
+              {!isTemplate && hasGistBackend && (
                 <Button
                   type="primary"
                   className="!text-base !pe-6 !ps-5 !py-[18px] !rounded-md"
@@ -2038,6 +2725,61 @@ export default function ControlPanel({
           toolbarContainer &&
           createPortal(toolbar(), toolbarContainer)}
       </div>
+      <ShortcutsModal
+        visible={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        prefs={shortcutPrefs}
+        onChangePrefs={changeShortcutPrefs}
+      />
+      <ExportDialog
+        visible={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        title={title}
+        setTitle={setTitle}
+        diagramId={diagramId}
+        onShowCode={showExportCode}
+      />
+      <ImportDialog
+        visible={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        currentDiagramId={diagramId}
+      />
+      <ChangelogDialog
+        visible={showChangelog}
+        onClose={() => setShowChangelog(false)}
+      />
+      <AboutDialog visible={showAbout} onClose={() => setShowAbout(false)} />
+      <NewDialog
+        mode={newMode}
+        onClose={() => setNewMode(null)}
+        onCreate={createNew}
+        askName={
+          newMode === "here" &&
+          !layout.readOnly &&
+          !diagramIsEmpty() &&
+          isDefaultTitle(title)
+        }
+        currentTitle={title}
+      />
+      <OpenDialog
+        visible={showOpenDialog}
+        onClose={() => setShowOpenDialog(false)}
+        onOpen={(id) => {
+          setShowOpenDialog(false);
+          navigate(`/editor/diagrams/${id}`);
+        }}
+        onOpenFile={() => {
+          setShowOpenDialog(false);
+          setShowImportDialog(true);
+        }}
+      />
+      <SaveAsDialog
+        visible={showSaveAsDialog}
+        onClose={() => setShowSaveAsDialog(false)}
+        title={title}
+        onSaveCopy={saveAsCopy}
+        onSaveTemplate={saveAsTemplate}
+      />
       <Modal
         modal={modal}
         exportData={exportData}
@@ -2093,7 +2835,7 @@ export default function ControlPanel({
         <div className="flex justify-start items-center">
           <LayoutDropdown />
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("zoom_out")} position="bottom">
+          <Tooltip content={`${t("zoom_out")} (Ctrl+↓)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-lg"
               onClick={() =>
@@ -2156,7 +2898,7 @@ export default function ControlPanel({
               </div>
             </div>
           </Dropdown>
-          <Tooltip content={t("zoom_in")} position="bottom">
+          <Tooltip content={`${t("zoom_in")} (Ctrl+↑)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-lg"
               onClick={() =>
@@ -2167,7 +2909,10 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("undo")} position="bottom">
+          <GridDropdown />
+          <SnapToGridButton />
+          <Divider layout="vertical" margin="8px" />
+          <Tooltip content={`${t("undo")} (Ctrl+Z)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               disabled={undoStack.length === 0 || layout.readOnly}
@@ -2176,7 +2921,7 @@ export default function ControlPanel({
               <IconUndo size="large" />
             </button>
           </Tooltip>
-          <Tooltip content={t("redo")} position="bottom">
+          <Tooltip content={`${t("redo")} (Ctrl+Y)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               disabled={redoStack.length === 0 || layout.readOnly}
@@ -2186,7 +2931,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("add_table")} position="bottom">
+          <Tooltip content={withQuickKey(t("add_table"), "T")} position="bottom">
             <button
               className="flex items-center py-1 px-2 hover-2 rounded-sm disabled:opacity-50"
               onClick={() => addTable()}
@@ -2204,7 +2949,7 @@ export default function ControlPanel({
               <IconAddView />
             </button>
           </Tooltip>
-          <Tooltip content={t("add_area")} position="bottom">
+          <Tooltip content={withQuickKey(t("add_area"), "A")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addArea()}
@@ -2213,7 +2958,7 @@ export default function ControlPanel({
               <IconAddArea />
             </button>
           </Tooltip>
-          <Tooltip content={t("add_note")} position="bottom">
+          <Tooltip content={withQuickKey(t("add_note"), "N")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={() => addNote()}
@@ -2223,7 +2968,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("auto_arrange")} position="bottom">
+          <Tooltip content={withQuickKey(t("auto_arrange"), "O")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5 disabled:opacity-50"
               onClick={autoArrangeTables}
@@ -2233,7 +2978,7 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("save")} position="bottom">
+          <Tooltip content={`${t("save")} (Ctrl+S)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm flex items-center disabled:opacity-50"
               onClick={save}
@@ -2243,16 +2988,31 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("versions")} position="bottom">
+          <Tooltip content={withQuickKey(t("help_shortcuts"), "?")} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
-              onClick={() => setSidesheet(SIDESHEET.VERSIONS)}
+              onClick={() => setShowShortcuts(true)}
+              aria-label={t("shortcuts_title")}
             >
-              <i className="fa-solid fa-code-branch" />
+              <i className="fa-regular fa-keyboard" />
             </button>
           </Tooltip>
+          {/* Versões grava em gists no drawdb-server; sem servidor, só falharia. */}
+          {hasGistBackend && (
+            <>
+              <Divider layout="vertical" margin="8px" />
+              <Tooltip content={t("versions")} position="bottom">
+                <button
+                  className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
+                  onClick={() => setSidesheet(SIDESHEET.VERSIONS)}
+                >
+                  <i className="fa-solid fa-code-branch" />
+                </button>
+              </Tooltip>
+            </>
+          )}
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={t("theme")} position="bottom">
+          <Tooltip content={`${t("theme")} (Ctrl+Alt+D)`} position="bottom">
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
               onClick={() => {
@@ -2269,28 +3029,10 @@ export default function ControlPanel({
               <i className="fa-solid fa-circle-half-stroke" />
             </button>
           </Tooltip>
+          <PaletteButton />
         </div>
       </div>
     );
-  }
-
-  function getState() {
-    switch (saveState) {
-      case State.NONE:
-        return t("no_changes");
-      case State.LOADING:
-        return t("loading");
-      case State.SAVED:
-        return `${t("last_saved")} ${lastSaved}`;
-      case State.SAVING:
-        return t("saving");
-      case State.ERROR:
-        return t("failed_to_save");
-      case State.FAILED_TO_LOAD:
-        return t("failed_to_load");
-      default:
-        return "";
-    }
   }
 
   function header() {
@@ -2300,7 +3042,13 @@ export default function ControlPanel({
         style={isRtl(i18n.language) ? { direction: "rtl" } : {}}
       >
         <div className="flex justify-start items-center">
-          <Link to="/">
+          <Link
+            to="/"
+            onClick={(e) => {
+              e.preventDefault();
+              goHome();
+            }}
+          >
             <img
               width={54}
               src={icon}
@@ -2334,7 +3082,21 @@ export default function ControlPanel({
                 }}
                 onClick={!layout.readOnly && (() => setModal(MODAL.RENAME))}
               >
-                <span>{isTemplate ? t("templates") : t("diagrams")}</span>
+                {/* Fork: "Diagramas" leva à tela inicial, salvando antes. */}
+                <span
+                  role="link"
+                  tabIndex={0}
+                  className="cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goHome();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") goHome();
+                  }}
+                >
+                  {isTemplate ? t("templates") : t("diagrams")}
+                </span>
                 <span className="select-none text-zinc-400 dark:text-zinc-500 mx-1">
                   /
                 </span>
@@ -2345,8 +3107,17 @@ export default function ControlPanel({
                   </Tag>
                 )}
               </div>
-              {(showEditName || modal === MODAL.RENAME) && !layout.readOnly && (
-                <IconEdit />
+              {/* Lápis sempre visível: Renomear saiu do menu Arquivo. */}
+              {!layout.readOnly && (
+                <IconEdit
+                  role="button"
+                  aria-label={t("rename_diagram")}
+                  className="cursor-pointer"
+                  style={{
+                    opacity: showEditName || modal === MODAL.RENAME ? 1 : 0.55,
+                  }}
+                  onClick={() => setModal(MODAL.RENAME)}
+                />
               )}
             </div>
             <div className="flex items-center">
@@ -2479,20 +3250,7 @@ export default function ControlPanel({
                 ))}
               </div>
               {layout.readOnly && <Tag size="small">{t("read_only")}</Tag>}
-              {!layout.readOnly && (
-                <Tag
-                  size="small"
-                  type="light"
-                  prefixIcon={
-                    saveState === State.LOADING ||
-                    saveState === State.SAVING ? (
-                      <Spin size="small" />
-                    ) : null
-                  }
-                >
-                  {getState()}
-                </Tag>
-              )}
+              {!layout.readOnly && <SaveStatus saveState={saveState} />}
             </div>
           </div>
         </div>

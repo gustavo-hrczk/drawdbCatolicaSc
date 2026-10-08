@@ -1,0 +1,87 @@
+name: Deploy homologação
+
+# Publica a branch homolog em /<repo>/teste/ junto com a main em /<repo>/.
+# O GitHub Pages tem um único site por repositório, então os dois builds são
+# publicados no mesmo artefato.
+#
+# Requisitos:
+# - Settings > Environments > github-pages > Deployment branches: incluir "homolog".
+# - Um push na main (workflow "Deploy GitHub Pages") publica só a produção e
+#   remove /teste/. Para restaurar, rode este workflow de novo (Actions > Run workflow).
+#
+# A homologação usa outro banco local (VITE_DB_NAME), pois fica na mesma origem
+# que a produção e, sem isso, os diagramas de teste e os reais se misturariam.
+
+on:
+  push:
+    branches: ["homolog"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ROOT: /${{ github.event.repository.name }}/
+    steps:
+      - name: Checkout main (produção)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
+      - name: Checkout homolog
+        uses: actions/checkout@v4
+        with:
+          ref: homolog
+          path: homolog
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: |
+            prod/package-lock.json
+            homolog/package-lock.json
+
+      - name: Build produção
+        working-directory: prod
+        run: npm ci && npm run build
+        env:
+          BASE_PATH: ${{ env.ROOT }}
+
+      - name: Lint, testes e build homologação
+        working-directory: homolog
+        run: npm ci && npm run lint && npm test && npm run build
+        env:
+          BASE_PATH: ${{ env.ROOT }}teste/
+          VITE_DB_NAME: drawDB-teste
+          VITE_APP_ENV: homolog
+
+      - name: Monta o site (produção na raiz, homologação em /teste/)
+        run: |
+          mkdir -p site
+          cp -r prod/dist/. site/
+          mkdir -p site/teste
+          cp -r homolog/dist/. site/teste/
+          sed "s|__ROOT__|${ROOT}|g" homolog/.github/pages/404.html > site/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}teste/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

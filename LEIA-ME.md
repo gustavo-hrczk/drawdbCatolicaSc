@@ -14,6 +14,9 @@ está neste repositório.
 - `src/main.jsx`: removido o Vercel Analytics (não se aplica fora da Vercel).
 - `.github/workflows/deploy-pages.yml`: build e publicação automáticos no GitHub Pages.
 
+As novidades e correções desta versão, além das listadas acima, estão em
+[`CHANGELOG.md`](CHANGELOG.md).
+
 Nada do editor foi removido. Os recursos pagos do drawDB Pro (nuvem, colaboração em tempo real,
 IA) dependem de servidores próprios do drawDB e não fazem parte do código aberto.
 
@@ -21,8 +24,10 @@ IA) dependem de servidores próprios do drawDB e não fazem parte do código abe
 
 - Os diagramas ficam salvos **no navegador** (IndexedDB). Limpar dados do navegador ou trocar
   de computador apaga ou "esconde" os diagramas.
-- **Ao fim de cada aula, exporte o diagrama** (Arquivo → Exportar → JSON) e guarde o arquivo.
-- Para entregar trabalhos, use a exportação em JSON, SQL ou imagem.
+- **Ao fim de cada aula, exporte o diagrama** (Arquivo → Exportar → Pacote .zip) e guarde o
+  arquivo. Para reabrir em outro computador: Arquivo → Importar (Ctrl+I).
+- Para entregar trabalhos, use Arquivo → Exportar: o pacote .zip leva o SQL, o diagrama completo
+  e uma imagem. Também dá para exportar só o SQL ou uma imagem (PNG, JPEG, SVG ou PDF).
 
 ## Publicar (uma vez)
 

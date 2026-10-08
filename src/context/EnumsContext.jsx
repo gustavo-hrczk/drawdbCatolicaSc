@@ -1,9 +1,9 @@
 import { createContext, useEffect, useRef, useState } from "react";
 import { Action, ObjectType } from "../data/constants";
-import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { useUndoRedo, useCollab } from "../hooks";
 import { nanoid } from "nanoid";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const EnumsContext = createContext(null);
 
@@ -64,7 +64,7 @@ export default function EnumsContextProvider({ children }) {
   const deleteEnum = (id, addToHistory = true) => {
     const enumIndex = enums.findIndex((e) => e.id === id);
     if (addToHistory) {
-      Toast.success(t("enum_deleted"));
+      toastWithUndo(t("enum_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {
