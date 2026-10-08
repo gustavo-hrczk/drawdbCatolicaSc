@@ -36,6 +36,11 @@ const RENAMABLE = {
     prefix: "scroll_view_",
     overlay: ".semi-sidesheet",
   },
+  [ObjectType.RELATIONSHIP]: {
+    tab: Tab.RELATIONSHIPS,
+    prefix: "scroll_ref_",
+    overlay: ".semi-sidesheet",
+  },
 };
 
 export function canRename(selectedElement) {

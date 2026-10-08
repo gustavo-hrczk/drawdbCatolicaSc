@@ -64,6 +64,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Melhorias
 
+- Relacionamentos: um clique na linha ou nos pontos seleciona (em destaque) e Delete exclui, como
+  nas tabelas; o relacionamento criado já abre com o nome selecionado.
 - Tabela, área, nota e coluna novas já abrem com o nome selecionado, pronto para digitar; pelas
   teclas T, A, N e C, o que for digitado logo em seguida já entra no nome.
 - Nomes numerados para elementos novos (tabela_1, area_1, nota_1) no lugar de códigos aleatórios.

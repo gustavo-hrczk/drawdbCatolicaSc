@@ -46,6 +46,7 @@ import {
 import { getRectFromEndpoints, isInsideRect } from "../../utils/rect";
 import { State, noteWidth } from "../../data/constants";
 import { nanoid } from "nanoid";
+import { notifyElementCreated } from "../../catolica/editorEvents";
 
 export default function Canvas() {
   const { t } = useTranslation();
@@ -712,6 +713,10 @@ export default function Canvas() {
     delete newRelationship.endX;
     delete newRelationship.endY;
     addRelationship(newRelationship);
+    notifyElementCreated({
+      type: ObjectType.RELATIONSHIP,
+      id: newRelationship.id,
+    });
   };
 
   useEventListener(

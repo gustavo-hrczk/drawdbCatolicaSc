@@ -635,6 +635,20 @@ A comparação ignora maiúsculas e espaços nas pontas, e a cópia de uma cópi
 (`src/catolica/uniqueName.js`, com testes). Continuam permitidos nomes repetidos ao renomear pelo
 lápis e em "Diagrama sem título" (Novo).
 
+## Relacionamentos no desenho (08/10/2026, pedido do mantenedor)
+
+- **Um clique seleciona** o relacionamento (na linha, no nome ou nos pontos de cardinalidade),
+  com destaque azul contínuo (o tracejado animado continua sendo só o "passar o mouse"); dois
+  cliques abrem a edição, como antes. **Delete exclui**, com a mensagem "Relacionamento excluído"
+  e Ctrl+Z para desfazer, como nas tabelas. Esc em cascata e F2 também valem para relacionamentos.
+- **Criar arrastando de uma coluna a outra** abre a aba Relacionamentos com o nome já selecionado,
+  pelo mesmo evento `element-created` das tabelas (só na criação pelo usuário; não na conexão
+  automática de chaves estrangeiras nem no DBML).
+- Alterações no núcleo, mínimas: `onClick` e estilo de selecionado em `Relationship.jsx`, o caso
+  do relacionamento no `del()` do `ControlPanel.jsx` e o aviso de criação no `Canvas.jsx`.
+- Conferido no build de homologação local: selecionar com um clique, Delete, Ctrl+Z, criar por
+  arraste (nome selecionado na aba Relacionamentos) e Esc em cascata.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O

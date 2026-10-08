@@ -170,12 +170,28 @@ export default function Relationship({ data }) {
     }
   };
 
+  // Um clique na linha ou nos pontos seleciona (Delete exclui), como nas
+  // tabelas; dois cliques abrem a edição.
+  const selected =
+    selectedElement.element === ObjectType.RELATIONSHIP &&
+    selectedElement.id === data.id;
+  const select = () => {
+    if (selected) return;
+    setSelectedElement((prev) => ({
+      ...prev,
+      element: ObjectType.RELATIONSHIP,
+      id: data.id,
+      open: false,
+    }));
+  };
+
   if (!pathValues) return null;
 
   return (
     <>
       <g
         className="select-none group"
+        onClick={select}
         onDoubleClick={edit}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
@@ -200,7 +216,11 @@ export default function Relationship({ data }) {
               : calcPath(pathValues, 1, settings.showComments)
           }
           className="relationship-path"
-          style={{ stroke: hovered ? undefined : data.color }}
+          style={
+            selected
+              ? { stroke: "#0084d1", strokeWidth: 4 }
+              : { stroke: hovered ? undefined : data.color }
+          }
           fill="none"
           cursor="pointer"
         />

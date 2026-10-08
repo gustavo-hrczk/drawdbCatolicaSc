@@ -268,6 +268,11 @@ export default function ControlPanel({
           if (created.type === ObjectType.TABLE) {
             return tables.some((table) => table.id === created.id);
           }
+          if (created.type === ObjectType.RELATIONSHIP) {
+            return latestRef.current.relationships.some(
+              (r) => r.id === created.id,
+            );
+          }
           const list = created.type === ObjectType.AREA ? areas : notes;
           return list.some((item) => item.id === created.id);
         };
@@ -1183,6 +1188,10 @@ export default function ControlPanel({
         break;
       case ObjectType.VIEW:
         deleteView(selectedElement.id);
+        break;
+      case ObjectType.RELATIONSHIP:
+        deleteRelationship(selectedElement.id);
+        Toast.success(t("relationship_deleted"));
         break;
       default:
         break;
