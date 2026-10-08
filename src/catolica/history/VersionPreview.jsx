@@ -12,6 +12,12 @@ import {
 // aberto), então nada do diagrama atual é tocado.
 
 const PADDING = 40;
+
+// Cor padrão do upstream segue o tema (como no desenho do editor).
+const shown = (color) =>
+  !color || color === defaultBlue
+    ? "var(--drawdb-default-color, #175e7a)"
+    : color;
 const NOTE_HEIGHT = 80;
 
 const tableHeight = (table) =>
@@ -70,9 +76,9 @@ export default function VersionPreview({ snapshot }) {
             width={area.width}
             height={area.height}
             rx={8}
-            fill={area.color ?? defaultBlue}
+            fill={shown(area.color)}
             fillOpacity={0.15}
-            stroke={area.color ?? defaultBlue}
+            stroke={shown(area.color)}
             strokeOpacity={0.4}
           />
           <text
@@ -123,7 +129,7 @@ export default function VersionPreview({ snapshot }) {
               width={width}
               height={8}
               rx={4}
-              fill={table.color ?? defaultBlue}
+              fill={shown(table.color)}
             />
             <text
               x={table.x + 12}

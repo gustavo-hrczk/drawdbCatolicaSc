@@ -12,6 +12,7 @@ import { EDITOR_VERSION } from "../InfoDialogs";
 import { REPOSITORY_URL, UPSTREAM_DOCS_URL } from "../links";
 import DiagramList from "./DiagramList";
 import ChangelogPanel from "./ChangelogPanel";
+import PaletteButton from "../theme/PaletteButton";
 import "./home.css";
 
 // Tela inicial (rota "/"), no lugar da página de apresentação do drawDB
@@ -39,7 +40,7 @@ function Header() {
         <img
           src={dark ? logoDark : logoLight}
           alt="drawDB"
-          className="h-[40px] sm:h-[32px]"
+          className="drawdb-logo h-[40px] sm:h-[32px]"
         />
         <span
           className="ms-1 text-xs"
@@ -84,6 +85,7 @@ function Header() {
             }
           />
         </Tooltip>
+        <PaletteButton className="!text-base" />
       </nav>
     </header>
   );
@@ -97,15 +99,15 @@ function Hero({ onNew, onImport }) {
     ["bi bi-lightning-charge", t("home_badge_quick")],
   ];
   return (
-    <section className="home-hero rounded-2xl px-10 py-8 sm:px-5 sm:py-6">
-      <h1 className="home-title text-4xl sm:text-3xl">{t("home_title")}</h1>
+    <section className="home-hero rounded-2xl px-8 py-5 sm:px-5 sm:py-5">
+      <h1 className="home-title text-3xl sm:text-2xl">{t("home_title")}</h1>
       <p
-        className="mt-3 max-w-[720px] text-base leading-relaxed"
+        className="mt-2 max-w-[720px] text-sm leading-relaxed"
         style={{ color: "var(--semi-color-text-1)" }}
       >
         {t("home_subtitle")}
       </p>
-      <ul className="mt-4 flex flex-wrap gap-2">
+      <ul className="mt-3 flex flex-wrap gap-2">
         {badges.map(([icon, label]) => (
           <li key={label} className="home-badge">
             <i className={icon} aria-hidden />
@@ -113,13 +115,11 @@ function Hero({ onNew, onImport }) {
           </li>
         ))}
       </ul>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button theme="solid" type="primary" size="large" onClick={onNew}>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button theme="solid" type="primary" onClick={onNew}>
           {t("home_new")}
         </Button>
-        <Button size="large" onClick={onImport}>
-          {t("import")}
-        </Button>
+        <Button onClick={onImport}>{t("import")}</Button>
       </div>
     </section>
   );

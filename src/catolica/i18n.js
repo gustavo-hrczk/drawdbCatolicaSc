@@ -57,6 +57,7 @@ const resources = {
     palette: "Cores",
     palette_vinho: "Vinho",
     palette_original: "drawDB original",
+    palette_switch: "Cores: {{current}} (clique para {{next}})",
     home_title: "Desenhe, gere o SQL e entregue.",
     home_subtitle:
       "Editor de diagramas de banco de dados gratuito e de código aberto: modele as tabelas e os relacionamentos, gere o SQL e exporte sem complicação.",
@@ -175,6 +176,7 @@ const resources = {
     palette: "Colors",
     palette_vinho: "Wine",
     palette_original: "Original drawDB",
+    palette_switch: "Colors: {{current}} (click for {{next}})",
     home_title: "Draw, generate the SQL and deliver.",
     home_subtitle:
       "Free and open source database diagram editor: model tables and relationships, generate SQL and export with no hassle.",

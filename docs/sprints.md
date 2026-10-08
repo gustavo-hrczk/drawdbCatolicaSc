@@ -674,7 +674,14 @@ lápis e em "Diagrama sem título" (Novo).
   contraste no fundo escuro); os azuis fixos do Tailwind usados no desenho (`--color-blue-*`,
   `--color-sky-600`), o realce de relacionamento e as alças das colunas seguem a paleta.
 - Núcleo: `palette` nas configurações padrão e o atributo no `body` (`SettingsContext.jsx`).
-  As cores das tabelas (dado do diagrama) não mudam.
+- **Segunda rodada (pedidos do mantenedor):** logo do drawDB na cor do tema (filtro de cor; o
+  Vite embute a imagem, então o seletor usa o `alt`/classe), cor padrão das tabelas, áreas e
+  views (`#175e7a`, gravada no diagrama) exibida na cor do tema por CSS sobre o estilo inline,
+  sem mudar o arquivo; realce de relacionamento num tom mais claro da paleta; alças azuis
+  (`#5891db`) na paleta; marcadores de cardinalidade com fundo da tela e contorno na cor da linha
+  (antes, pílula cinza cheia) e nome do relacionamento com halo (`Relationship.jsx`, os dois
+  melhoram também nas cores originais); botão rápido de cores (`theme/PaletteButton.jsx`) na
+  barra inferior e na tela inicial; apresentação da tela inicial mais compacta.
 
 ## Tela inicial (Sprints 2 e 3, 08/10/2026)
 

@@ -149,6 +149,7 @@ import { snapshotOf } from "../../catolica/history/versionRules";
 import { addVersion } from "../../catolica/history/versions";
 import { onUndoOf, onVersionRestore } from "../../catolica/editorEvents";
 import { toastWithUndo } from "../../catolica/undoToast";
+import PaletteButton from "../../catolica/theme/PaletteButton";
 import { flushSync } from "react-dom";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
@@ -3022,6 +3023,7 @@ export default function ControlPanel({
               <i className="fa-solid fa-circle-half-stroke" />
             </button>
           </Tooltip>
+          <PaletteButton />
         </div>
       </div>
     );
