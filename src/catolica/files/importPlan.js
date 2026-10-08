@@ -1,4 +1,5 @@
 import { parseDiagramFile } from "./diagramJson";
+import { historyFolderOf, parseHistoryFiles } from "./historyPackage";
 import { sqlFingerprint } from "./sql";
 import { LIMITS, looksLikeRar, looksLikeZip, readPackage } from "./zipPackage";
 
@@ -17,9 +18,11 @@ import { LIMITS, looksLikeRar, looksLikeZip, readPackage } from "./zipPackage";
 // inputs: [{ name, bytes: Uint8Array }]
 // Devolve { ok: false, error, detail? }, um diagrama
 //   { ok: true, kind: "json" | "pair" | "sql" | "dbml", diagram?, sql?, dbml?,
-//     sqlCheck, fromZip, location, ignored, warnings }
+//     sqlCheck, fromZip, location, history, ignored, warnings }
 // ou a escolha { ok: true, kind: "choose", candidates, ignored, warnings }.
 // sqlCheck: "match" | "mismatch" | "not_checked" (JSON sem hash) | "absent".
+// history: pasta historico/ do pacote, ao lado do .json (historyPackage.js),
+// ou null.
 
 const utf8 = new TextDecoder("utf-8", { fatal: true }); // remove o BOM sozinho
 const ansi = new TextDecoder("windows-1252");
@@ -67,6 +70,7 @@ async function jsonCandidate(json, parsed, sql, group) {
     sqlCheck,
     fromZip: group.fromZip,
     location: group.location,
+    history: group.history?.length ? parseHistoryFiles(group.history) : null,
   };
 }
 
@@ -126,10 +130,14 @@ export async function planImport(inputs) {
   let emptyZip = null;
   let deepZips = 0;
 
-  const addFile = (groupKey, location, fromZip, name, bytes) => {
+  const groupFor = (groupKey, location, fromZip) => {
     if (!groups.has(groupKey)) {
-      groups.set(groupKey, { location, fromZip, files: [] });
+      groups.set(groupKey, { location, fromZip, files: [], history: [] });
     }
+    return groups.get(groupKey);
+  };
+  const addFile = (groupKey, location, fromZip, name, bytes) => {
+    groupFor(groupKey, location, fromZip);
     groups.get(groupKey).files.push({
       name,
       kind: kindOf(name),
@@ -137,8 +145,17 @@ export async function planImport(inputs) {
     });
   };
 
-  // Arquivos de um .zip, agrupados por pasta.
-  const addPackage = (files, zipLabel, fromZip) => {
+  // Arquivos de um .zip, agrupados por pasta. A pasta historico/ vai junto
+  // com o diagrama da pasta em que ela está.
+  const addPackage = (files, zipLabel, fromZip, history = []) => {
+    for (const file of history) {
+      const folder = historyFolderOf(file.path);
+      const location = folder ? `${zipLabel} › ${folder}` : zipLabel;
+      groupFor(`${zipLabel}/${folder}`, location, fromZip).history.push({
+        path: file.path,
+        text: decodeText(file.bytes),
+      });
+    }
     for (const file of files) {
       const folder = folderOf(file.path);
       const location = folder ? `${zipLabel} › ${folder}` : zipLabel;
@@ -164,7 +181,7 @@ export async function planImport(inputs) {
     if (looksLikeZip(name, bytes)) {
       const pkg = await readPackage(bytes);
       if (!pkg.ok) return { ok: false, error: pkg.error, detail: name };
-      addPackage(pkg.files, name, name);
+      addPackage(pkg.files, name, name, pkg.history);
       for (const inner of pkg.zips) {
         const sub = await readPackage(inner.bytes, { withZips: false });
         if (!sub.ok) {
@@ -172,7 +189,7 @@ export async function planImport(inputs) {
           continue;
         }
         deepZips += sub.deepZips;
-        addPackage(sub.files, `${name} › ${inner.path}`, name);
+        addPackage(sub.files, `${name} › ${inner.path}`, name, sub.history);
       }
       if (!pkg.files.length && !pkg.zips.length) emptyZip ??= name;
       continue;

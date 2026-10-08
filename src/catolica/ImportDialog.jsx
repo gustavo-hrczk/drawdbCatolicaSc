@@ -16,6 +16,7 @@ import { autoArrange } from "../utils/autoArrange";
 import { getTableHeight, getTableWidth } from "../utils/utils";
 import { preferredDatabase, preferredSqlDialect } from "./databasePreference";
 import { findDuplicate, importAsNewDiagram } from "./importAsNewDiagram";
+import { historySummary, importHistory } from "./history/importHistory";
 import { untitledTitle } from "./i18n";
 import { DialogFooter, Notice, Summary } from "./dialogParts";
 import { planImport } from "./files/importPlan";
@@ -315,8 +316,12 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
         data = plan.diagram.data;
         source = { exportId: plan.diagram.meta?.exportId };
       }
-      const diagramId = await importAsNewDiagram(data, source);
-      return { diagramId, title: data.title || untitledTitle() };
+      const { diagramId, name } = await importAsNewDiagram(data, source);
+      // Histórico do pacote (pasta historico/), se veio junto com o .json.
+      if (!openingSql && !openingDbml) {
+        await importHistory(diagramId, plan.history);
+      }
+      return { diagramId, title: name };
     }).catch((err) => {
       console.error(err);
       Toast.error(t("oops_smth_went_wrong"));
@@ -586,6 +591,7 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
       );
     } else {
       const { data, meta } = plan.diagram;
+      const history = historySummary(plan.history);
       canImport = true;
       body = (
         <div className="flex flex-col gap-3">
@@ -596,6 +602,10 @@ export default function ImportDialog({ visible, onClose, currentDiagramId }) {
               [t("import_tables"), data.tables.length],
               [t("import_exported_at"), formatDate(meta?.exportadoEm)],
               [t("import_from_package"), plan.location],
+              [
+                t("import_history"),
+                history && t("import_history_counts", history),
+              ],
               ignoredRow,
             ]}
           />

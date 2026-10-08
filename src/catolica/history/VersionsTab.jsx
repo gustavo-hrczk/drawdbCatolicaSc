@@ -292,7 +292,9 @@ export default function VersionsTab() {
       title: await diagramTitle(),
       version: versionLabel(version, t, i18n.language),
     });
-    const id = await importAsNewDiagram(asDiagram(version, title));
+    const { diagramId: id } = await importAsNewDiagram(
+      asDiagram(version, title),
+    );
     const url = appUrl(`/editor/diagrams/${id}${window.location.search}`);
     // Navegador bloqueou a nova janela: abre nesta (o diagrama atual já está
     // salvo).

@@ -35,6 +35,7 @@ import { decodeText, planImport } from "./importPlan";
 import { parseSqlDiagram } from "./sqlImport";
 import { parseDbmlDiagram } from "./dbmlImport";
 import { toDBML } from "../../utils/exportAs/dbml";
+import { buildHistoryFiles, historyFolderOf } from "./historyPackage";
 
 const TEMPLATES = [
   template1,
@@ -626,6 +627,80 @@ describe("importação: casos reais de entrega (Sprint 1F)", () => {
     expect(diagramContentKey(stored)).toBe(diagramContentKey(data));
     const changed = { ...stored, tables: data.tables.slice(1) };
     expect(diagramContentKey(changed)).not.toBe(diagramContentKey(data));
+  });
+});
+
+describe("histórico no pacote .zip", () => {
+  const historyFor = (diagram) =>
+    buildHistoryFiles({
+      diagram,
+      stacks: {
+        undo: [{ action: 0, element: 1, at: EXPORTED_AT.getTime(), desc: {} }],
+        redo: [{ action: 2, element: 1 }],
+      },
+      versions: [
+        {
+          kind: "manual",
+          reason: "manual",
+          name: "Entrega 1",
+          createdAt: EXPORTED_AT,
+          snapshot: { ...diagram, relationships: diagram.relationships },
+        },
+      ],
+      describe: (entry) =>
+        entry.action === 0 ? "Tabela criada" : "Tabela excluída",
+      formatDate: () => "08/10/2026 21:40",
+      labels: {
+        title: "Histórico",
+        noTime: "sem horário",
+        undone: "desfeito",
+        autoVersion: "Versão automática",
+      },
+    });
+
+  it("pasta historico/ em qualquer nível", () => {
+    expect(historyFolderOf("historico/alteracoes.json")).toBe("");
+    expect(historyFolderOf("Entrega/historico/versoes/a.json")).toBe("Entrega");
+    expect(historyFolderOf("Entrega/diagrama.json")).toBeNull();
+  });
+
+  it("o histórico volta na importação e não vira diagrama a escolher", async () => {
+    const { diagram, sql, json } = await makeExport(template1);
+    const files = historyFor(diagram);
+    expect(files.map((f) => f.path)).toEqual([
+      "historico/alteracoes.json",
+      "historico/alteracoes.txt",
+      "historico/versoes/2026-10-08_21h40_Entrega 1.json",
+    ]);
+    expect(files[1].content).toContain("Tabela excluída (desfeito)");
+
+    const zip = await buildPackage(
+      { baseName: "blog", sql, json, extra: files },
+      "uint8array",
+    );
+    const plan = await planImport([{ name: "blog.zip", bytes: zip }]);
+    expect(plan.ok).toBe(true);
+    expect(plan.kind).toBe("pair");
+    expect(plan.history.stacks.undo).toHaveLength(1);
+    expect(plan.history.stacks.redo).toHaveLength(1);
+    expect(plan.history.versions).toHaveLength(1);
+    expect(plan.history.versions[0]).toMatchObject({
+      kind: "manual",
+      name: "Entrega 1",
+    });
+    expect(plan.history.versions[0].snapshot.tables).toHaveLength(
+      diagram.tables.length,
+    );
+  });
+
+  it("pacote sem histórico continua igual", async () => {
+    const { sql, json } = await makeExport(template1);
+    const zip = await buildPackage(
+      { baseName: "blog", sql, json },
+      "uint8array",
+    );
+    const plan = await planImport([{ name: "blog.zip", bytes: zip }]);
+    expect(plan.history).toBeNull();
   });
 });
 

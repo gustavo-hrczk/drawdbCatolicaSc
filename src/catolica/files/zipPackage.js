@@ -1,7 +1,9 @@
 import JSZip from "jszip";
+import { historyFolderOf } from "./historyPackage";
 
-// Pacote de entrega (.zip): nome.sql + nome.json + nome.png + README.txt.
-// Extraído, vira exatamente o caso "SQL + JSON".
+// Pacote de entrega (.zip): nome.sql + nome.json + nome.png (opcional) +
+// README.txt + pasta historico/ (opcional, historyPackage.js). Extraído, vira
+// exatamente o caso "SQL + JSON".
 
 export const LIMITS = {
   // Arquivo escolhido (inclusive o .zip inteiro, com a imagem).
@@ -25,6 +27,7 @@ export function packageReadme({
   dialectLabel,
   baseName,
   hasImage = true,
+  hasHistory = false,
 }) {
   const lines = [
     `Diagrama: ${title || "(sem título)"}`,
@@ -38,6 +41,12 @@ export function packageReadme({
     hasImage
       ? `- ${baseName}.png: imagem do diagrama, para visualizar sem o editor.`
       : null,
+    hasHistory
+      ? "- historico/: alterações do diagrama (alteracoes.txt para ler, alteracoes.json para o"
+      : null,
+    hasHistory
+      ? "  editor) e versões guardadas (versoes/). Vêm junto ao importar este .zip."
+      : null,
     "",
     "Gerado por uma versão modificada do drawDB, editor de código aberto (https://github.com/drawdb-io/drawdb).",
   ];
@@ -45,10 +54,11 @@ export function packageReadme({
   return lines.filter((line) => line !== null).join("\r\n");
 }
 
-// files: { sql, json, png (Blob/Uint8Array, opcional), readme }
+// files: { sql, json, png (Blob/Uint8Array, opcional), readme,
+//          extra: [{ path, content }] (opcional, ex.: historico/) }
 // type: "blob" no navegador, "uint8array" nos testes.
 export function buildPackage(
-  { baseName, sql, json, png, readme },
+  { baseName, sql, json, png, readme, extra = [] },
   type = "blob",
 ) {
   const zip = new JSZip();
@@ -56,6 +66,7 @@ export function buildPackage(
   zip.file(`${baseName}.json`, json);
   if (png) zip.file(`${baseName}.png`, png);
   if (readme) zip.file("README.txt", readme);
+  for (const { path, content } of extra) zip.file(path, content);
   return zip.generateAsync({
     type,
     compression: "DEFLATE",
@@ -85,9 +96,10 @@ const basename = (path) => path.split("/").pop();
 // tudo" das Tarefas do Teams junta as entregas, uma por aluno). Ignora pastas,
 // arquivos de sistema do macOS e o que não for do diagrama.
 //
-// Devolve { ok: true, files, zips, deepZips } ou { ok: false, error }.
-// files e zips: [{ path, name, bytes }]; deepZips: .zip internos ignorados
-// (quando withZips é false).
+// Devolve { ok: true, files, zips, history, deepZips } ou { ok: false, error }.
+// files, zips e history: [{ path, name, bytes }]; history: os .json da pasta
+// historico/ (fora de files, para não serem lidos como diagrama); deepZips:
+// .zip internos ignorados (quando withZips é false).
 export async function readPackage(bytes, { withZips = true } = {}) {
   if (bytes.byteLength > LIMITS.maxZipBytes) {
     return { ok: false, error: "too_large" };
@@ -111,6 +123,7 @@ export async function readPackage(bytes, { withZips = true } = {}) {
 
   const files = [];
   const zips = [];
+  const history = [];
   let deepZips = 0;
   let total = 0;
   for (const entry of entries) {
@@ -139,7 +152,10 @@ export async function readPackage(bytes, { withZips = true } = {}) {
       return { ok: false, error: "package_too_large" };
     }
     const file = { path: entry.name, name: basename(entry.name), bytes: data };
-    (isZip ? zips : files).push(file);
+    if (isZip) zips.push(file);
+    else if (historyFolderOf(entry.name) !== null) {
+      if (/\.json$/i.test(entry.name)) history.push(file);
+    } else files.push(file);
   }
-  return { ok: true, files, zips, deepZips };
+  return { ok: true, files, zips, history, deepZips };
 }

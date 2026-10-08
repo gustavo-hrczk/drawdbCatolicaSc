@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Input, Modal, Select, Toast } from "@douyinfe/semi-ui";
+import { Button, Input, Modal, Select, Switch, Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
 import { v4 as uuidv4 } from "uuid";
@@ -11,6 +11,7 @@ import {
   useSettings,
   useTransform,
   useTypes,
+  useUndoRedo,
   useViews,
 } from "../hooks";
 import { DB } from "../data/constants";
@@ -36,11 +37,15 @@ import {
 } from "./files/sql";
 import { buildDiagramJson, serializeDiagramJson } from "./files/diagramJson";
 import { buildPackage, packageReadme } from "./files/zipPackage";
+import { buildHistoryFiles } from "./files/historyPackage";
+import { listVersions } from "./history/versions";
+import { stepText } from "./history/historyRows";
 
 // Janela "Exportar" (Arquivo > Exportar). A ordem das seções é a mesma da
 // janela Importar: SQL, diagrama completo, imagem e outros formatos. O SQL é
 // exatamente o dos exportadores do upstream; o diagrama completo é sempre o
-// pacote .zip (SQL, .json, imagem e README).
+// pacote .zip (SQL, .json, imagem e README, mais o histórico). A imagem e o
+// histórico são opcionais, ligados por padrão.
 //
 // As descrições dizem o que cada arquivo é ou contém, sem indicar usos.
 
@@ -63,8 +68,10 @@ const CODE_EXTENSION = {
   markdown: "md",
 };
 
-// Arquivos do pacote, na ordem em que aparecem na descrição.
-const ZIP_FILES = ["sql", "json", "png", "readme"];
+// Arquivos do pacote, na ordem em que aparecem na descrição. Os opcionais têm
+// um botão de liga/desliga.
+const ZIP_FILES = ["sql", "json", "png", "history", "readme"];
+const ZIP_OPTIONAL = new Set(["png", "history"]);
 
 const fileNameFor = (base, option) =>
   ({
@@ -101,12 +108,14 @@ export default function ExportDialog({
   const { types } = useTypes();
   const { enums } = useEnums();
   const { transform } = useTransform();
+  const { undoStack, redoStack } = useUndoRedo();
 
   const [option, setOption] = useState("sql");
   const [name, setName] = useState(title);
   const [dialect, setDialect] = useState(() => preferredSqlDialect(settings));
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [zipParts, setZipParts] = useState({ png: true, history: true });
 
   // Ao abrir a janela: nome atual do diagrama, horário novo no nome dos
   // arquivos e o banco de dados preferido para diagramas genéricos.
@@ -115,6 +124,7 @@ export default function ExportDialog({
     setName(title);
     setNow(new Date());
     setDialect(preferredSqlDialect(settings));
+    setZipParts({ png: true, history: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -204,19 +214,52 @@ export default function ExportDialog({
     );
     // A imagem é um extra: se não puder ser gerada, o pacote sai sem ela.
     let png = null;
-    try {
-      png = (await diagramBlob({ scale: 2 })).blob;
-    } catch (err) {
-      if (!(err instanceof EmptyDiagramError)) console.warn(err);
+    if (zipParts.png) {
+      try {
+        png = (await diagramBlob({ scale: 2 })).blob;
+      } catch (err) {
+        if (!(err instanceof EmptyDiagramError)) console.warn(err);
+      }
     }
+    const extra = zipParts.history ? await historyFiles() : [];
     const readme = packageReadme({
       title: trimmedName,
       exportedAt: exportedAt.toLocaleString(),
       dialectLabel: databases[sqlDialect]?.name,
       baseName: fileBase,
       hasImage: Boolean(png),
+      hasHistory: extra.length > 0,
     });
-    return buildPackage({ baseName: fileBase, sql, json, png, readme });
+    return buildPackage({ baseName: fileBase, sql, json, png, readme, extra });
+  };
+
+  // Pasta historico/ do pacote: alterações (linha do tempo) e versões.
+  const historyFiles = async () => {
+    const state = {
+      tables,
+      relationships,
+      notes,
+      areas,
+      types,
+      enums,
+      views,
+    };
+    const versions = await listVersions(diagramId);
+    // Sem alterações nem versões, o pacote sai sem a pasta.
+    if (!undoStack.length && !redoStack.length && !versions.length) return [];
+    return buildHistoryFiles({
+      diagram: { ...diagram(), title: trimmedName || title },
+      stacks: { undo: undoStack, redo: redoStack },
+      versions,
+      describe: (entry) => stepText(entry, t, state),
+      formatDate: (at) => new Date(at).toLocaleString(),
+      labels: {
+        title: t("export_history_title", { title: trimmedName || title }),
+        noTime: t("history_no_time"),
+        undone: t("history_undone").toLowerCase(),
+        autoVersion: t("version_auto"),
+      },
+    });
   };
 
   const blobFor = {
@@ -344,9 +387,28 @@ export default function ExportDialog({
             <div className="text-sm opacity-80">
               {t(`export_option_${option}_hint`)}
               {option === "zip" && (
-                <ul className="mt-1 list-disc ps-5">
+                <ul className="mt-1 flex flex-col gap-1 ps-5">
                   {ZIP_FILES.map((file) => (
-                    <li key={file}>{t(`export_zip_file_${file}`)}</li>
+                    <li key={file} className="list-disc">
+                      {ZIP_OPTIONAL.has(file) ? (
+                        <label className="flex items-center justify-between gap-3">
+                          <span>{t(`export_zip_file_${file}`)}</span>
+                          <Switch
+                            size="small"
+                            checked={zipParts[file]}
+                            onChange={(checked) =>
+                              setZipParts((prev) => ({
+                                ...prev,
+                                [file]: checked,
+                              }))
+                            }
+                            aria-label={t(`export_zip_file_${file}`)}
+                          />
+                        </label>
+                      ) : (
+                        t(`export_zip_file_${file}`)
+                      )}
+                    </li>
                   ))}
                 </ul>
               )}

@@ -40,6 +40,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   e a cada 10 minutos de edição, e versões com nome. Cada versão pode ser vista, restaurada (o
   diagrama atual é guardado antes e o Ctrl+Z desfaz), aberta como cópia, baixada, renomeada ou
   excluída.
+- O pacote .zip pode levar o histórico (alterações e versões), que volta junto ao importar. A imagem
+  e o histórico são opcionais, ligados por padrão.
 - Aviso quando o mesmo diagrama está aberto em outra aba e escolha do que fazer em caso de
   conflito de gravação, sem perder nada.
 - Nome do diagrama no título da aba do navegador.
@@ -96,6 +98,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   mostra o atalho O.
 - Apagar todos os diagramas do navegador pede confirmação explícita.
 - Diagramas novos se chamam "Diagrama sem título".
+- Importar, abrir uma versão como cópia e "Salvar como" não repetem o nome de outro diagrama: a
+  cópia de "Diagrama1" se chama "Diagrama1 (cópia)", depois "Diagrama1 (cópia 2)".
 - Painel lateral: a aba Relacionamentos vem logo depois de Tabelas.
 - Relacionamento: tabelas primária e estrangeira em destaque.
 - Organizar automaticamente: desfazer também volta o zoom anterior.

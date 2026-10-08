@@ -16,7 +16,7 @@ for inevitável (ver `CLAUDE.md`).
 | 1B | Persistência da edição: auto-save, Ctrl+C/V, Ctrl+Z/Y, conflito entre abas | concluído na `homolog` (falta teste manual nos 4 navegadores) |
 | 1C | Exportação e importação: os três casos de entrega | concluído na `homolog` (falta o aceite pelo MS Teams) |
 | 1D | Atalhos do teclado, menu da grade e proteção contra acionamento acidental | fase A concluída na `homolog`; fase B (personalização) pendente |
-| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | em andamento: fases A (linha do tempo) e B (versões) na `homolog`; falta a C (histórico no .zip) |
+| 1E | Histórico de alterações e versões (inclui a nova Linha do tempo) | concluído na `homolog` (fases A, B e C) |
 | 1F | Menus enxutos e janelas padronizadas | concluído na `homolog` |
 | 2 | Home em português, sem seção de depoimentos | pendente |
 | 3 | Acesso rápido na home | pendente |
@@ -605,8 +605,35 @@ publicada na homologação para teste antes da seguinte.
 - Conferido no build de homologação local: versão ao abrir, salvar com nome, pré-visualização,
   restaurar (6 → 5 tabelas), Ctrl+Z (volta a 6), abrir como cópia e as duas abas.
 
-**Fase C, histórico no pacote .zip:** pasta `historico/` na exportação e leitura na importação.
-Decisão pendente: a opção "Incluir histórico" vem marcada ou desmarcada.
+**Fase C, histórico no pacote .zip (08/10/2026, na `homolog`):**
+
+- **Exportar:** na lista de arquivos do pacote, "Imagem do diagrama" e "Histórico de alterações e
+  versões" têm botão de liga/desliga, **ligados por padrão** (decisão do mantenedor). Sem
+  alterações nem versões, o pacote sai sem a pasta.
+- **Pasta `historico/`** (`src/catolica/files/historyPackage.js`): `alteracoes.json` (as pilhas
+  de desfazer/refazer, com horário e frase de cada passo, e a lista legível), `alteracoes.txt`
+  (a mesma lista, para ler sem o editor) e `versoes/<data>_<nome>.json` (cada versão no formato
+  do .json do diagrama, que também abre sozinha no Importar, com os dados da versão em `versao`).
+  O README do pacote descreve a pasta.
+- **Importar:** a leitura do .zip separa a pasta `historico/` (senão os .json dela seriam lidos
+  como diagramas a escolher) e a liga ao diagrama da mesma pasta, inclusive dentro dos .zip de
+  cada aluno do "Baixar tudo" do Teams. O resumo mostra "Histórico: Alterações: N · Versões: N".
+  O diagrama importado recebe a linha do tempo (as pilhas, gravadas com a revisão do diagrama
+  novo; os ids dos elementos são os do arquivo, então os passos continuam válidos) e as versões,
+  com as datas originais (`history/importHistory.js`). Arquivo de histórico com defeito é
+  ignorado; nunca impede a importação do diagrama.
+- Conferido no build de homologação local: exportar com histórico, conferir o .zip (nomes com
+  acento marcados como UTF-8), importar de volta como nova cópia com a linha do tempo e as
+  versões. Testes de ida e volta em `files.test.js`.
+
+**Nomes repetidos (pedido do mantenedor, 08/10/2026):** antes, importar de novo o mesmo arquivo
+avisava ("Este diagrama já existe neste navegador") e oferecia "Abrir o existente" ou "Importar
+uma nova cópia", mas a cópia ficava com o mesmo nome; um diagrama diferente com o mesmo nome
+também. Agora todo diagrama criado automaticamente (importar, abrir versão como cópia e "Salvar
+como") recebe um nome que não existe neste navegador: "Diagrama1 (cópia)", "Diagrama1 (cópia 2)"...
+A comparação ignora maiúsculas e espaços nas pontas, e a cópia de uma cópia não acumula sufixos
+(`src/catolica/uniqueName.js`, com testes). Continuam permitidos nomes repetidos ao renomear pelo
+lápis e em "Diagrama sem título" (Novo).
 
 ## Sprint 2: Home em português, sem seção de depoimentos
 

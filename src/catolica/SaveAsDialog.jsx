@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Checkbox, Input, Modal } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { focusDialogField } from "./renameField";
+import { uniqueDiagramName } from "./uniqueName";
 
 // Arquivo > Salvar como (Ctrl+Shift+S). Inclui a opção "Salvar como modelo",
 // que antes era um item separado do menu: o modelo aparece em Arquivo > Novo.
@@ -33,7 +34,10 @@ export default function SaveAsDialog({
     if (!trimmed || saving) return;
     setSaving(true);
     try {
-      await (asTemplate ? onSaveTemplate(trimmed) : onSaveCopy(trimmed));
+      // A cópia não repete o nome de outro diagrama ("Nome (cópia)").
+      await (asTemplate
+        ? onSaveTemplate(trimmed)
+        : onSaveCopy(await uniqueDiagramName(trimmed)));
       onClose();
     } finally {
       setSaving(false);

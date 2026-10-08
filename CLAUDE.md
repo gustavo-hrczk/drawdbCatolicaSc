@@ -131,6 +131,9 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   frase em `describeChange.js` (sem ela, a linha do tempo mostra a mensagem do upstream).
   Versões: `versions.js` (banco do fork), `VersionKeeper.jsx` (automáticas) e restauração por
   entrada de desfazer com `snapshot` (tratada no `undo`/`redo` do `ControlPanel.jsx`).
+  No pacote .zip, a pasta `historico/` (`files/historyPackage.js`) é lida à parte dos diagramas.
+- Diagramas criados automaticamente (importar, cópia de versão, "Salvar como") passam por
+  `uniqueDiagramName` (`src/catolica/uniqueName.js`): nome repetido vira "Nome (cópia)".
 
 ## Versionamento (público)
 

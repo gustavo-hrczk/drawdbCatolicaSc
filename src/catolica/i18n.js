@@ -26,6 +26,7 @@ const resources = {
     save_conflict_overwrite_hint:
       "Grava esta versão por cima. As alterações feitas na outra aba serão perdidas.",
     conflict_copy_name: "{{title}} (cópia de conflito {{date}})",
+    copy_suffix: "cópia",
     nothing_to_paste:
       "Nada para colar: copie uma tabela, nota, área ou view do diagrama.",
     shortcuts_title: "Atalhos do teclado",
@@ -94,6 +95,7 @@ const resources = {
     save_conflict_overwrite_hint:
       "Writes this version over the saved one. Changes made in the other tab will be lost.",
     conflict_copy_name: "{{title}} (conflict copy {{date}})",
+    copy_suffix: "copy",
     nothing_to_paste:
       "Nothing to paste: copy a table, note, area or view from the diagram.",
     shortcuts_title: "Keyboard shortcuts",
@@ -201,6 +203,11 @@ const fileTexts = {
     export_zip_file_sql: "Schema SQL (.sql)",
     export_zip_file_json: "Diagrama completo (.json)",
     export_zip_file_png: "Imagem do diagrama (.png)",
+    export_zip_file_history:
+      "Histórico de alterações e versões (pasta historico)",
+    export_history_title: "Histórico de alterações: {{title}}",
+    import_history: "Histórico",
+    import_history_counts: "Alterações: {{changes}} · Versões: {{versions}}",
     export_zip_file_readme: "Instruções (README.txt)",
     export_option_png: "PNG",
     export_option_png_hint: "Imagem do diagrama em alta resolução.",
@@ -342,6 +349,10 @@ const fileTexts = {
     export_zip_file_sql: "SQL schema (.sql)",
     export_zip_file_json: "Full diagram (.json)",
     export_zip_file_png: "Diagram image (.png)",
+    export_zip_file_history: "Change and version history (historico folder)",
+    export_history_title: "Change history: {{title}}",
+    import_history: "History",
+    import_history_counts: "Changes: {{changes}} · Versions: {{versions}}",
     export_zip_file_readme: "Instructions (README.txt)",
     export_option_png: "PNG",
     export_option_png_hint: "High resolution image of the diagram.",

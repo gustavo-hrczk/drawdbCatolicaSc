@@ -5,22 +5,28 @@ import { databases } from "../data/databases";
 import { mergeCustomTypes } from "../utils/customTypes";
 import { untitledTitle } from "./i18n";
 import { diagramContentKey } from "./files/diagramJson";
+import { uniqueDiagramName } from "./uniqueName";
 
 // Salva um diagrama importado de arquivo (.json/.ddb/.zip/.sql) como um
-// diagrama novo neste navegador, sem tocar no diagrama aberto. Retorna o
-// diagramId criado.
+// diagrama novo neste navegador, sem tocar no diagrama aberto.
 //
 // source (opcional): { exportId } do arquivo, guardado em importedFrom para
 // avisar se o mesmo arquivo for importado de novo.
+//
+// O nome não repete o de outro diagrama deste navegador: "Diagrama1" vira
+// "Diagrama1 (cópia)" (uniqueName.js). Retorna { diagramId, name }.
 export async function importAsNewDiagram(data, source = null) {
   const database = data.database || DB.GENERIC;
   const diagramId = uuidv4();
   const now = new Date();
+  const name = await uniqueDiagramName(
+    data.title || data.name || untitledTitle(),
+  );
 
   await db.diagrams.add({
     diagramId,
     database,
-    name: data.title || data.name || untitledTitle(),
+    name,
     gistId: "",
     loadedFromGistId: "",
     createdAt: now,
@@ -41,7 +47,7 @@ export async function importAsNewDiagram(data, source = null) {
 
   if (data.customTypes) mergeCustomTypes(data.customTypes);
 
-  return diagramId;
+  return { diagramId, name };
 }
 
 // Diagrama deste navegador igual ao que vai ser importado, se houver: o que
