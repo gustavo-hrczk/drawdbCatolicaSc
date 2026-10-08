@@ -687,6 +687,21 @@ lápis e em "Diagrama sem título" (Novo).
   original). Dica do botão: "Trocar tema (atual: Vinho)". Na tela inicial, o título passou a
   "Pense. Desenhe. Entregue." e saiu o link "Novidades" do cabeçalho (redundante com o painel).
 
+## Versão 1.0.0 (08/10/2026)
+
+Varredura antes da publicação: lint, 140 testes, builds de produção e de homologação, sem
+`console.log`/`debugger` nem arquivos do fork sem uso, URLs internas com `appUrl()` e texto de
+tradução sem uso removido (`shortcut_deselect`). Teste de fumaça no build de produção (banco
+`drawDB`, sem o selo de testes): tela inicial, diagrama novo, modelo, atalhos, Exportar, Importar,
+histórico e versões.
+
+**Defeito encontrado e corrigido:** no primeiro salvamento de um diagrama novo (em branco ou de
+modelo), o editor muda o endereço para `/editor/diagrams/<id>` e recarregava o diagrama do banco,
+apagando o que foi editado enquanto o save rodava (com o nome já aberto ao criar a tabela, o nome
+digitado da primeira tabela se perdia). Agora o `Workspace.jsx` não recarrega o diagrama que
+acabou de criar (`createdIdRef`) e chama o save de novo com o id novo, o que grava o que mudou
+(chamado direto, porque o estado pode já estar em "Salvando" com um save pendente).
+
 ## Tela inicial (Sprints 2 e 3, 08/10/2026)
 
 Feita a partir do mockup do mantenedor (apresentação no topo, diagramas à esquerda, novidades à

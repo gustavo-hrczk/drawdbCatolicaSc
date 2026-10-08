@@ -17,6 +17,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ## [Não lançado]
 
+## [1.0.0] - 2026-10-08
+
 ### Novidades
 
 - Tela inicial em português: apresentação, os diagramas deste navegador (busca, favoritos,
@@ -28,8 +30,7 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   lista de atalhos.
 - Janela "Atalhos do teclado" com todos os atalhos e opção de desligar os atalhos rápidos.
 - Novos atalhos: Esc (em etapas: sai do campo, fecha a edição e desmarca; também fecha
-  mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (tema
-  claro/escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+E (exportar, par com o Ctrl+I de importar) e
+  mensagens), Ctrl+F (buscar tabela), Ctrl+Alt+D (modo escuro), Ctrl+Alt+G (alinhar à grade), Ctrl+E (exportar, par com o Ctrl+I de importar) e
   Ctrl+Shift+Z (refazer).
 - Botões de grade e de ímã (alinhar objetos à grade) na barra de ferramentas, com o mesmo visual
   de ligado e desligado e o estado na dica; a grade liga direto no ícone, e a seta ao lado escolhe
@@ -118,6 +119,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ### Correções
 
+- Num diagrama novo, o que era editado durante o primeiro salvamento (como o nome da primeira
+  tabela) podia se perder.
 - Diagrama aberto por um link inexistente mostrava "Salvo" sem gravar nada.
 - Abrir o editor pela página inicial criava uma cópia do último diagrama.
 - "Exportar dados salvos" incluía arquivos antigos e gerava o nome com a data errada.

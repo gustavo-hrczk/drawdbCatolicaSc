@@ -91,6 +91,11 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   // diagrama carregado. Se o banco tiver outra ao salvar, outra aba gravou no
   // meio: é um conflito.
   const baseRef = useRef({ diagramId: null, revision: null });
+  // Diagrama que este editor acabou de criar no primeiro save: o endereço
+  // muda para /editor/diagrams/<id>, mas o load não deve recarregá-lo do
+  // banco (apagaria o que foi editado enquanto o save rodava, como o nome da
+  // primeira tabela).
+  const createdIdRef = useRef(null);
   const conflictRef = useRef(false);
   const forceSaveRef = useRef(false);
   // Um save local por vez; se outro for pedido no meio, roda em seguida com
@@ -328,13 +333,17 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
       if (isNew) {
         // Fica em "Salvando": o load do diagrama recém-criado dispara o save
         // pendente já com o id novo (chamar agora criaria outro diagrama).
+        createdIdRef.current = savedId;
         navigate(`/editor/diagrams/${savedId}`, { replace: true });
       } else {
         saveRef.current?.();
       }
       return;
     }
-    if (isNew) navigate(`/editor/diagrams/${savedId}`, { replace: true });
+    if (isNew) {
+      createdIdRef.current = savedId;
+      navigate(`/editor/diagrams/${savedId}`, { replace: true });
+    }
     setSaveState(State.SAVED);
     setLastSaved(new Date().toLocaleString());
   }, [
@@ -386,6 +395,18 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   const load = useCallback(async () => {
     const previousLoadedId = loadedIdRef.current;
     loadedIdRef.current = loadedDiagramId ?? null;
+
+    // Recém-criado por este editor: o conteúdo em memória é o mais novo. Não
+    // recarrega; só salva de novo, já com o id novo (grava o que mudou durante
+    // o primeiro save, ou nada, se não mudou). Chama o save direto: o estado
+    // pode já estar em "Salvando" (save pendente), e repetir o estado não
+    // dispararia nada.
+    if (loadedDiagramId && loadedDiagramId === createdIdRef.current) {
+      createdIdRef.current = null;
+      setDiagramSource("local");
+      saveRef.current?.();
+      return;
+    }
 
     const fetchDiagram = async (id) => {
       const localDiagram = await db.diagrams
