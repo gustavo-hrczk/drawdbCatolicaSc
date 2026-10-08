@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Toast } from "@douyinfe/semi-ui";
 import { isTypingTarget } from "./clipboard";
-import { readShortcutPrefs, writeShortcutPrefs } from "./shortcuts";
 
 // Proteções contra atalhos acionados sem querer (principalmente os de uma
 // tecla, como T, A, N, O e F, que coincidem com letras digitadas):
@@ -22,7 +21,6 @@ export const TYPING_WINDOW_MS = 700;
 const AFTER_FIELD_MS = 1500;
 const DELETE_CONFIRM_MS = 3000;
 const TYPING_WARNING_INTERVAL_MS = 10000;
-const USAGE_HINTS = 3;
 
 let lastFieldTypingAt = -Infinity;
 let deleteBlockedAt = -Infinity;
@@ -100,12 +98,11 @@ export function allowDelete() {
   return false;
 }
 
-// singleKeys: { tecla: { run, rollback, opensField, changes, hint,
-// hintText } }, com a tecla em minúscula (ou "?"). opensField: o atalho abre
-// o nome do elemento criado (run devolve false se não criou nada). changes:
-// altera o diagrama (bloqueado em somente leitura). hint: "first" (dica nas primeiras vezes) ou "always";
-// hintText: texto da dica. onEscape e onFind: Esc e Ctrl+F; onFind devolve
-// true se tratou o atalho. Esc também fecha as mensagens flutuantes.
+// singleKeys: { tecla: { run, rollback, opensField, changes } }, com a tecla
+// em minúscula (ou "?"). opensField: o atalho abre o nome do elemento criado
+// (run devolve false se não criou nada). changes: altera o diagrama
+// (bloqueado em somente leitura). onEscape e onFind: Esc e Ctrl+F; onFind
+// devolve true se tratou o atalho. Esc também fecha as mensagens flutuantes.
 export default function useSafeKeyShortcuts({
   singleKeys,
   enabled,
@@ -130,17 +127,6 @@ export default function useSafeKeyShortcuts({
         content: configRef.current.t("shortcut_typing_detected"),
         duration: 4,
       });
-    };
-
-    const showHint = (action) => {
-      if (!action.hint || !action.hintText) return;
-      if (action.hint === "first") {
-        const prefs = readShortcutPrefs();
-        const shown = prefs.hintsShown ?? 0;
-        if (shown >= USAGE_HINTS) return;
-        writeShortcutPrefs({ ...prefs, hintsShown: shown + 1 });
-      }
-      Toast.info({ content: action.hintText, duration: 3 });
     };
 
     const onKeyDown = (e) => {
@@ -233,7 +219,6 @@ export default function useSafeKeyShortcuts({
       } else {
         lastRun = { key, at: now };
       }
-      showHint(action);
     };
 
     // Esc fecha as mensagens flutuantes ("Tabela excluída" etc.), em qualquer

@@ -649,6 +649,17 @@ lápis e em "Diagrama sem título" (Novo).
 - Conferido no build de homologação local: selecionar com um clique, Delete, Ctrl+Z, criar por
   arraste (nome selecionado na aba Relacionamentos) e Esc em cascata.
 
+## Mensagens flutuantes (08/10/2026)
+
+- Saem as dicas "Tabela/Área/Nota criada pelo atalho…" (e o contador `hintsShown`): criar é
+  visível na tela e o nome já abre para edição. Padrão de Figma, Google Docs e Notion: mensagem
+  só para ação destrutiva (com "Desfazer"), resultado invisível (exportação) e erro.
+- Exclusões (tabela, relacionamento, área, nota, tipo, enum, view) e Organizar automaticamente
+  mostram a mensagem com **Desfazer** (`src/catolica/undoToast.jsx`). O botão só desfaz se a
+  ação ainda for o último passo (marca na entrada da pilha); se houve outra ação depois, não faz
+  nada. Conferido no build local, inclusive esse caso.
+- Fica o aviso de digitação fora de um campo.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O

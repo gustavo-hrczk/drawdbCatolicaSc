@@ -70,3 +70,15 @@ export function onVersionRestore(listener) {
   target.addEventListener("version-restore", handler);
   return () => target.removeEventListener("version-restore", handler);
 }
+
+// Botão "Desfazer" das mensagens (undoToast.jsx): desfaz o último passo se
+// ele for o indicado por matches. Tratado pelo ControlPanel.
+export function requestUndoOf(matches) {
+  target.dispatchEvent(new CustomEvent("undo-of", { detail: matches }));
+}
+
+export function onUndoOf(listener) {
+  const handler = (e) => listener(e.detail);
+  target.addEventListener("undo-of", handler);
+  return () => target.removeEventListener("undo-of", handler);
+}

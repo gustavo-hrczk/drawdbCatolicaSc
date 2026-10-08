@@ -106,6 +106,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Relacionamento: tabelas primária e estrangeira em destaque.
 - Organizar automaticamente: desfazer também volta o zoom anterior.
 - Delete logo depois de digitar em um campo pede confirmação.
+- Menos mensagens: criar pelos atalhos T, A e N não mostra mais aviso. Excluir e organizar
+  automaticamente mostram a mensagem com o botão "Desfazer".
 - Mensagens revisadas em português.
 
 ### Correções

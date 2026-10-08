@@ -3,11 +3,11 @@ import { Action, DB, ObjectType, defaultBlue } from "../data/constants";
 import { defaultTableName } from "../catolica/defaultNames";
 import { notifyElementCreated } from "../catolica/editorEvents";
 import { useTransform, useUndoRedo, useSelect, useCollab } from "../hooks";
-import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
 import { getRelationshipFields } from "../utils/utils";
 import { cascadePosition } from "../utils/rect";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const DiagramContext = createContext(null);
 
@@ -125,7 +125,7 @@ export default function DiagramContextProvider({ children }) {
         },
       ]);
       setRedoStack([]);
-      Toast.success(t("table_deleted"));
+      toastWithUndo(t("table_deleted"));
     }
     setRelationships((prevR) =>
       prevR.filter((e) => !(e.startTableId === id || e.endTableId === id)),

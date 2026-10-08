@@ -1,9 +1,9 @@
 import { createContext, useState } from "react";
 import { Action, ObjectType, defaultBlue } from "../data/constants";
 import { useTransform, useUndoRedo, useSelect, useCollab } from "../hooks";
-import { Toast } from "@douyinfe/semi-ui";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const ViewsContext = createContext(null);
 
@@ -70,7 +70,7 @@ export default function ViewsContextProvider({ children }) {
     if (index === -1) return;
 
     if (addToHistory) {
-      Toast.success(t("view_deleted"));
+      toastWithUndo(t("view_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {

@@ -6,11 +6,11 @@ import {
   noteWidth,
 } from "../data/constants";
 import { useUndoRedo, useTransform, useSelect, useCollab } from "../hooks";
-import { Toast } from "@douyinfe/semi-ui";
 import { cascadePosition } from "../utils/rect";
 import { defaultNoteTitle } from "../catolica/defaultNames";
 import { notifyElementCreated } from "../catolica/editorEvents";
 import { useTranslation } from "react-i18next";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const NotesContext = createContext(null);
 
@@ -75,7 +75,7 @@ export default function NotesContextProvider({ children }) {
 
   const deleteNote = (id, addToHistory = true) => {
     if (addToHistory) {
-      Toast.success(t("note_deleted"));
+      toastWithUndo(t("note_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {

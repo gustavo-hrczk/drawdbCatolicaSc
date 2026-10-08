@@ -147,7 +147,8 @@ import {
 import { openHistoryPanel } from "../../catolica/history/panelState";
 import { snapshotOf } from "../../catolica/history/versionRules";
 import { addVersion } from "../../catolica/history/versions";
-import { onVersionRestore } from "../../catolica/editorEvents";
+import { onUndoOf, onVersionRestore } from "../../catolica/editorEvents";
+import { toastWithUndo } from "../../catolica/undoToast";
 import { flushSync } from "react-dom";
 import { focusTableSearch } from "../../catolica/tableSearch";
 import { pointerInDiagram } from "../../catolica/canvasPointer";
@@ -855,6 +856,13 @@ export default function ControlPanel({
     redo,
     enabled: !layout.readOnly,
   });
+  // Botão "Desfazer" das mensagens: só se a ação ainda for o último passo.
+  const undoOfRef = useRef(null);
+  undoOfRef.current = (matches) => {
+    const last = undoStack[undoStack.length - 1];
+    if (!layout.readOnly && last && matches(last)) undo();
+  };
+  useEffect(() => onUndoOf((matches) => undoOfRef.current(matches)), []);
 
   // Janelas do menu Arquivo do fork (ver src/catolica/fileMenu.js).
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -1033,7 +1041,10 @@ export default function ControlPanel({
     ]);
     setRedoStack([]);
     fitToView(arrangedTables);
+    // Move tudo de uma vez: a mensagem traz o "Desfazer".
+    arrangeToast.current = toastWithUndo(t("arranged_done"));
   };
+  const arrangeToast = useRef(null);
   const autoConnectFKs = () => {
     if (layout.readOnly) return;
     setShowAutoConnectModal(true);
@@ -1191,7 +1202,7 @@ export default function ControlPanel({
         break;
       case ObjectType.RELATIONSHIP:
         deleteRelationship(selectedElement.id);
-        Toast.success(t("relationship_deleted"));
+        toastWithUndo(t("relationship_deleted"));
         break;
       default:
         break;
@@ -1550,11 +1561,8 @@ export default function ControlPanel({
   const [showAbout, setShowAbout] = useState(false);
   const [shortcutPrefs, setShortcutPrefs] = useState(readShortcutPrefs);
   const changeShortcutPrefs = (prefs) => {
-    // O contador de dicas é gravado direto pelo useSafeKeyShortcuts; o valor
-    // deste estado pode estar desatualizado e zeraria as dicas.
-    const next = { ...prefs, hintsShown: readShortcutPrefs().hintsShown };
-    setShortcutPrefs(next);
-    writeShortcutPrefs(next);
+    setShortcutPrefs(prefs);
+    writeShortcutPrefs(prefs);
   };
 
   // Sair e Novo (nesta aba) só deixam o diagrama depois que o save termina.
@@ -2568,23 +2576,17 @@ export default function ControlPanel({
       t: {
         run: () => addTable(undefined, true, tableAtPointer()),
         opensField: true,
-        hintText: t("shortcut_hint_table"),
         changes: true,
-        hint: "first",
       },
       a: {
         run: () => addArea(undefined, true, pointerInDiagram()),
         opensField: true,
-        hintText: t("shortcut_hint_area"),
         changes: true,
-        hint: "first",
       },
       n: {
         run: () => addNote(undefined, true, pointerInDiagram()),
         opensField: true,
-        hintText: t("shortcut_hint_note"),
         changes: true,
-        hint: "first",
       },
       c: {
         // Sem tabela selecionada não cria nada (e não abre campo).
@@ -2614,10 +2616,10 @@ export default function ControlPanel({
             (entry) => entry.bulk && entry.message === t("auto_arrange"),
           );
           restoreTransform();
+          // Era o começo de uma palavra: a mensagem não vale mais.
+          if (arrangeToast.current) Toast.close(arrangeToast.current);
         },
-        hintText: t("shortcut_hint_arrange"),
         changes: true,
-        hint: "always",
       },
       f: {
         run: () => {

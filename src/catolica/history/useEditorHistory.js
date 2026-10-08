@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { describeChange } from "./describeChange";
 import { notifyHistoryStamped, onHistoryJump } from "../editorEvents";
+import { takeUndoToken } from "../undoToast";
 
 // Cada passo novo da pilha de desfazer ganha o horário (at) e a frase da
 // linha do tempo (desc), calculada com o diagrama logo depois da ação, para os
@@ -35,6 +36,9 @@ export function useHistoryStamps(undoStack, redoStack, state) {
       if (entry.at !== undefined) continue;
       entry.at = Date.now();
       entry.desc = describeChange(entry, latest.current.state);
+      // Mensagem com "Desfazer" mostrada para esta ação (undoToast.jsx).
+      const token = takeUndoToken();
+      if (token) entry.undoToken = token;
       stamped = true;
     }
     if (stamped) notifyHistoryStamped();

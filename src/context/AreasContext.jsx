@@ -1,4 +1,3 @@
-import { Toast } from "@douyinfe/semi-ui";
 import { createContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Action, ObjectType, defaultBlue } from "../data/constants";
@@ -6,6 +5,7 @@ import { defaultAreaName } from "../catolica/defaultNames";
 import { notifyElementCreated } from "../catolica/editorEvents";
 import { useSelect, useTransform, useUndoRedo, useCollab } from "../hooks";
 import { cascadePosition } from "../utils/rect";
+import { toastWithUndo } from "../catolica/undoToast";
 
 export const AreasContext = createContext(null);
 
@@ -66,7 +66,7 @@ export default function AreasContextProvider({ children }) {
 
   const deleteArea = (id, addToHistory = true) => {
     if (addToHistory) {
-      Toast.success(t("area_deleted"));
+      toastWithUndo(t("area_deleted"));
       setUndoStack((prev) => [
         ...prev,
         {
