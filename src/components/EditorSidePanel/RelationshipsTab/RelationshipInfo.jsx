@@ -14,6 +14,7 @@ import {
 } from "@douyinfe/semi-icons";
 import {
   Cardinality,
+  Constraint,
   Action,
   ObjectType,
   defaultRelationshipColor,
@@ -23,10 +24,6 @@ import { getRelationshipFields } from "../../../utils/utils";
 import ColorPicker from "../ColorPicker";
 import { useTranslation } from "react-i18next";
 import { useMemo, useRef, useState } from "react";
-import {
-  constraintOptions,
-  constraintSelected,
-} from "../../../catolica/constraintOptions";
 
 export default function RelationshipInfo({ data }) {
   const { setUndoStack, setRedoStack } = useUndoRedo();
@@ -353,9 +350,10 @@ export default function RelationshipInfo({ data }) {
         <Col span={12}>
           <div className="font-semibold">{t("on_update")}: </div>
           <Select
-            optionList={constraintOptions(t)}
-            renderSelectedItem={constraintSelected(t)}
-            dropdownStyle={{ minWidth: 240 }}
+            optionList={Object.values(Constraint).map((v) => ({
+              label: v,
+              value: v,
+            }))}
             value={data.updateConstraint}
             className="w-full"
             onChange={(value) => changeConstraint("update", value)}
@@ -364,9 +362,10 @@ export default function RelationshipInfo({ data }) {
         <Col span={12}>
           <div className="font-semibold">{t("on_delete")}: </div>
           <Select
-            optionList={constraintOptions(t)}
-            renderSelectedItem={constraintSelected(t)}
-            dropdownStyle={{ minWidth: 240 }}
+            optionList={Object.values(Constraint).map((v) => ({
+              label: v,
+              value: v,
+            }))}
             value={data.deleteConstraint}
             className="w-full"
             onChange={(value) => changeConstraint("delete", value)}
