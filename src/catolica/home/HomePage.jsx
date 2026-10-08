@@ -29,7 +29,6 @@ function Header() {
 
   const links = [
     { to: "/editor", label: t("home_nav_editor") },
-    { href: "#novidades", label: t("home_changelog") },
     { href: UPSTREAM_DOCS_URL, label: t("home_nav_docs"), external: true },
     { href: REPOSITORY_URL, label: t("home_nav_source"), external: true },
   ];

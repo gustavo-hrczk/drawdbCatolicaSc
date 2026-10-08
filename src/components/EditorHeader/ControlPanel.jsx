@@ -2440,6 +2440,12 @@ export default function ControlPanel({
     confirmErase,
     palette: settings.palette ?? "vinho",
     setPalette: (palette) => setSettings((prev) => ({ ...prev, palette })),
+    darkMode: settings.mode === "dark",
+    toggleDarkMode: () =>
+      setSettings((prev) => ({
+        ...prev,
+        mode: prev.mode === "dark" ? "light" : "dark",
+      })),
   });
   menu.help = catolicaHelpMenu(upstreamMenu.help, {
     showShortcuts: () => setShowShortcuts(true),

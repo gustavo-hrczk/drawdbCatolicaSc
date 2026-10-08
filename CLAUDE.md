@@ -134,7 +134,7 @@ No **Git Bash**, prefixe com `MSYS_NO_PATHCONV=1`, senão `/drawdbCatolicaSc/` v
   No pacote .zip, a pasta `historico/` (`files/historyPackage.js`) é lida à parte dos diagramas.
 - Tela inicial (rota `/`): `src/catolica/home/` (o `LandingPage.jsx` do upstream fica sem uso).
   Tema "Vinho" (padrão) em `src/catolica/theme/vinho.css`, ligado por `body[data-palette]`
-  (`palette` nas configurações); as cores originais ficam em Configurações → Cores.
+  (`palette` nas configurações); o tema original fica em Configurações → Tema (o claro/escuro se chama "Modo escuro").
 - Diagramas criados automaticamente (importar, cópia de versão, "Salvar como") passam por
   `uniqueDiagramName` (`src/catolica/uniqueName.js`): nome repetido vira "Nome (cópia)".
 

@@ -664,7 +664,7 @@ lápis e em "Diagrama sem título" (Novo).
 
 - **Decisões do mantenedor:** sem o nome nem o logo da instituição, só as cores (tema "Vinho");
   o nome "drawDB" fica, com "versão modificada" e a versão logo abaixo, para não parecer o
-  oficial; o vinho é o padrão e as cores originais ficam em Configurações → Cores.
+  oficial; o vinho é o padrão e o tema original fica em Configurações → Tema.
 - **Paleta** (extraída do site de referência): vinho `#9b1536` (principal), vinho escuro
   `#790f2a`, salmão `#ec928b`/`#f3bbb7`, dourado `#c0994f` (detalhes) e neutros `#282828`,
   `#767676`, `#f6f6f6`.
@@ -678,10 +678,14 @@ lápis e em "Diagrama sem título" (Novo).
   Vite embute a imagem, então o seletor usa o `alt`/classe), cor padrão das tabelas, áreas e
   views (`#175e7a`, gravada no diagrama) exibida na cor do tema por CSS sobre o estilo inline,
   sem mudar o arquivo; realce de relacionamento num tom mais claro da paleta; alças azuis
-  (`#5891db`) na paleta; marcadores de cardinalidade com fundo da tela e contorno na cor da linha
-  (antes, pílula cinza cheia) e nome do relacionamento com halo (`Relationship.jsx`, os dois
-  melhoram também nas cores originais); botão rápido de cores (`theme/PaletteButton.jsx`) na
-  barra inferior e na tela inicial; apresentação da tela inicial mais compacta.
+  (`#5891db`) na paleta; botão rápido de tema (`theme/PaletteButton.jsx`) na barra inferior e na
+  tela inicial; apresentação da tela inicial mais compacta. Os marcadores "1"/"n" com contorno e
+  o halo no nome do relacionamento foram testados e revertidos a pedido do mantenedor (fica o
+  desenho original).
+- **Terceira rodada (nomes):** "Tema" (claro/escuro) passou a se chamar **Modo escuro**, com
+  liga/desliga em Configurações (Ctrl+Alt+D); "Cores" passou a se chamar **Tema** (Vinho / drawDB
+  original). Dica do botão: "Trocar tema (atual: Vinho)". Na tela inicial, o título passou a
+  "Pense. Desenhe. Entregue." e saiu o link "Novidades" do cabeçalho (redundante com o painel).
 
 ## Tela inicial (Sprints 2 e 3, 08/10/2026)
 
@@ -691,7 +695,7 @@ direita), em `src/catolica/home/`, na rota `/` (o `LandingPage.jsx` do upstream 
 - **Cabeçalho:** logo "drawDB" com "versão modificada · vX" (ou "em testes") abaixo, links Editor,
   Novidades, Documentação e Código-fonte, e botão de tema claro/escuro. Saem Features, X, Discord
   e patrocínio.
-- **Apresentação:** "Desenhe, gere o SQL e entregue.", texto curto, selos (Sem cadastro, Gratuito,
+- **Apresentação:** "Pense. Desenhe. Entregue." (antes "Desenhe, gere o SQL e entregue."), texto curto, selos (Sem cadastro, Gratuito,
   Rápido e fácil) e os botões Novo diagrama (mesma janela de modelos do editor) e Importar (a
   mesma janela do editor). Títulos em Poppins (fonte do site de referência).
 - **Seus diagramas:** busca (sem diferenciar acentos), Todos/Favoritos, ordenação (editados

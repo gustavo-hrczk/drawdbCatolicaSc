@@ -143,12 +143,30 @@ export function catolicaViewMenu(upstream, { t }) {
 // com confirmação explícita para apagar.
 export function catolicaSettingsMenu(
   upstream,
-  { strictMode, t, confirmErase, palette, setPalette },
+  {
+    strictMode,
+    t,
+    confirmErase,
+    palette,
+    setPalette,
+    darkMode,
+    toggleDarkMode,
+  },
 ) {
   const menu = {
     autosave: upstream.autosave,
     strict_mode: strictMode,
-    // Cores do editor (tema "Vinho" do fork ou as do drawDB original).
+    // Modo escuro (liga/desliga, como Ctrl+Alt+D) e tema de cores ("Vinho"
+    // do fork ou o do drawDB original).
+    dark_mode: {
+      state: darkMode ? (
+        <i className="bi bi-toggle-on" />
+      ) : (
+        <i className="bi bi-toggle-off" />
+      ),
+      shortcut: "Ctrl+Alt+D",
+      function: toggleDarkMode,
+    },
     palette: {
       children: ["vinho", "original"].map((value) =>
         submenuItem(t, `palette_${value}`, {

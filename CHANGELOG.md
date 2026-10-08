@@ -58,11 +58,9 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Importar um .zip com vários diagramas (como o "Baixar tudo" das Tarefas do Teams, com um pacote
   por aluno) mostra a lista para escolher qual abrir.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
-- Novas cores (vinho), nos temas claro e escuro: botões, seleção, logo e cor padrão das tabelas.
-  As cores do drawDB original continuam em Configurações → Cores e no botão de cores da barra
-  inferior e da tela inicial.
-- Relacionamentos mais leves: realce em tom claro, marcadores "1"/"n" com contorno no lugar da
-  pílula cinza e nome legível mesmo sobre a linha.
+- Tema Vinho (novo padrão), com e sem modo escuro: botões, seleção, logo e cor padrão das tabelas.
+  O tema do drawDB original continua em Configurações → Tema e no botão de tema da barra inferior
+  e da tela inicial. Modo escuro também em Configurações, com liga/desliga.
 - F2 renomeia a tabela, área, nota ou view selecionada. Opção na janela "Atalhos do teclado" para
   o F2 renomear a coluna, tabela, nota ou área sob o mouse.
 - Ajuda → Novidades mostra as mudanças de cada versão, e Ajuda → Sobre mostra a versão, a licença

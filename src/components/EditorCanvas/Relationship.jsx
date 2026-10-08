@@ -233,11 +233,6 @@ export default function Relationship({ data }) {
             fontWeight={500}
             ref={labelRef}
             className="group-hover:fill-sky-600"
-            // Fork: contorno na cor do fundo, para o nome não se misturar
-            // com a linha que passa por baixo.
-            stroke="var(--semi-color-bg-0)"
-            strokeWidth={4}
-            paintOrder="stroke"
           >
             {data.name}
           </text>
@@ -284,9 +279,7 @@ export default function Relationship({ data }) {
   );
 }
 
-// Fork: marcador discreto (fundo da tela, contorno e texto na cor da linha)
-// no lugar da pílula cinza cheia, que pesava sobre a linha e as tabelas.
-function CardinalityLabel({ x, y, text, color, r = 10, padding = 10 }) {
+function CardinalityLabel({ x, y, text, color, r = 12, padding = 14 }) {
   const [textWidth, setTextWidth] = useState(0);
   const textRef = useRef(null);
 
@@ -306,21 +299,17 @@ function CardinalityLabel({ x, y, text, color, r = 10, padding = 10 }) {
         ry={r}
         width={textWidth + padding}
         height={r * 2}
-        fill="var(--semi-color-bg-0)"
-        stroke={color ?? "grey"}
-        strokeWidth={1.5}
-        className="group-hover:stroke-sky-600"
+        fill={color ?? "grey"}
+        className="group-hover:fill-sky-600"
       />
       <text
         ref={textRef}
         x={x}
         y={y}
-        fill={color ?? "grey"}
-        fontSize={13}
-        fontWeight={700}
+        fill="white"
+        strokeWidth="0.5"
         textAnchor="middle"
         alignmentBaseline="middle"
-        className="group-hover:fill-sky-600"
       >
         {text}
       </text>
