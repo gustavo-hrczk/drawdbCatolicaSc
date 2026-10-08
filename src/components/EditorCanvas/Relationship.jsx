@@ -218,7 +218,7 @@ export default function Relationship({ data }) {
           className="relationship-path"
           style={
             selected
-              ? { stroke: "#0084d1", strokeWidth: 4 }
+              ? { stroke: "var(--drawdb-highlight, #0084d1)", strokeWidth: 4 }
               : { stroke: hovered ? undefined : data.color }
           }
           fill="none"

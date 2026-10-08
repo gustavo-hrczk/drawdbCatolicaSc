@@ -1,0 +1,61 @@
+/*
+  Tema "Vinho" (padrão do fork), com as cores de referência da instituição:
+  vinho #9b1536 (principal), salmão #ec928b / #f3bbb7 e dourado #c0994f.
+  Configurações > Cores > "drawDB original" volta às cores do upstream
+  (body sem data-palette="vinho").
+
+  Os componentes do Semi UI derivam botões, seleção, links e foco da escala
+  azul (--semi-blue-0..9); trocar a escala troca tudo de forma coerente. O
+  modo escuro tem escala própria (no Semi ela vai do escuro ao claro), com o
+  principal mais claro para ter contraste no fundo escuro.
+*/
+
+body[data-palette="vinho"] {
+  --semi-blue-0: 251, 238, 240;
+  --semi-blue-1: 245, 214, 219;
+  --semi-blue-2: 234, 170, 181;
+  --semi-blue-3: 219, 121, 139;
+  --semi-blue-4: 191, 63, 92;
+  --semi-blue-5: 155, 21, 54;
+  --semi-blue-6: 133, 18, 47;
+  --semi-blue-7: 110, 15, 39;
+  --semi-blue-8: 86, 12, 31;
+  --semi-blue-9: 62, 8, 22;
+
+  /* Azuis fixos do Tailwind usados no desenho (seleção de tabela, alças,
+     realces): passam a seguir a paleta. */
+  --color-blue-300: rgb(var(--semi-blue-2));
+  --color-blue-400: rgb(var(--semi-blue-3));
+  --color-blue-500: rgb(var(--semi-blue-5));
+  --color-blue-600: rgb(var(--semi-blue-6));
+  --color-sky-600: rgb(var(--semi-blue-5));
+
+  /* Realce de relacionamento (passar o mouse e selecionado). */
+  --drawdb-highlight: rgb(var(--semi-blue-5));
+  /* Detalhe dourado (favoritos, selos da tela inicial). */
+  --drawdb-accent: #c0994f;
+}
+
+body[data-palette="vinho"][theme-mode="dark"] {
+  --semi-blue-0: 48, 14, 22;
+  --semi-blue-1: 72, 20, 33;
+  --semi-blue-2: 104, 30, 48;
+  --semi-blue-3: 146, 44, 66;
+  --semi-blue-4: 184, 64, 86;
+  --semi-blue-5: 214, 86, 104;
+  --semi-blue-6: 226, 118, 128;
+  --semi-blue-7: 236, 146, 139;
+  --semi-blue-8: 243, 187, 183;
+  --semi-blue-9: 251, 232, 231;
+
+  --drawdb-accent: #d9b97a;
+}
+
+body[data-palette="vinho"] .group:hover .relationship-path {
+  stroke: var(--drawdb-highlight);
+}
+
+/* Alças das colunas (ponto para ligar relacionamentos). */
+body[data-palette="vinho"] .bg-\[\#2f68adcc\] {
+  background-color: rgba(var(--semi-blue-5), 0.8);
+}

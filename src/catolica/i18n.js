@@ -54,6 +54,9 @@ const resources = {
     shortcut_theme: "Alternar tema claro/escuro",
     undo_hint: "Pressione Ctrl+Z para desfazer alterações.",
     arranged_done: "Diagrama organizado automaticamente.",
+    palette: "Cores",
+    palette_vinho: "Vinho",
+    palette_original: "drawDB original",
     shortcut_typing_detected:
       "Parece que você está digitando fora de um campo de texto, então o atalho foi ignorado ou desfeito. Clique no campo onde quer escrever.",
     shortcut_delete_blocked:
@@ -120,6 +123,9 @@ const resources = {
     shortcut_theme: "Toggle light/dark theme",
     undo_hint: "Press Ctrl+Z to undo changes.",
     arranged_done: "Diagram arranged automatically.",
+    palette: "Colors",
+    palette_vinho: "Wine",
+    palette_original: "Original drawDB",
     shortcut_typing_detected:
       "It looks like you are typing outside a text field, so the shortcut was ignored or undone. Click the field where you want to write.",
     shortcut_delete_blocked:

@@ -2434,6 +2434,8 @@ export default function ControlPanel({
     strictMode: upstreamMenu.view.strict_mode,
     t,
     confirmErase,
+    palette: settings.palette ?? "vinho",
+    setPalette: (palette) => setSettings((prev) => ({ ...prev, palette })),
   });
   menu.help = catolicaHelpMenu(upstreamMenu.help, {
     showShortcuts: () => setShowShortcuts(true),

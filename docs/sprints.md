@@ -660,6 +660,22 @@ lápis e em "Diagrama sem título" (Novo).
   nada. Conferido no build local, inclusive esse caso.
 - Fica o aviso de digitação fora de um campo.
 
+## Tema vinho (08/10/2026)
+
+- **Decisões do mantenedor:** sem o nome nem o logo da instituição, só as cores (tema "Vinho");
+  o nome "drawDB" fica, com "versão modificada" e a versão logo abaixo, para não parecer o
+  oficial; o vinho é o padrão e as cores originais ficam em Configurações → Cores.
+- **Paleta** (extraída do site de referência): vinho `#9b1536` (principal), vinho escuro
+  `#790f2a`, salmão `#ec928b`/`#f3bbb7`, dourado `#c0994f` (detalhes) e neutros `#282828`,
+  `#767676`, `#f6f6f6`.
+- **Como funciona** (`src/catolica/theme/vinho.css`, ativado por `body[data-palette="vinho"]`):
+  o Semi UI deriva botões, seleção, links e foco da escala `--semi-blue-0..9`, que é trocada
+  inteira (com escala própria no modo escuro, onde o principal é um rosado `#d65668` para ter
+  contraste no fundo escuro); os azuis fixos do Tailwind usados no desenho (`--color-blue-*`,
+  `--color-sky-600`), o realce de relacionamento e as alças das colunas seguem a paleta.
+- Núcleo: `palette` nas configurações padrão e o atributo no `body` (`SettingsContext.jsx`).
+  As cores das tabelas (dado do diagrama) não mudam.
+
 ## Sprint 2: Home em português, sem seção de depoimentos
 
 - Criar uma home própria (`src/pages/Home*.jsx`) em PT-BR e apontar a rota `/` para ela. O

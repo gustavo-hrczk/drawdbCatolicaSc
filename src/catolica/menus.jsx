@@ -143,11 +143,21 @@ export function catolicaViewMenu(upstream, { t }) {
 // com confirmação explícita para apagar.
 export function catolicaSettingsMenu(
   upstream,
-  { strictMode, t, confirmErase },
+  { strictMode, t, confirmErase, palette, setPalette },
 ) {
   const menu = {
     autosave: upstream.autosave,
     strict_mode: strictMode,
+    // Cores do editor (tema "Vinho" do fork ou as do drawDB original).
+    palette: {
+      children: ["vinho", "original"].map((value) =>
+        submenuItem(t, `palette_${value}`, {
+          function: () => setPalette(value),
+          state: palette === value ? <i className="bi bi-check2" /> : null,
+        }),
+      ),
+      function: () => {},
+    },
     default_database: upstream.default_database,
     configure_custom_types: upstream.configure_custom_types,
     language: upstream.language,

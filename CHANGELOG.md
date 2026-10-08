@@ -55,6 +55,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 - Importar um .zip com vários diagramas (como o "Baixar tudo" das Tarefas do Teams, com um pacote
   por aluno) mostra a lista para escolher qual abrir.
 - Banco de dados padrão em Configurações (PostgreSQL, se nada for escolhido).
+- Novas cores (vinho), nos temas claro e escuro. As cores do drawDB original continuam em
+  Configurações → Cores.
 - F2 renomeia a tabela, área, nota ou view selecionada. Opção na janela "Atalhos do teclado" para
   o F2 renomear a coluna, tabela, nota ou área sob o mouse.
 - Ajuda → Novidades mostra as mudanças de cada versão, e Ajuda → Sobre mostra a versão, a licença

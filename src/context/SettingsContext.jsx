@@ -14,6 +14,8 @@ const defaultSettings = {
   showRelationshipLabels: true,
   showDebugCoordinates: false,
   showComments: false,
+  // Fork: cores do editor ("vinho" ou "original"), src/catolica/theme/.
+  palette: "vinho",
 };
 
 export const SettingsContext = createContext({
@@ -41,6 +43,10 @@ export default function SettingsContextProvider({ children }) {
   useEffect(() => {
     document.body.setAttribute("theme-mode", settings.mode);
   }, [settings.mode]);
+
+  useEffect(() => {
+    document.body.setAttribute("data-palette", settings.palette);
+  }, [settings.palette]);
 
   useEffect(() => {
     localStorage.setItem("settings", JSON.stringify(settings));
