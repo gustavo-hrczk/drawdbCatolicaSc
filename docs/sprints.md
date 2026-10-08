@@ -689,6 +689,9 @@ lápis e em "Diagrama sem título" (Novo).
 
 ## Versão 1.0.0 (08/10/2026)
 
+**Publicada em 08/10/2026:** PR #1 (`homolog` → `main`, merge `bbfe1db`), tag `v1.0.0` e deploy
+da produção conferido no ar.
+
 Varredura antes da publicação: lint, 140 testes, builds de produção e de homologação, sem
 `console.log`/`debugger` nem arquivos do fork sem uso, URLs internas com `appUrl()` e texto de
 tradução sem uso removido (`shortcut_deselect`). Teste de fumaça no build de produção (banco
