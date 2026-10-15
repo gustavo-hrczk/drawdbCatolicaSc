@@ -86,6 +86,8 @@ export default function TableField({ data, tid, index, inherited }) {
             })),
           ]}
           filter
+          // Fork: Enter escolhe o primeiro tipo do filtro ("date" → DATE).
+          defaultActiveFirstOption
           value={data.type}
           validateStatus={data.type === "" ? "error" : "default"}
           placeholder={t("type")}

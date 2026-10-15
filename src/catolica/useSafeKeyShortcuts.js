@@ -23,28 +23,86 @@ const DELETE_CONFIRM_MS = 3000;
 const TYPING_WARNING_INTERVAL_MS = 10000;
 
 let lastFieldTypingAt = -Infinity;
+// Saída de um campo com Enter, Tab ou Esc: a próxima tecla não é "meio de
+// palavra" (permite C, nome, Enter, C em sequência rápida).
+let lastFieldExitAt = -Infinity;
 let deleteBlockedAt = -Infinity;
 
 // Atalho que abre o nome do elemento novo: o campo leva alguns milissegundos
 // para aparecer. O que for digitado nesse meio-tempo fica guardado e entra no
 // campo quando ele abrir (takeHeldTyping), sem se perder nem desfazer o atalho.
+// Fila: com digitação rápida (ou computador lento), "C nome Enter C" cria a
+// segunda coluna antes de o campo da primeira abrir; cada atalho guarda o seu
+// texto e os campos pegam na ordem em que foram criados.
 const HOLD_MS = 1500;
-let held = null; // { until, text }
+let pending = []; // [{ until, text, confirm }]
 
-const holding = () => held !== null && performance.now() < held.until;
+const dropExpired = () => {
+  const now = performance.now();
+  pending = pending.filter((entry) => now < entry.until);
+};
 
-// Texto digitado antes de o campo abrir (e encerra a espera).
+// Texto que está sendo guardado agora (o último atalho, ainda sem Enter).
+const held = () => {
+  dropExpired();
+  const last = pending[pending.length - 1];
+  return last && !last.confirm ? last : null;
+};
+
+// Texto digitado antes de o campo abrir: { text, confirm }. confirm: "Enter"
+// ou "Tab" chegou antes do campo, então o nome já vem confirmado (Enter sai do
+// campo; Tab passa para o campo seguinte).
 export function takeHeldTyping() {
-  const text = holding() ? held.text : "";
-  held = null;
-  return text;
+  dropExpired();
+  const entry = pending.shift();
+  return entry
+    ? { text: entry.text, confirm: entry.confirm }
+    : { text: "", confirm: null };
+}
+
+// Digitação logo depois de T, A, N ou C, antes de o campo do nome abrir:
+// guarda o texto; Enter ou Tab confirmam o nome (as teclas seguintes voltam a
+// ser atalhos). Roda em captura, antes dos atalhos do upstream: sem isso o
+// Enter recentraria a visão e o Backspace excluiria o elemento recém-criado.
+function holdKey(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+  if (e.key === "Process" || e.key === "Dead") return;
+  const entry = held();
+  if (!entry) return;
+  if (e.key.length === 1) {
+    entry.text += e.key;
+  } else if (e.key === "Enter" || e.key === "Tab") {
+    entry.confirm = e.key;
+    // Depois do Enter, a próxima tecla já pode ser atalho (C, nome, Enter,
+    // C...). Depois do Tab vem o próximo campo (o tipo), então o que for
+    // digitado logo em seguida continua protegido como digitação.
+    if (e.key === "Enter") lastFieldExitAt = performance.now();
+  } else if (e.key === "Backspace") {
+    entry.text = entry.text.slice(0, -1);
+  } else {
+    return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 if (typeof document !== "undefined") {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (isTypingTarget(e.target)) lastFieldTypingAt = performance.now();
+      if (!isTypingTarget(e.target)) {
+        holdKey(e);
+        return;
+      }
+      // Enter, Tab e Esc saem do campo de propósito (confirmar o nome e criar
+      // a próxima coluna com C, por exemplo): o que vem depois não é
+      // digitação perdida, então a proteção não vale.
+      if (["Enter", "Tab", "Escape"].includes(e.key)) {
+        lastFieldTypingAt = -Infinity;
+        lastFieldExitAt = performance.now();
+      } else {
+        lastFieldTypingAt = performance.now();
+      }
     },
     true,
   );
@@ -67,10 +125,13 @@ function isClosing(el) {
   );
 }
 
-// Janelas, painéis e menus abertos (visíveis e sem animação de saída).
+// Janelas, painéis e menus abertos (visíveis e sem animação de saída). Dicas
+// (role="tooltip", como o cartão da coluna sob o mouse) não contam: são só
+// informativas e não podem bloquear E, C e F2 sobre a coluna.
 export function openOverlays() {
   return [...document.querySelectorAll(OVERLAY_SELECTOR)].filter(
     (el) =>
+      el.getAttribute("role") !== "tooltip" &&
       el.getClientRects().length > 0 &&
       getComputedStyle(el).visibility !== "hidden" &&
       !isClosing(el),
@@ -145,20 +206,6 @@ export default function useSafeKeyShortcuts({
       }
       if (isTypingTarget(e.target)) return;
 
-      // Digitação logo depois de T, A, N ou C, antes de o campo do nome abrir.
-      if (holding() && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.key.length === 1) {
-          e.preventDefault();
-          held.text += e.key;
-          return;
-        }
-        if (e.key === "Backspace") {
-          e.preventDefault();
-          held.text = held.text.slice(0, -1);
-          return;
-        }
-      }
-
       const withMod = e.ctrlKey || e.metaKey;
       if (withMod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "f") {
         if (!hasOpenOverlay() && config.onFind?.()) e.preventDefault();
@@ -179,7 +226,8 @@ export default function useSafeKeyShortcuts({
       }
 
       const now = performance.now();
-      const sinceLastKey = now - lastKeyAt;
+      const sinceLastKey =
+        lastFieldExitAt > lastKeyAt ? Infinity : now - lastKeyAt;
       lastKeyAt = now;
       const key = e.key === "?" ? "?" : e.key.toLowerCase();
 
@@ -215,7 +263,9 @@ export default function useSafeKeyShortcuts({
       e.preventDefault();
       const created = action.run();
       if (action.opensField) {
-        if (created !== false) held = { until: now + HOLD_MS, text: "" };
+        if (created !== false) {
+          pending.push({ until: now + HOLD_MS, text: "", confirm: null });
+        }
       } else {
         lastRun = { key, at: now };
       }

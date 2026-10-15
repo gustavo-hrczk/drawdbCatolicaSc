@@ -5,6 +5,7 @@ import { useDiagram, useSettings, useLayout, useSelect } from "../../hooks";
 import { useTranslation } from "react-i18next";
 import { SideSheet } from "@douyinfe/semi-ui";
 import RelationshipInfo from "../EditorSidePanel/RelationshipsTab/RelationshipInfo";
+import RouteHandle from "../../catolica/RouteHandle";
 import {
   getVisibleFieldIndex,
   getVisibleFields,
@@ -64,6 +65,8 @@ export default function Relationship({ data }) {
         comment: endTable.comment,
         fields: endFields,
       },
+      // Fork: deslocamento do trecho do meio (alça de arraste).
+      midOffset: data.midOffset,
     };
   }, [tables, relationships, data]);
 
@@ -191,6 +194,8 @@ export default function Relationship({ data }) {
     <>
       <g
         className="select-none group"
+        // Fork: identifica o relacionamento sob o mouse (atalhos E e F2).
+        data-relationship-id={data.id}
         onClick={select}
         onDoubleClick={edit}
         onPointerEnter={() => setHovered(true)}
@@ -254,6 +259,10 @@ export default function Relationship({ data }) {
           </>
         )}
       </g>
+      {/* Fork: alça para arrastar o traçado (relacionamento selecionado). */}
+      {selected && !composite && (
+        <RouteHandle data={data} pathValues={pathValues} />
+      )}
       <SideSheet
         title={t("edit")}
         size="small"

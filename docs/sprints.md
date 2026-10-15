@@ -687,7 +687,69 @@ lápis e em "Diagrama sem título" (Novo).
   original). Dica do botão: "Trocar tema (atual: Vinho)". Na tela inicial, o título passou a
   "Pense. Desenhe. Entregue." e saiu o link "Novidades" do cabeçalho (redundante com o painel).
 
+## Pontos de melhoria pós-1.0.0 (15/10/2026)
+
+Lista do mantenedor depois dos primeiros usos da 1.0.0:
+
+1. **C em sequência.** Depois de Enter, Tab ou Esc no nome da coluna, o C seguinte era tomado
+   como "meio de palavra" (proteção contra digitação) e não fazia nada. Agora sair de um campo
+   zera essa proteção (`lastFieldExitAt` em `useSafeKeyShortcuts.js`). Enter ou Tab digitados
+   antes de o campo abrir (digitação muito rápida) ficam guardados com o texto e confirmam o
+   nome assim que o campo aparece (`takeHeldTyping` devolve `{ text, confirm }`). Testado com
+   120, 40 e 15 ms entre teclas.
+2. **F2 no item sob o mouse.** Coluna, tabela, relacionamento, nota ou área sob o mouse vêm
+   antes da seleção (`elementUnderPointer` em `canvasHit.js`, que reconhece relacionamentos pelo
+   `data-relationship-id` do `<g>`).
+3. **Atalhos sem clique.** A opção `hoverTarget` (antes `f2Hover`, desligada) vale para E, C e
+   F2 e vem ligada. Ganho: menos cliques e o mesmo gesto do T/A/N, que já criam onde está o
+   mouse. Risco: agir num item diferente do selecionado quando o mouse ficou parado sobre outro;
+   mitigado porque E e F2 só abrem a edição (nada muda sem digitar), C pode ser desfeito com
+   Ctrl+Z e a opção pode ser desligada na janela "Atalhos do teclado".
+4. **E sobre relacionamento.** `canRename`/`openForRename` e `RENAMABLE` (`renameField.js`)
+   passaram a tratar relacionamentos (aba Relacionamentos com o item aberto e rolado até ele).
+5. **Arrastar a linha.** O relacionamento selecionado mostra uma alça (`RouteHandle.jsx`) no
+   trecho vertical do meio; arrastar grava `midOffset` no relacionamento, que o `calcPath.js`
+   usa (`routeAnchors`/`routeHandle`), limitado ao espaço entre as tabelas. Cada arraste é um
+   passo do desfazer ("traçado" na linha do tempo); dois cliques zeram. Sem deslocamento, o
+   caminho é idêntico ao do upstream (teste em `route.test.js`). A alça fica fora da imagem
+   exportada (`data-export-ignore`). Tabelas sobrepostas na horizontal ou campos quase na mesma
+   altura não têm esse trecho e não mostram a alça.
+
+### Teste com três perfis de uso (15/10/2026)
+
+Simulação no navegador de três perfis montando o mesmo modelo (clientes, produtos e pedidos, com
+duas chaves estrangeiras): Amador (só mouse), Médio (Ctrl+C/V/Z, T e Tab) e PRO (todos os
+atalhos, digitação rápida). Defeitos encontrados e corrigidos:
+
+- **Enter perdido na espera do campo.** O atalho Enter do upstream (`useHotkeys("enter",
+  resetView)`) roda antes do `useSafeKeyShortcuts` e marca a tecla como tratada, então o Enter
+  digitado antes de o campo abrir recentrava a visão e as letras seguintes iam para o mesmo nome
+  ("clientes" + "cnome"). O teste anterior passou porque usava eventos sintéticos, que o
+  `react-hotkeys-hook` não reconhece. Agora a espera é tratada em captura (`holdKey`), antes de
+  todos (o Backspace também, que excluiria o elemento recém-criado).
+- **Nomes trocados com vários C seguidos.** O segundo C antes de o primeiro campo abrir apagava o
+  texto guardado. A espera virou fila (`pending`): cada atalho guarda o seu texto e os campos
+  pegam na ordem de criação. O campo leva cerca de 95 ms para abrir; em computador lento de
+  laboratório isso acontece em ritmo humano.
+- **Tab guardado.** Confirma o nome e passa para o campo seguinte (o tipo), como com o campo aberto.
+- **Cartão da coluna bloqueava os atalhos.** O cartão de detalhes (mouse parado sobre a coluna) é
+  um popover do Semi e contava como janela aberta. `openOverlays` ignora `role="tooltip"`.
+- **Lista de tipos.** `defaultActiveFirstOption` no `TableField.jsx` (núcleo, uma linha): ao
+  filtrar, o Enter escolhe a primeira opção ("date" → DATE).
+
+Pontos anotados para depois (sem correção nesta versão): janelas "Renomear diagrama" e "Novo
+diagrama" abrem com o foco em Cancelar/X (Enter fecha ou não confirma); escolha do banco não
+confirma com Enter; tabela nova pelo botão nasce em cima da anterior; tabela colada mantém o mesmo
+nome (SQL inválido) e cai sobre a original; "Organizar" põe as tabelas em linha e a linha
+clientes→pedidos atravessa produtos (sem alça, campos quase na mesma altura); F com uma tabela só
+amplia demais; por 1,5 s depois de digitar em qualquer campo os atalhos ficam mudos (o T logo
+depois de renomear o diagrama "falha"); falta atalho para NOT NULL/chave e para relacionamento;
+aba "Código" mostra DBML com a cor original das tabelas; nomes dos modelos prontos em inglês.
+
 ## Versão 1.0.0 (08/10/2026)
+
+**Publicada em 08/10/2026:** PR #1 (`homolog` → `main`, merge `bbfe1db`), tag `v1.0.0` e deploy
+da produção conferido no ar.
 
 Varredura antes da publicação: lint, 140 testes, builds de produção e de homologação, sem
 `console.log`/`debugger` nem arquivos do fork sem uso, URLs internas com `appUrl()` e texto de

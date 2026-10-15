@@ -85,6 +85,18 @@ const setInputValue = (input, value) => {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const FOCUSABLE =
+  "input, button, textarea, select, [tabindex]:not([tabindex='-1'])";
+
+function focusNext(input) {
+  const all = [...document.querySelectorAll(FOCUSABLE)].filter(
+    (el) => !el.disabled && el.getClientRects().length > 0,
+  );
+  const next = all[all.indexOf(input) + 1];
+  if (next) next.focus();
+  else input.blur();
+}
+
 function startRename(input, { restore = true } = {}) {
   const original = input.value;
   input.scrollIntoView({ block: "nearest" });
@@ -92,8 +104,14 @@ function startRename(input, { restore = true } = {}) {
   input.select();
   // Letras digitadas logo depois do atalho (T, A, N, C), antes de o campo
   // aparecer: substituem o nome padrão selecionado.
-  const typed = takeHeldTyping();
+  const { text: typed, confirm } = takeHeldTyping();
   if (typed) setInputValue(input, typed);
+  // Enter ou Tab digitados antes de o campo abrir: confirmam o nome já (o Tab
+  // segue para o campo seguinte, como faria com o campo aberto).
+  if (confirm) {
+    setTimeout(() => (confirm === "Tab" ? focusNext(input) : input.blur()), 0);
+    return;
+  }
 
   const onKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -112,6 +130,17 @@ function startRename(input, { restore = true } = {}) {
   };
   input.addEventListener("keydown", onKeyDown);
   input.addEventListener("blur", stop);
+}
+
+// Tecla E: rola o painel lateral até o item aberto para edição.
+export function revealItem(element, id) {
+  const target = RENAMABLE[element];
+  if (!target) return;
+  setTimeout(() => {
+    document
+      .getElementById(`${target.prefix}${id}`)
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, 150);
 }
 
 // Espera o campo aparecer (troca de aba, item expandindo, janela abrindo) e

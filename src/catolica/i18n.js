@@ -40,14 +40,15 @@ const resources = {
     shortcut_zoom: "Aumentar / diminuir zoom",
     shortcut_pan: "Mover a visualização",
     shortcut_escape: "Sair do campo › fechar edição › desmarcar",
-    shortcut_add_column: "Adicionar coluna à tabela selecionada",
-    shortcut_f2_hover: "F2 renomeia o item sob o mouse",
+    shortcut_add_column: "Adicionar coluna à tabela",
+    shortcut_hover_target:
+      "E, C e F2 agem no item sob o mouse, sem precisar clicar",
     default_table_prefix: "tabela",
     default_area_prefix: "area",
     default_note_prefix: "nota",
     shortcut_search_table: "Buscar tabela",
     shortcut_list: "Lista de atalhos",
-    shortcut_edit_selected: "Editar elemento selecionado",
+    shortcut_edit_selected: "Editar elemento",
     shortcut_field_summary: "Mostrar resumo dos campos",
     shortcut_dbml_editor: "Abrir editor DBML",
     shortcut_theme: "Ligar/desligar modo escuro",
@@ -159,14 +160,15 @@ const resources = {
     shortcut_zoom: "Zoom in / out",
     shortcut_pan: "Move the view",
     shortcut_escape: "Leave field › close editing › clear selection",
-    shortcut_add_column: "Add column to selected table",
-    shortcut_f2_hover: "F2 renames the item under the mouse",
+    shortcut_add_column: "Add column to table",
+    shortcut_hover_target:
+      "E, C and F2 act on the item under the mouse, no click needed",
     default_table_prefix: "table",
     default_area_prefix: "area",
     default_note_prefix: "note",
     shortcut_search_table: "Search table",
     shortcut_list: "Shortcut list",
-    shortcut_edit_selected: "Edit selected element",
+    shortcut_edit_selected: "Edit element",
     shortcut_field_summary: "Show field summary",
     shortcut_dbml_editor: "Open DBML editor",
     shortcut_theme: "Turn dark mode on/off",
@@ -788,6 +790,9 @@ const historyTexts = {
     history_prop_locked: "bloqueio",
     history_prop_fields: "colunas",
     history_prop_unsigned: "sem sinal",
+    history_prop_midOffset: "traçado",
+    route_handle:
+      "Arraste para mover a linha; dois cliques voltam ao traçado automático",
   },
   en: {
     history_title: "Change history",
@@ -927,6 +932,9 @@ const historyTexts = {
     history_prop_locked: "lock",
     history_prop_fields: "columns",
     history_prop_unsigned: "unsigned",
+    history_prop_midOffset: "route",
+    route_handle:
+      "Drag to move the line; double-click restores the automatic route",
   },
 };
 
