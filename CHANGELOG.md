@@ -28,12 +28,19 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
   relacionamento, da nota ou da área; C adiciona uma coluna à tabela; F2 renomeia a coluna, a
   tabela ou o relacionamento. Sem nada sob o mouse, vale o item selecionado. A opção fica na
   janela "Atalhos do teclado" (ligada por padrão).
+- Lista de tipos da coluna: ao filtrar (por exemplo, "date"), a primeira opção já vem marcada e o
+  Enter a escolhe.
 
 ### Correções
 
 - C adiciona colunas em sequência: depois de digitar o nome e apertar Enter, Tab ou Esc, o C
   seguinte cria outra coluna sem precisar clicar na tabela de novo.
 - E passou a abrir a edição do relacionamento selecionado (antes não fazia nada).
+- Digitação rápida logo depois de T, A, N ou C: o Enter confirma o nome mesmo antes de o campo
+  aparecer (antes ele recentrava a visão e as letras seguintes iam para o mesmo nome), o Tab passa
+  para o tipo da coluna e vários C seguidos não misturam os nomes.
+- Atalhos de uma tecla voltaram a funcionar com o cartão de detalhes da coluna aberto (o mouse
+  parado sobre uma coluna os bloqueava).
 
 ## [1.0.0] - 2026-10-08
 

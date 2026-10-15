@@ -85,6 +85,18 @@ const setInputValue = (input, value) => {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const FOCUSABLE =
+  "input, button, textarea, select, [tabindex]:not([tabindex='-1'])";
+
+function focusNext(input) {
+  const all = [...document.querySelectorAll(FOCUSABLE)].filter(
+    (el) => !el.disabled && el.getClientRects().length > 0,
+  );
+  const next = all[all.indexOf(input) + 1];
+  if (next) next.focus();
+  else input.blur();
+}
+
 function startRename(input, { restore = true } = {}) {
   const original = input.value;
   input.scrollIntoView({ block: "nearest" });
@@ -94,9 +106,10 @@ function startRename(input, { restore = true } = {}) {
   // aparecer: substituem o nome padrão selecionado.
   const { text: typed, confirm } = takeHeldTyping();
   if (typed) setInputValue(input, typed);
-  // Enter digitado antes de o campo abrir: confirma o nome já.
+  // Enter ou Tab digitados antes de o campo abrir: confirmam o nome já (o Tab
+  // segue para o campo seguinte, como faria com o campo aberto).
   if (confirm) {
-    setTimeout(() => input.blur(), 0);
+    setTimeout(() => (confirm === "Tab" ? focusNext(input) : input.blur()), 0);
     return;
   }
 

@@ -715,6 +715,37 @@ Lista do mantenedor depois dos primeiros usos da 1.0.0:
    exportada (`data-export-ignore`). Tabelas sobrepostas na horizontal ou campos quase na mesma
    altura não têm esse trecho e não mostram a alça.
 
+### Teste com três perfis de uso (15/10/2026)
+
+Simulação no navegador de três perfis montando o mesmo modelo (clientes, produtos e pedidos, com
+duas chaves estrangeiras): Amador (só mouse), Médio (Ctrl+C/V/Z, T e Tab) e PRO (todos os
+atalhos, digitação rápida). Defeitos encontrados e corrigidos:
+
+- **Enter perdido na espera do campo.** O atalho Enter do upstream (`useHotkeys("enter",
+  resetView)`) roda antes do `useSafeKeyShortcuts` e marca a tecla como tratada, então o Enter
+  digitado antes de o campo abrir recentrava a visão e as letras seguintes iam para o mesmo nome
+  ("clientes" + "cnome"). O teste anterior passou porque usava eventos sintéticos, que o
+  `react-hotkeys-hook` não reconhece. Agora a espera é tratada em captura (`holdKey`), antes de
+  todos (o Backspace também, que excluiria o elemento recém-criado).
+- **Nomes trocados com vários C seguidos.** O segundo C antes de o primeiro campo abrir apagava o
+  texto guardado. A espera virou fila (`pending`): cada atalho guarda o seu texto e os campos
+  pegam na ordem de criação. O campo leva cerca de 95 ms para abrir; em computador lento de
+  laboratório isso acontece em ritmo humano.
+- **Tab guardado.** Confirma o nome e passa para o campo seguinte (o tipo), como com o campo aberto.
+- **Cartão da coluna bloqueava os atalhos.** O cartão de detalhes (mouse parado sobre a coluna) é
+  um popover do Semi e contava como janela aberta. `openOverlays` ignora `role="tooltip"`.
+- **Lista de tipos.** `defaultActiveFirstOption` no `TableField.jsx` (núcleo, uma linha): ao
+  filtrar, o Enter escolhe a primeira opção ("date" → DATE).
+
+Pontos anotados para depois (sem correção nesta versão): janelas "Renomear diagrama" e "Novo
+diagrama" abrem com o foco em Cancelar/X (Enter fecha ou não confirma); escolha do banco não
+confirma com Enter; tabela nova pelo botão nasce em cima da anterior; tabela colada mantém o mesmo
+nome (SQL inválido) e cai sobre a original; "Organizar" põe as tabelas em linha e a linha
+clientes→pedidos atravessa produtos (sem alça, campos quase na mesma altura); F com uma tabela só
+amplia demais; por 1,5 s depois de digitar em qualquer campo os atalhos ficam mudos (o T logo
+depois de renomear o diagrama "falha"); falta atalho para NOT NULL/chave e para relacionamento;
+aba "Código" mostra DBML com a cor original das tabelas; nomes dos modelos prontos em inglês.
+
 ## Versão 1.0.0 (08/10/2026)
 
 **Publicada em 08/10/2026:** PR #1 (`homolog` → `main`, merge `bbfe1db`), tag `v1.0.0` e deploy
