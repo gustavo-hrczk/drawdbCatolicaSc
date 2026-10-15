@@ -17,6 +17,8 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ## [Não lançado]
 
+## [1.1.0] - 2026-10-15
+
 ### Novidades
 
 - Linha do relacionamento arrastável: com o relacionamento selecionado, arraste a alça no meio
