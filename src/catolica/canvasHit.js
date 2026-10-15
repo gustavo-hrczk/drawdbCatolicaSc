@@ -2,9 +2,10 @@ import { noteWidth, ObjectType } from "../data/constants";
 import { getVisibleFields } from "../utils/utils";
 import { lastPointerClient, pointerInDiagram } from "./canvasPointer";
 
-// O que está sob o mouse no desenho (para o F2 renomear o item sob o mouse):
-// { type: "field", tableId, fieldId }, { type: TABLE|NOTE|AREA, id } ou null.
-// Coluna e tabela vêm da própria página; notas e áreas, da posição.
+// O que está sob o mouse no desenho (atalhos E, C e F2 agindo no item sob o
+// mouse): { type: "field", tableId, fieldId },
+// { type: TABLE|RELATIONSHIP|NOTE|AREA, id } ou null. Coluna, tabela e
+// relacionamento vêm da própria página; notas e áreas, da posição.
 
 const inside = (point, { x, y, width, height }) =>
   point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
@@ -25,6 +26,16 @@ export function elementUnderPointer({ tables, relationships, notes, areas }) {
   if (!client || !point) return null;
 
   const top = document.elementFromPoint(client.x, client.y);
+  const relationship = top?.closest("[data-relationship-id]");
+  if (relationship) {
+    const id = relationship.getAttribute("data-relationship-id");
+    if (relationships.some((r) => String(r.id) === id)) {
+      return {
+        type: ObjectType.RELATIONSHIP,
+        id: relationships.find((r) => String(r.id) === id).id,
+      };
+    }
+  }
   const foreignObject = top?.closest("foreignObject");
   const table =
     foreignObject &&

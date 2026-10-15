@@ -13,17 +13,16 @@ import { getCommentHeight, getFieldOffsetY, getTableWidth } from "./utils";
  * @param {number} zoom - Zoom level (used to scale vertical spacing).
  * @returns {string} SVG path "d" attribute string.
  */
-export function calcPath(r, zoom = 1, showComments = true) {
-  if (!r) {
-    return "";
-  }
-
+// Fork: pontos de ancoragem da linha e posição do trecho vertical do meio
+// (midX). r.midOffset desloca esse trecho (arrastado pela alça do
+// relacionamento selecionado), dentro do espaço entre as duas tabelas.
+function routeAnchors(r, zoom, showComments) {
   const startTableWidth = getTableWidth(r.startTable);
   const endTableWidth = getTableWidth(r.endTable);
   const startWidth = startTableWidth * zoom;
   const endWidth = endTableWidth * zoom;
-  let x1 = r.startTable.x;
-  let y1 =
+  const x1 = r.startTable.x;
+  const y1 =
     r.startTable.y +
     getFieldOffsetY(
       r.startTable.fields ?? [],
@@ -34,8 +33,8 @@ export function calcPath(r, zoom = 1, showComments = true) {
     tableHeaderHeight +
     getCommentHeight(r.startTable.comment, startTableWidth, showComments) +
     tableFieldHeight / 2;
-  let x2 = r.endTable.x;
-  let y2 =
+  const x2 = r.endTable.x;
+  const y2 =
     r.endTable.y +
     getFieldOffsetY(
       r.endTable.fields ?? [],
@@ -47,8 +46,41 @@ export function calcPath(r, zoom = 1, showComments = true) {
     tableHeaderHeight +
     tableFieldHeight / 2;
 
-  let radius = 10 * zoom;
-  const midX = (x2 + x1 + startWidth) / 2;
+  const radius = 10 * zoom;
+  const offset = Number(r.midOffset) || 0;
+  const clamp = (value, min, max) =>
+    min > max ? (min + max) / 2 : Math.min(Math.max(value, min), max);
+  let midX = (x2 + x1 + startWidth) / 2 + offset;
+  // O trecho do meio só existe com as tabelas lado a lado.
+  let movable = false;
+  if (x1 + startWidth <= x2) {
+    midX = clamp(midX, x1 + startWidth + 2 * radius, x2 - 2 * radius);
+    movable = true;
+  } else if (x2 + endWidth < x1) {
+    midX = clamp(midX, x2 + endWidth + 2 * radius, x1 - 2 * radius);
+    movable = true;
+  }
+  return { x1, y1, x2, y2, startWidth, endWidth, radius, midX, movable };
+}
+
+// Fork: posição da alça de arraste do traçado (meio do trecho vertical), ou
+// null quando o traçado não tem esse trecho (tabelas sobrepostas na
+// horizontal ou campos quase na mesma altura, ligados por linha reta).
+export function routeHandle(r, zoom = 1, showComments = true) {
+  if (!r) return null;
+  const { y1, y2, midX, movable } = routeAnchors(r, zoom, showComments);
+  if (!movable || Math.abs(y1 - y2) <= 36 * zoom) return null;
+  return { x: midX, y: (y1 + y2) / 2 };
+}
+
+export function calcPath(r, zoom = 1, showComments = true) {
+  if (!r) {
+    return "";
+  }
+
+  const anchors = routeAnchors(r, zoom, showComments);
+  const { x1, y1, x2, y2, startWidth, endWidth, midX } = anchors;
+  let { radius } = anchors;
   const endX = x2 + endWidth < x1 ? x2 + endWidth : x2;
 
   if (Math.abs(y1 - y2) <= 36 * zoom) {

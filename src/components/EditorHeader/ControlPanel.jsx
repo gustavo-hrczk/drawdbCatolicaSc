@@ -176,6 +176,7 @@ import { newIssueUrl, UPSTREAM_DOCS_URL } from "../../catolica/links";
 import { preferredDatabase } from "../../catolica/databasePreference";
 import {
   canRename,
+  revealItem,
   focusColumnName,
   focusNameField,
   openForRename,
@@ -1143,14 +1144,34 @@ export default function ControlPanel({
   // F2: abre a edição do elemento selecionado com o campo do nome em foco.
   // Sem nada selecionado, não faz nada (o diagrama se renomeia pelo lápis ao
   // lado do nome, para o F2 não mexer no diagrama por engano).
+  // Item sob o mouse para os atalhos E, C e F2 (ou null, com a opção
+  // desligada ou nada sob o mouse; aí vale a seleção).
+  const hoveredTarget = () =>
+    shortcutPrefs.hoverTarget
+      ? elementUnderPointer({ tables, relationships, notes, areas })
+      : null;
+  // Tecla E: abre a edição do item sob o mouse ou do selecionado (tabela,
+  // relacionamento, área, nota ou view); sobre uma coluna, a da tabela dela.
+  const editTarget = () => {
+    const hovered = hoveredTarget();
+    const target =
+      hovered?.type === "field"
+        ? { element: ObjectType.TABLE, id: hovered.tableId }
+        : hovered
+          ? { element: hovered.type, id: hovered.id }
+          : { element: selectedElement.element, id: selectedElement.id };
+    if (!canRename(target)) return;
+    setSelectedElement((prev) =>
+      openForRename({ ...prev, ...target }, layout.sidebar),
+    );
+    if (layout.sidebar) revealItem(target.element, target.id);
+  };
   const rename = () => {
     if (layout.readOnly) return;
     if (openOverlays().some((el) => el.matches(".semi-modal-wrap"))) return;
-    // Opção "F2 renomeia o item sob o mouse": coluna, tabela, nota ou área
-    // sob o mouse vêm antes da seleção.
-    const hovered =
-      shortcutPrefs.f2Hover &&
-      elementUnderPointer({ tables, relationships, notes, areas });
+    // Opção "E, C e F2 agem no item sob o mouse": coluna, tabela,
+    // relacionamento, nota ou área sob o mouse vêm antes da seleção.
+    const hovered = hoveredTarget();
     if (hovered?.type === "field") {
       setSelectedElement((prev) =>
         openForRename(
@@ -2505,10 +2526,24 @@ export default function ControlPanel({
   // edição aberta. Igual ao botão "Adicionar coluna" do painel (TableInfo).
   // Devolve o id da coluna criada (ou null, sem tabela selecionada).
   const addColumnToSelected = () => {
-    if (selectedElement.element !== ObjectType.TABLE) return null;
-    const table = tables.find((item) => item.id === selectedElement.id);
+    // Tabela sob o mouse (ou da coluna sob o mouse); senão, a selecionada.
+    const hovered = hoveredTarget();
+    const tableId =
+      hovered?.type === "field"
+        ? hovered.tableId
+        : hovered?.type === ObjectType.TABLE
+          ? hovered.id
+          : selectedElement.element === ObjectType.TABLE
+            ? selectedElement.id
+            : null;
+    const table = tables.find((item) => item.id === tableId);
     if (!table) return null;
-    setSelectedElement((prev) => openForRename(prev, layout.sidebar));
+    setSelectedElement((prev) =>
+      openForRename(
+        { ...prev, element: ObjectType.TABLE, id: table.id },
+        layout.sidebar,
+      ),
+    );
     const id = nanoid();
     setUndoStack((prev) => [
       ...prev,
@@ -2609,7 +2644,7 @@ export default function ControlPanel({
       e: {
         run: () => {
           selectionBeforeShortcut.current = selectedElement;
-          edit();
+          editTarget();
         },
         rollback: () => {
           if (selectionBeforeShortcut.current) {
@@ -2811,9 +2846,7 @@ export default function ControlPanel({
         cancelText={t("cancel")}
       >
         <div className="space-y-3">
-          <p className="text-sm">
-            {t("auto_connect_fk_modal_description")}
-          </p>
+          <p className="text-sm">{t("auto_connect_fk_modal_description")}</p>
           <ol className="list-decimal ps-5 space-y-1 text-sm">
             <li>{t("auto_connect_fk_rule_1")}</li>
             <li>{t("auto_connect_fk_rule_2")}</li>
@@ -2931,7 +2964,10 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={withQuickKey(t("add_table"), "T")} position="bottom">
+          <Tooltip
+            content={withQuickKey(t("add_table"), "T")}
+            position="bottom"
+          >
             <button
               className="flex items-center py-1 px-2 hover-2 rounded-sm disabled:opacity-50"
               onClick={() => addTable()}
@@ -2968,7 +3004,10 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={withQuickKey(t("auto_arrange"), "O")} position="bottom">
+          <Tooltip
+            content={withQuickKey(t("auto_arrange"), "O")}
+            position="bottom"
+          >
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5 disabled:opacity-50"
               onClick={autoArrangeTables}
@@ -2988,7 +3027,10 @@ export default function ControlPanel({
             </button>
           </Tooltip>
           <Divider layout="vertical" margin="8px" />
-          <Tooltip content={withQuickKey(t("help_shortcuts"), "?")} position="bottom">
+          <Tooltip
+            content={withQuickKey(t("help_shortcuts"), "?")}
+            position="bottom"
+          >
             <button
               className="py-1 px-2 hover-2 rounded-sm text-xl -mt-0.5"
               onClick={() => setShowShortcuts(true)}
@@ -3066,8 +3108,12 @@ export default function ControlPanel({
                     filter:
                       "opacity(0.4) drop-shadow(0 0 0 white) drop-shadow(0 0 0 white)",
                   }}
-                  alt={t("database_icon", { databaseName: databases[database].name })}
-                  title={t("database_diagram", { databaseName: databases[database].name })}
+                  alt={t("database_icon", {
+                    databaseName: databases[database].name,
+                  })}
+                  title={t("database_diagram", {
+                    databaseName: databases[database].name,
+                  })}
                 />
               )}
               <Slot name="diagram-title-prefix" />

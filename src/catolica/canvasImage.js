@@ -24,7 +24,7 @@ const MAX_PIXELS = 32_000_000;
 // Controles da interface que não fazem parte do desenho: botões com ícone que
 // aparecem ao passar o mouse (cadeado, recolher, "...", remover campo) e
 // ícones de fonte. Botões vazios ficam: são os pontos azuis dos campos.
-const EXCLUDE = "button:not(:empty), i";
+const EXCLUDE = "button:not(:empty), i, [data-export-ignore]";
 
 // Propriedades herdadas: o filho só precisa delas se forem diferentes do pai.
 const INHERITED = new Set([

@@ -687,6 +687,34 @@ lápis e em "Diagrama sem título" (Novo).
   original). Dica do botão: "Trocar tema (atual: Vinho)". Na tela inicial, o título passou a
   "Pense. Desenhe. Entregue." e saiu o link "Novidades" do cabeçalho (redundante com o painel).
 
+## Pontos de melhoria pós-1.0.0 (15/10/2026)
+
+Lista do mantenedor depois dos primeiros usos da 1.0.0:
+
+1. **C em sequência.** Depois de Enter, Tab ou Esc no nome da coluna, o C seguinte era tomado
+   como "meio de palavra" (proteção contra digitação) e não fazia nada. Agora sair de um campo
+   zera essa proteção (`lastFieldExitAt` em `useSafeKeyShortcuts.js`). Enter ou Tab digitados
+   antes de o campo abrir (digitação muito rápida) ficam guardados com o texto e confirmam o
+   nome assim que o campo aparece (`takeHeldTyping` devolve `{ text, confirm }`). Testado com
+   120, 40 e 15 ms entre teclas.
+2. **F2 no item sob o mouse.** Coluna, tabela, relacionamento, nota ou área sob o mouse vêm
+   antes da seleção (`elementUnderPointer` em `canvasHit.js`, que reconhece relacionamentos pelo
+   `data-relationship-id` do `<g>`).
+3. **Atalhos sem clique.** A opção `hoverTarget` (antes `f2Hover`, desligada) vale para E, C e
+   F2 e vem ligada. Ganho: menos cliques e o mesmo gesto do T/A/N, que já criam onde está o
+   mouse. Risco: agir num item diferente do selecionado quando o mouse ficou parado sobre outro;
+   mitigado porque E e F2 só abrem a edição (nada muda sem digitar), C pode ser desfeito com
+   Ctrl+Z e a opção pode ser desligada na janela "Atalhos do teclado".
+4. **E sobre relacionamento.** `canRename`/`openForRename` e `RENAMABLE` (`renameField.js`)
+   passaram a tratar relacionamentos (aba Relacionamentos com o item aberto e rolado até ele).
+5. **Arrastar a linha.** O relacionamento selecionado mostra uma alça (`RouteHandle.jsx`) no
+   trecho vertical do meio; arrastar grava `midOffset` no relacionamento, que o `calcPath.js`
+   usa (`routeAnchors`/`routeHandle`), limitado ao espaço entre as tabelas. Cada arraste é um
+   passo do desfazer ("traçado" na linha do tempo); dois cliques zeram. Sem deslocamento, o
+   caminho é idêntico ao do upstream (teste em `route.test.js`). A alça fica fora da imagem
+   exportada (`data-export-ignore`). Tabelas sobrepostas na horizontal ou campos quase na mesma
+   altura não têm esse trecho e não mostram a alça.
+
 ## Versão 1.0.0 (08/10/2026)
 
 **Publicada em 08/10/2026:** PR #1 (`homolog` → `main`, merge `bbfe1db`), tag `v1.0.0` e deploy

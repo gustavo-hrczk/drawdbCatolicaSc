@@ -17,6 +17,24 @@ Formato (a tela inicial lê este arquivo; mantenha a estrutura):
 
 ## [Não lançado]
 
+### Novidades
+
+- Linha do relacionamento arrastável: com o relacionamento selecionado, arraste a alça no meio
+  da linha para os lados; dois cliques na alça voltam ao traçado automático. O Ctrl+Z desfaz.
+
+### Melhorias
+
+- E, C e F2 agem no item sob o mouse, sem precisar clicar: E abre a edição da tabela, do
+  relacionamento, da nota ou da área; C adiciona uma coluna à tabela; F2 renomeia a coluna, a
+  tabela ou o relacionamento. Sem nada sob o mouse, vale o item selecionado. A opção fica na
+  janela "Atalhos do teclado" (ligada por padrão).
+
+### Correções
+
+- C adiciona colunas em sequência: depois de digitar o nome e apertar Enter, Tab ou Esc, o C
+  seguinte cria outra coluna sem precisar clicar na tabela de novo.
+- E passou a abrir a edição do relacionamento selecionado (antes não fazia nada).
+
 ## [1.0.0] - 2026-10-08
 
 ### Novidades

@@ -23,6 +23,9 @@ const DELETE_CONFIRM_MS = 3000;
 const TYPING_WARNING_INTERVAL_MS = 10000;
 
 let lastFieldTypingAt = -Infinity;
+// Saída de um campo com Enter, Tab ou Esc: a próxima tecla não é "meio de
+// palavra" (permite C, nome, Enter, C em sequência rápida).
+let lastFieldExitAt = -Infinity;
 let deleteBlockedAt = -Infinity;
 
 // Atalho que abre o nome do elemento novo: o campo leva alguns milissegundos
@@ -31,20 +34,35 @@ let deleteBlockedAt = -Infinity;
 const HOLD_MS = 1500;
 let held = null; // { until, text }
 
-const holding = () => held !== null && performance.now() < held.until;
+const holding = () =>
+  held !== null && !held.confirm && performance.now() < held.until;
 
-// Texto digitado antes de o campo abrir (e encerra a espera).
+// Texto digitado antes de o campo abrir (e encerra a espera):
+// { text, confirm }. confirm: um Enter/Tab chegou antes do campo, então o
+// nome já vem confirmado (o campo sai da edição logo depois).
 export function takeHeldTyping() {
-  const text = holding() ? held.text : "";
+  const result =
+    held && performance.now() < held.until
+      ? { text: held.text, confirm: Boolean(held.confirm) }
+      : { text: "", confirm: false };
   held = null;
-  return text;
+  return result;
 }
 
 if (typeof document !== "undefined") {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (isTypingTarget(e.target)) lastFieldTypingAt = performance.now();
+      if (!isTypingTarget(e.target)) return;
+      // Enter, Tab e Esc saem do campo de propósito (confirmar o nome e criar
+      // a próxima coluna com C, por exemplo): o que vem depois não é
+      // digitação perdida, então a proteção não vale.
+      if (["Enter", "Tab", "Escape"].includes(e.key)) {
+        lastFieldTypingAt = -Infinity;
+        lastFieldExitAt = performance.now();
+      } else {
+        lastFieldTypingAt = performance.now();
+      }
     },
     true,
   );
@@ -152,6 +170,13 @@ export default function useSafeKeyShortcuts({
           held.text += e.key;
           return;
         }
+        if (e.key === "Enter" || e.key === "Tab") {
+          // Confirma o nome; as teclas seguintes voltam a ser atalhos.
+          e.preventDefault();
+          held.confirm = true;
+          lastFieldExitAt = performance.now();
+          return;
+        }
         if (e.key === "Backspace") {
           e.preventDefault();
           held.text = held.text.slice(0, -1);
@@ -179,7 +204,8 @@ export default function useSafeKeyShortcuts({
       }
 
       const now = performance.now();
-      const sinceLastKey = now - lastKeyAt;
+      const sinceLastKey =
+        lastFieldExitAt > lastKeyAt ? Infinity : now - lastKeyAt;
       lastKeyAt = now;
       const key = e.key === "?" ? "?" : e.key.toLowerCase();
 

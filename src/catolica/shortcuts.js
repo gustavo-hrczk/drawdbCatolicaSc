@@ -71,7 +71,7 @@ export const SHORTCUT_GROUPS = [
         label: "rename_selected",
         keys: [["F2"]],
         // Opção ligada/desligada mostrada logo abaixo do atalho.
-        option: { pref: "f2Hover", label: "shortcut_f2_hover" },
+        option: { pref: "hoverTarget", label: "shortcut_hover_target" },
       },
       { id: "escape", label: "shortcut_escape", keys: [["Esc"]] },
       {
@@ -126,9 +126,10 @@ export const SHORTCUT_GROUPS = [
 // Preferência por navegador: atalhos de uma tecla ligados ou desligados.
 const PREFS_KEY = `${import.meta.env.VITE_DB_NAME || "drawDB"}-catolica:shortcuts`;
 
-// singleKey: atalhos rápidos ligados; f2Hover: F2 renomeia o item sob o
-// mouse (desligado por padrão: no Windows, F2 renomeia o que está selecionado).
-const DEFAULT_PREFS = { singleKey: true, f2Hover: false };
+// singleKey: atalhos rápidos ligados; hoverTarget: E, C e F2 agem no item sob
+// o mouse (sem ele, no selecionado). Substitui a antiga opção "f2Hover", que
+// era só do F2 e vinha desligada.
+const DEFAULT_PREFS = { singleKey: true, hoverTarget: true };
 
 export function readShortcutPrefs() {
   try {
